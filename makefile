@@ -6,7 +6,7 @@ LIBS    = -lm
 
 EXEC	= exec
 RUN_CMD	=./$(EXEC)
-SRCS	= globals.cpp shadow.cpp shadow_test.cpp
+SRCS	= globals.cpp shadow.cpp mcprof.cpp
 OBJS	=$(SRCS:%.cpp=%.o)
 
 all: $(EXEC)
@@ -28,5 +28,7 @@ run: $(EXEC)
 
 clean:
 	rm -f $(EXEC) $(OBJS) *~ *.P
+open:
+	kate makefile globals.h globals.cpp shadow.h shadow.cpp mcprof.cpp &> /dev/null &
 
 .PHONY: clean run all archive

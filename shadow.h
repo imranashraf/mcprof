@@ -113,4 +113,7 @@ class L3Table
         }
 };
 
+void RecordWrite(FtnNo prod, uptr addr, int size);
+void RecordRead(FtnNo cons, uptr addr, int size);
+
 #endif
