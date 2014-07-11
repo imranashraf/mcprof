@@ -17,23 +17,23 @@ class Matrix2D
     public:
         Matrix2D()
         {
-            int cols=DEFAULT_SIZE;
-            int rows=DEFAULT_SIZE;
+            u16 cols=DEFAULT_SIZE;
+            u16 rows=DEFAULT_SIZE;
             double value=0.0;
 
             Matrix.resize( cols , vector<double>( rows , value) );
         }
 
-        Matrix2D(int size)
+        Matrix2D(u16 size)
         {
-            int cols=size;
-            int rows=size;
+            u16 cols=size;
+            u16 rows=size;
             double value=0.0;
 
             Matrix.resize( cols , vector<double>( rows , value) );
         }
 
-        void Increment(int col, int row, int size)
+        void Increment(u16 col, u16 row, u16 size)
         {
             if( col<Matrix.size() && row < Matrix.size() )
                 Matrix[row][col] += size;
@@ -41,8 +41,8 @@ class Matrix2D
 
         void Print()
         {
-            for (int r=0; r<Matrix.size(); r++) {
-                for (int c=0; c<Matrix[r].size(); c++) {
+            for (u16 r=0; r<Matrix.size(); r++) {
+                for (u16 c=0; c<Matrix[r].size(); c++) {
                     cout << Matrix[r][c] <<"  ";
                 }
                 cout<<endl;
