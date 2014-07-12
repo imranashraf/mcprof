@@ -100,6 +100,10 @@ clean: cleantemp
 cleantemp:
 	rm -f *~ $(TESTDIR)*~
 
+
+format:
+    astyle --style=kr *.h *.cpp
+
 open:
 	kate makefile.rules globals.h globals.cpp shadow.h shadow.cpp commatrix.h \
 	commatrix.cpp pintrace.h pintrace.cpp mcprof.cpp &> /dev/null &

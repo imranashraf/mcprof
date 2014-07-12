@@ -12,7 +12,7 @@ class Matrix2D
 {
     private:
         vector< vector<double> > Matrix;
-        static const int DEFAULT_SIZE=5; //most of the applications have functions less than 256
+        static const int DEFAULT_SIZE=255; //most of the applications have functions less than 256
 
     public:
         Matrix2D()
@@ -41,8 +41,10 @@ class Matrix2D
 
         void Print()
         {
-            for (u16 r=0; r<Matrix.size(); r++) {
-                for (u16 c=0; c<Matrix[r].size(); c++) {
+//             for (u16 r=0; r<Matrix.size(); r++) {
+            for (u16 r=0; r<10; r++) {
+//                 for (u16 c=0; c<Matrix[r].size(); c++) {
+                for (u16 c=0; c<10; c++) {
                     cout << Matrix[r][c] <<"  ";
                 }
                 cout<<endl;

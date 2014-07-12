@@ -6,19 +6,15 @@
 #include <cassert>
 #include <cstddef>
 
-// Sizes of tables
-// #define L1ENTRIES (1<<16)
-// #define L2ENTRIES (1<<16)
-// #define L3ENTRIES (1<<16)
-
-#define L1ENTRIES (1<<2)
-#define L2ENTRIES (1<<3)
-#define L3ENTRIES (1<<4)
-
 // No of bits required to address table entries
-#define L1BITS (1>>L1ENTRIES)
-#define L2BITS (1>>L2ENTRIES)
-#define L3BITS (1>>L3ENTRIES)
+static const u64 L1BITS = (16);
+static const u64 L2BITS = (16);
+static const u64 L3BITS = (16);
+
+// Sizes of tables
+static const u64 L1ENTRIES = (1ULL << L1BITS);
+static const u64 L2ENTRIES = (1ULL << L2BITS);
+static const u64 L3ENTRIES = (1ULL << L3BITS);
 
 // should be greater than max(L1ENTRIES,L2ENTRIES,L3ENTRIES)
 #define UNACCESSED NULL
