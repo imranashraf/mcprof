@@ -10,7 +10,7 @@ L3Table ShadowMemory;
 
 void RecordWrite(FtnNo prod, uptr addr, int size)
 {
-    for(int i=0;i<size; i++) {
+    for(int i=0; i<size; i++) {
         ShadowMemory.setProducer(addr+i,prod);
     }
 }
@@ -18,8 +18,8 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
 void RecordRead(FtnNo cons, uptr addr, int size)
 {
     FtnNo prod;
-    
-    for(int i=0;i<size; i++) {
+
+    for(int i=0; i<size; i++) {
         prod = ShadowMemory.getProducer(addr+i);
         RecordCommunication(prod,cons,1);
         //RecordCommunication

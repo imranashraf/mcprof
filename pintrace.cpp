@@ -1,6 +1,6 @@
 
 /*! @file
- *  This is an example of the PIN tool that demonstrates some basic PIN APIs 
+ *  This is an example of the PIN tool that demonstrates some basic PIN APIs
  *  and could serve as the starting point for developing your first PIN tool
  */
 
@@ -11,7 +11,7 @@
 #include <fstream>
 
 /* ================================================================== */
-// Global variables 
+// Global variables
 /* ================================================================== */
 
 UINT64 insCount = 0;        //number of dynamically executed instructions
@@ -24,10 +24,10 @@ std::ostream * out = &cerr;
 // Command line switches
 /* ===================================================================== */
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
-    "o", "", "specify file name for MyPinTool output");
+                            "o", "", "specify file name for MyPinTool output");
 
 KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
-    "count", "1", "count instructions, basic blocks and threads in the application");
+                       "count", "1", "count instructions, basic blocks and threads in the application");
 
 
 /* ===================================================================== */
@@ -40,7 +40,7 @@ KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
 INT32 Usage()
 {
     cerr << "This tool prints out the number of dynamically executed " << endl <<
-            "instructions, basic blocks and threads in the application." << endl << endl;
+         "instructions, basic blocks and threads in the application." << endl << endl;
 
     cerr << KNOB_BASE::StringKnobSummary() << endl;
 
@@ -68,7 +68,7 @@ VOID CountBbl(UINT32 numInstInBbl)
 /* ===================================================================== */
 
 /*!
- * Insert call to the CountBbl() analysis routine before every basic block 
+ * Insert call to the CountBbl() analysis routine before every basic block
  * of the trace.
  * This function is called every time a new trace is encountered.
  * @param[in]   trace    trace to be instrumented
@@ -78,8 +78,7 @@ VOID CountBbl(UINT32 numInstInBbl)
 VOID Trace(TRACE trace, VOID *v)
 {
     // Visit every basic block in the trace
-    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
-    {
+    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
         // Insert a call to CountBbl() before every basic bloc, passing the number of instructions
         BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)CountBbl, IARG_UINT32, BBL_NumIns(bbl), IARG_END);
     }
@@ -92,7 +91,7 @@ VOID Trace(TRACE trace, VOID *v)
  * @param[in]   threadIndex     ID assigned by PIN to the new thread
  * @param[in]   ctxt            initial register state for the new thread
  * @param[in]   flags           thread creation flags (OS specific)
- * @param[in]   v               value specified by the tool in the 
+ * @param[in]   v               value specified by the tool in the
  *                              PIN_AddThreadStartFunction function call
  */
 VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
@@ -104,7 +103,7 @@ VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
  * Print out analysis results.
  * This function is called when the application exits.
  * @param[in]   code            exit code of the application
- * @param[in]   v               value specified by the tool in the 
+ * @param[in]   v               value specified by the tool in the
  *                              PIN_AddFiniFunction function call
  */
 VOID Fini(INT32 code, VOID *v)
@@ -121,25 +120,25 @@ VOID Fini(INT32 code, VOID *v)
  * The main procedure of the tool.
  * This function is called when the application image is loaded but not yet started.
  * @param[in]   argc            total number of elements in the argv array
- * @param[in]   argv            array of command line arguments, 
+ * @param[in]   argv            array of command line arguments,
  *                              including pin -t <toolname> -- ...
  */
 void SetupPin(int argc, char *argv[])
 {
     // Initialize PIN library. Print help message if -h(elp) is specified
-    // in the command line or the command line is invalid 
-    if( PIN_Init(argc,argv) )
-    {
+    // in the command line or the command line is invalid
+    if( PIN_Init(argc,argv) ) {
         Usage();
         return;
     }
-    
+
     string fileName = KnobOutputFile.Value();
 
-    if (!fileName.empty()) { out = new std::ofstream(fileName.c_str());}
+    if (!fileName.empty()) {
+        out = new std::ofstream(fileName.c_str());
+    }
 
-    if (KnobCount)
-    {
+    if (KnobCount) {
         // Register function to be called to instrument traces
         TRACE_AddInstrumentFunction(Trace, 0);
 

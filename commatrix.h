@@ -10,46 +10,42 @@ using namespace std;
 
 class Matrix2D
 {
-    private:
-        vector< vector<double> > Matrix;
-        static const int DEFAULT_SIZE=255; //most of the applications have functions less than 256
+private:
+    vector< vector<double> > Matrix;
+    static const int DEFAULT_SIZE=255; //most of the applications have functions less than 256
 
-    public:
-        Matrix2D()
-        {
-            u16 cols=DEFAULT_SIZE;
-            u16 rows=DEFAULT_SIZE;
-            double value=0.0;
+public:
+    Matrix2D() {
+        u16 cols=DEFAULT_SIZE;
+        u16 rows=DEFAULT_SIZE;
+        double value=0.0;
 
-            Matrix.resize( cols , vector<double>( rows , value) );
-        }
+        Matrix.resize( cols , vector<double>( rows , value) );
+    }
 
-        Matrix2D(u16 size)
-        {
-            u16 cols=size;
-            u16 rows=size;
-            double value=0.0;
+    Matrix2D(u16 size) {
+        u16 cols=size;
+        u16 rows=size;
+        double value=0.0;
 
-            Matrix.resize( cols , vector<double>( rows , value) );
-        }
+        Matrix.resize( cols , vector<double>( rows , value) );
+    }
 
-        void Increment(u16 col, u16 row, u16 size)
-        {
-            if( col<Matrix.size() && row < Matrix.size() )
-                Matrix[row][col] += size;
-        }
+    void Increment(u16 col, u16 row, u16 size) {
+        if( col<Matrix.size() && row < Matrix.size() )
+            Matrix[row][col] += size;
+    }
 
-        void Print()
-        {
+    void Print() {
 //             for (u16 r=0; r<Matrix.size(); r++) {
-            for (u16 r=0; r<10; r++) {
+        for (u16 r=0; r<10; r++) {
 //                 for (u16 c=0; c<Matrix[r].size(); c++) {
-                for (u16 c=0; c<10; c++) {
-                    cout << Matrix[r][c] <<"  ";
-                }
-                cout<<endl;
+            for (u16 c=0; c<10; c++) {
+                cout << Matrix[r][c] <<"  ";
             }
+            cout<<endl;
         }
+    }
 
 };
 

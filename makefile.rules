@@ -6,6 +6,20 @@
 ##############################################################
 TESTDIR := ./tests/
 
+ASTYLE := $(shell which astyle)
+ifeq ($(ASTYLE),)
+    $(warning command <astyle> not found!)
+    $(warning Install it to get advantage of automatic code formatting by:)
+    $(warning make format)
+endif
+
+PIN := $(shell pin -version | head -1)
+ifeq ($(PIN),"Pin 2.13" )
+    $(warning Pin 2.13 is required!)
+    exit
+endif
+
+
 ##############################################################
 #
 # Test targets
@@ -102,7 +116,8 @@ cleantemp:
 
 
 format:
-    astyle --style=kr *.h *.cpp
+	astyle --style=kr *.h *.cpp
+	rm *.orig
 
 open:
 	kate makefile.rules globals.h globals.cpp shadow.h shadow.cpp commatrix.h \
