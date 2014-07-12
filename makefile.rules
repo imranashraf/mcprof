@@ -8,17 +8,11 @@ TESTDIR := ./tests/
 
 ASTYLE := $(shell which astyle)
 ifeq ($(ASTYLE),)
-    $(warning command <astyle> not found!)
-    $(warning Install it to get advantage of automatic code formatting by:)
-    $(warning make format)
+$(info command <astyle> not found! \
+Install it to get advantage of automatic code formatting.\
+After installation, run <make format> to format all the files to Kernighan & \
+Ritchie (K&R) style code formatting.)
 endif
-
-PIN := $(shell pin -version | head -1)
-ifeq ($(PIN),"Pin 2.13" )
-    $(warning Pin 2.13 is required!)
-    exit
-endif
-
 
 ##############################################################
 #

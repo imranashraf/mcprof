@@ -6,10 +6,17 @@
 
 # If the tool is built out of the kit, PIN_ROOT must be specified in the make invocation and point to the kit root.
 ifdef PIN_ROOT
+PIN := $(shell pin -version | head -1)
+ifneq ($(PIN), Pin 2.13)
+$(error Pin 2.13 is required, found $(PIN)!)
+endif
 CONFIG_ROOT := $(PIN_ROOT)/source/tools/Config
 else
+$(warning Pin 2.13 is required. Ignore this warning if you are compiling thisi\
+tool inside pin kit. Otherwise, install it and set PIN_ROOT to point to it!)
 CONFIG_ROOT := ../Config
 endif
+
 include $(CONFIG_ROOT)/makefile.config
 include makefile.rules
 include $(TOOLS_ROOT)/Config/makefile.default.rules
