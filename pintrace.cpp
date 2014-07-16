@@ -13,18 +13,13 @@
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
-
-UINT64 insCount = 0;        //number of dynamically executed instructions
-UINT64 bblCount = 0;        //number of dynamically executed basic blocks
-UINT64 threadCount = 0;     //total number of threads, including main thread
-
-std::ostream * out = &cerr;
+std::ofstream fout;
 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
-                            "o", "", "specify file name for MyPinTool output");
+                            "o", "memtrace.out", "specify file name for output");
 
 KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
                        "count", "1", "count instructions, basic blocks and threads in the application");
@@ -51,16 +46,18 @@ INT32 Usage()
 // Analysis routines
 /* ===================================================================== */
 
-/*!
- * Increase counter of the executed basic blocks and instructions.
- * This function is called for every basic block when it is about to be executed.
- * @param[in]   numInstInBbl    number of instructions in the basic block
- * @note use atomic operations for multi-threaded applications
- */
-VOID CountBbl(UINT32 numInstInBbl)
+// Print a memory read record
+VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    bblCount++;
-    insCount += numInstInBbl;
+    fout << ip << " R " <<addr<< " " << refSize << endl;
+//     RecordRead(1,addr,refSize);
+}
+
+// Print a memory write record
+VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
+{
+    fout << ip << " W " <<addr<< " " << refSize << endl;
+//     RecordWrite(ftnNo,addr,refSize);
 }
 
 /* ===================================================================== */
@@ -75,29 +72,75 @@ VOID CountBbl(UINT32 numInstInBbl)
  * @param[in]   v        value specified by the tool in the TRACE_AddInstrumentFunction
  *                       function call
  */
-VOID Trace(TRACE trace, VOID *v)
+void Trace_cb(TRACE trace, void *v)
 {
-    // Visit every basic block in the trace
+    RTN rtn = TRACE_Rtn(trace);
+    if (!RTN_Valid(rtn)) return;
+//     string rtn_name = RTN_Name(rtn);
+
     for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
-        // Insert a call to CountBbl() before every basic bloc, passing the number of instructions
-        BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)CountBbl, IARG_UINT32, BBL_NumIns(bbl), IARG_END);
+        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins)) {
+            UINT32 memOperands = INS_MemoryOperandCount(ins);
+            for (UINT32 memOp = 0; memOp < memOperands; memOp++){
+                size_t refSize = INS_MemoryOperandSize(ins, memOp);
+//                 bool isStack = INS_IsStackRead(ins);
+//                 if(!isStack) return;
+
+                if (INS_MemoryOperandIsRead(ins, memOp))
+                {
+                    INS_InsertPredicatedCall(
+                        ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
+                        IARG_INST_PTR,
+                        IARG_MEMORYOP_EA, memOp,
+                        IARG_UINT32, refSize,
+                        IARG_END);
+                }
+
+                if (INS_MemoryOperandIsWritten(ins, memOp))
+                {
+                    INS_InsertPredicatedCall(
+                        ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
+                        IARG_INST_PTR,
+                        IARG_MEMORYOP_EA, memOp,
+                        IARG_UINT32, refSize,
+                        IARG_END);
+                }
+            }
+        }
     }
 }
 
-/*!
- * Increase counter of threads in the application.
- * This function is called for every thread created by the application when it is
- * about to start running (including the root thread).
- * @param[in]   threadIndex     ID assigned by PIN to the new thread
- * @param[in]   ctxt            initial register state for the new thread
- * @param[in]   flags           thread creation flags (OS specific)
- * @param[in]   v               value specified by the tool in the
- *                              PIN_AddThreadStartFunction function call
- */
-VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
+void Image_cb(IMG img, void *v)
 {
-    threadCount++;
+    string img_name = IMG_Name(img);
+    cerr << " Image = "<<img_name<<endl;
+    
+//     if (img_name.find("pintest_so.so") == string::npos) return;
+
+    // Don't instrument these images
+    if (img_name.find("/libc") != string::npos){
+        cerr << " Skipping this image "<< img_name.find("/libc") <<endl;
+        return;
+    }
+
+    if ( img_name.find("/usr/lib/") != 0 ) {
+        cerr << " Skipping this image "<< img_name.find("/usr/lib/") << endl;
+        return;
+    }
+    
+    if ( img_name.find("/lib/") != 0){
+        cerr << " Skipping this image "<< img_name.find("/lib/") << endl;
+        return;
+    }
+
+    for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
+        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
+            string rtn_name = RTN_Name(rtn);
+            cerr << " Rtn = "<<rtn_name<<endl;
+        }
+    }
 }
+
 
 /*!
  * Print out analysis results.
@@ -108,12 +151,9 @@ VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
-    *out <<  "===============================================" << endl;
-    *out <<  "MyPinTool analysis results: " << endl;
-    *out <<  "Number of instructions: " << insCount  << endl;
-    *out <<  "Number of basic blocks: " << bblCount  << endl;
-    *out <<  "Number of threads: " << threadCount  << endl;
-    *out <<  "===============================================" << endl;
+    fout <<  "===============================================" << endl;
+    fout <<  "          MCPROF Results:     " << endl;
+    fout <<  "===============================================" << endl;
 }
 
 /*!
@@ -135,16 +175,20 @@ void SetupPin(int argc, char *argv[])
     string fileName = KnobOutputFile.Value();
 
     if (!fileName.empty()) {
-        out = new std::ofstream(fileName.c_str());
+        fout.open(fileName.c_str(), std::ios::out);
+        if(fout.fail()){
+            cerr << "Error Opening file"<<endl;
+            return;
+        }
+    }
+    else{
+        cerr << "Specify a non empty file name"<<endl;
+        return;
     }
 
     if (KnobCount) {
-        // Register function to be called to instrument traces
-        TRACE_AddInstrumentFunction(Trace, 0);
-
-        // Register function to be called for every thread before it starts running
-        PIN_AddThreadStartFunction(ThreadStart, 0);
-
+        TRACE_AddInstrumentFunction(Trace_cb, 0);
+        IMG_AddInstrumentFunction(Image_cb, 0);
         // Register function to be called when the application exits
         PIN_AddFiniFunction(Fini, 0);
     }
