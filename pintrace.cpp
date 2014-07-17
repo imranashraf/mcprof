@@ -21,8 +21,8 @@ std::ofstream fout;
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
                             "o", "memtrace.out", "specify file name for output");
 
-KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
-                       "count", "1", "count instructions, basic blocks and threads in the application");
+KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
+    "MainExecutableOnly","1", "Trace functions that are contained only in the main executable image");
 
 
 /* ===================================================================== */
@@ -110,12 +110,10 @@ void Trace_cb(TRACE trace, void *v)
     }
 }
 
-void Image_cb(IMG img, void *v)
+void Image_cb1(IMG img, void *v)
 {
     string img_name = IMG_Name(img);
     cerr << " Image = "<<img_name<<endl;
-    
-//     if (img_name.find("pintest_so.so") == string::npos) return;
 
     // Don't instrument these images
     if (img_name.find("/libc") != string::npos){
@@ -127,7 +125,7 @@ void Image_cb(IMG img, void *v)
         cerr << " Skipping this image "<< img_name.find("/usr/lib/") << endl;
         return;
     }
-    
+
     if ( img_name.find("/lib/") != 0){
         cerr << " Skipping this image "<< img_name.find("/lib/") << endl;
         return;
@@ -139,6 +137,78 @@ void Image_cb(IMG img, void *v)
             cerr << " Rtn = "<<rtn_name<<endl;
         }
     }
+}
+
+// IMG instrumentation routine - called once per image upon image load
+VOID Image_cb(IMG img, VOID * v)
+{
+    // For simplicity, instrument only the main image. This can be extended to any other image of course.
+    string img_name = IMG_Name(img);
+    if (IMG_IsMainExecutable(img) == false &&
+        KnobMainExecutableOnly.Value() == true) {
+        cerr << " Skipping Image "<<img_name<< " as it is not main executable " << endl;
+        return;
+    }
+    else {
+        cerr << " Instrumenting "<<img_name<< " as it is the Main executable " <<endl;
+    }
+
+    // To find all the instructions in the image, we traverse the sections of the image.
+    for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
+
+        // For each section, process all RTNs.
+        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
+
+            // Many RTN APIs require that the RTN be opened first.
+            string rtnName = RTN_Name(rtn);
+            string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+//             string demangledName = PIN_UndecorateSymbolName(rtnName, UNDECORATION_COMPLETE);
+            cerr << " Routine Name = "<<rtnName<<endl;
+//             cerr << " UNDECORATION_COMPLETE = "<<demangledName<<endl;
+//             cerr << " UNDECORATION_NAME_ONLY = "<<demangledNameNoParams<<endl << endl;
+
+            RTN_Open(rtn);
+
+            // Call PIN_GetSourceLocation for all the instructions of the RTN.
+            for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
+                UINT32 memOperands = INS_MemoryOperandCount(ins);
+                for (UINT32 memOp = 0; memOp < memOperands; memOp++){
+                    size_t refSize = INS_MemoryOperandSize(ins, memOp);
+//                 bool isStack = INS_IsStackRead(ins);
+//                 if(!isStack) return;
+
+                    if (INS_MemoryOperandIsRead(ins, memOp))
+                    {
+                        INS_InsertPredicatedCall(
+                            ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
+                            IARG_INST_PTR,
+                            IARG_MEMORYOP_EA, memOp,
+                            IARG_UINT32, refSize,
+                            IARG_END);
+                    }
+
+                    if (INS_MemoryOperandIsWritten(ins, memOp))
+                    {
+                        INS_InsertPredicatedCall(
+                            ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
+                            IARG_INST_PTR,
+                            IARG_MEMORYOP_EA, memOp,
+                            IARG_UINT32, refSize,
+                            IARG_END);
+                    }
+                }
+            }
+            RTN_Close(rtn); // Don't forget to close the RTN once you're done.
+        }
+    }
+}
+
+VOID Routine_cb(RTN rtn,VOID *v)
+{
+    string RName=RTN_Name(rtn);
+    RTN_Open(rtn);
+    cout << "Routine "<< RName << endl;
+    RTN_Close(rtn);
 }
 
 
@@ -165,6 +235,7 @@ VOID Fini(INT32 code, VOID *v)
  */
 void SetupPin(int argc, char *argv[])
 {
+    PIN_InitSymbols();
     // Initialize PIN library. Print help message if -h(elp) is specified
     // in the command line or the command line is invalid
     if( PIN_Init(argc,argv) ) {
@@ -186,12 +257,12 @@ void SetupPin(int argc, char *argv[])
         return;
     }
 
-    if (KnobCount) {
-        TRACE_AddInstrumentFunction(Trace_cb, 0);
-        IMG_AddInstrumentFunction(Image_cb, 0);
-        // Register function to be called when the application exits
-        PIN_AddFiniFunction(Fini, 0);
-    }
+    TRACE_AddInstrumentFunction(Trace_cb, 0);
+//         RTN_AddInstrumentFunction(Routine_cb,0);
+    IMG_AddInstrumentFunction(Image_cb, 0);
+
+    // Register function to be called when the application exits
+    PIN_AddFiniFunction(Fini, 0);
 }
 
 /* ===================================================================== */
