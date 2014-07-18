@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iostream>
 
-#define SIZE 100
+#define SIZE 5
 typedef int uint32_t;
 
 using namespace std;

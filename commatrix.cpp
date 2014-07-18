@@ -12,3 +12,8 @@ void PrintCommunication()
 {
     ComMatrix.Print();
 }
+
+void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName)
+{
+    ComMatrix.PrintDot(dotout, ADDtoName);
+}

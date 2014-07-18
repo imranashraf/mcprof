@@ -7,21 +7,34 @@
 #include "pin.H"
 #include "globals.h"
 #include "pintrace.h"
+#include "commatrix.h"
+#include "shadow.h"
 #include <iostream>
 #include <fstream>
 #include <stack>
+#include <set>
+#include <map>
 
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
 std::ofstream fout;
-stack <string> CallStack; // Call Stack to trace function call
+std::ofstream dotout;
+stack <string> CallStack;
+map <string,UINT16> NametoADD;
+map <UINT16,string> ADDtoName;
+set<string> SeenFname;
+UINT16 GlobalFunctionNo=0;
+
 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
                             "o", "memtrace.out", "specify file name for output");
+
+KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
+                            "d", "communication.dot", "specify file name for output in dot");
 
 KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
     "MainExecutableOnly","1", "Trace functions that are contained only in the main executable image");
@@ -55,8 +68,8 @@ VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
     if( !CallStack.empty() )
         ftnName = CallStack.top();
 
-    fout << ftnName << " " << ip << " R " <<addr<< " " << refSize << endl;
-    //RecordRead(ftnNo,addr,refSize);
+    //fout << ftnName << "(" << NametoADD[ftnName] << ") " << ip << " R " <<addr<< " " << refSize << endl;
+    RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
 }
 
 // Print a memory write record
@@ -66,8 +79,8 @@ VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
     if( !CallStack.empty() )
         ftnName = CallStack.top();
 
-    fout << ftnName << " " << ip << " W " <<addr<< " " << refSize << endl;
-    //RecordWrite(ftnNo,addr,refSize);
+    //fout << ftnName << "(" << NametoADD[ftnName] << ") " << ip << " W " <<addr<< " " << refSize << endl;
+    RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
 }
 
 /* ===================================================================== */
@@ -120,42 +133,48 @@ void Trace_cb(TRACE trace, void *v)
     }
 }
 
-void Image_cb1(IMG img, void *v)
-{
-    string img_name = IMG_Name(img);
-    cerr << " Image = "<<img_name<<endl;
-
-    // Don't instrument these images
-    if (img_name.find("/libc") != string::npos){
-        cerr << " Skipping this image "<< img_name.find("/libc") <<endl;
-        return;
-    }
-
-    if ( img_name.find("/usr/lib/") != 0 ) {
-        cerr << " Skipping this image "<< img_name.find("/usr/lib/") << endl;
-        return;
-    }
-
-    if ( img_name.find("/lib/") != 0){
-        cerr << " Skipping this image "<< img_name.find("/lib/") << endl;
-        return;
-    }
-
-    for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
-        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
-            string rtn_name = RTN_Name(rtn);
-            cerr << " Rtn = "<<rtn_name<<endl;
-        }
-    }
-}
 
 VOID RecordRoutineEntry(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+    string name = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
-    cout << "Entring Routine : "<< demangledNameNoParams << endl;
-    CallStack.push(demangledNameNoParams);
+    if (
+        name[0]=='_' ||
+        name[0]=='?' ||
+#ifdef WIN32
+        !strcmp(name,"GetPdbDll") ||
+        !strcmp(name,"DebuggerRuntime") ||
+        !strcmp(name,"atexit") ||
+        !strcmp(name,"failwithmessage") ||
+        !strcmp(name,"pre_c_init") ||
+        !strcmp(name,"pre_cpp_init") ||
+        !strcmp(name,"mainCRTStartup") ||
+        !strcmp(name,"NtCurrentTeb") ||
+        !strcmp(name,"check_managed_app") ||
+        !strcmp(name,"DebuggerKnownHandle") ||
+        !strcmp(name,"DebuggerProbe") ||
+        !strcmp(name,"failwithmessage") ||
+        !strcmp(name,"unnamedImageEntryPoint"
+#else
+        !name.compare(".plt") ||
+        !name.compare("call_gmon_start") ||
+        !name.compare("register_tm_clones") ||
+        !name.compare("deregister_tm_clones") ||
+        !name.compare("frame_dummy")
+#endif
+        )
+        return;
+
+    if(!SeenFname.count(name)) { // this is the first time I see this function name
+        SeenFname.insert(name);  // mark this function name as seen
+        GlobalFunctionNo++;      // create a dummy Function Number for this function
+        NametoADD[name]=GlobalFunctionNo;   // create the string -> Number binding
+        ADDtoName[GlobalFunctionNo]=name;   // create the Number -> String binding
+    }
+
+    cout << "Entring Routine : "<< name << endl;
+    CallStack.push(name);
 }
 
 
@@ -163,15 +182,21 @@ VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-//     if(!(CallStack.empty()) && (CallStack.top()==rtnName)) {
-//     cerr << " Return Stack Top: "<<CallStack.top()<< endl;
-//     cerr << " Return Routine Name : "<<rtnName<< endl;
 
-    if( !(CallStack.empty()) ) {
-        cout << " Return Stack Top: "<< CallStack.top() << endl;
+    //if( !(CallStack.empty()) ) {
+    if(!(CallStack.empty()) && (CallStack.top() == demangledNameNoParams)) {
+        cout << " Leaving Routine : "<< demangledNameNoParams << endl;
         CallStack.pop();
-        cout << " Leaving Routine : "<< demangledNameNoParams << endl << endl;
     }
+    else if (!(CallStack.empty()) ) {
+        cout << " Not Leaving Routine : "<< demangledNameNoParams << endl;
+        cout << " Return Stack Top: "<< CallStack.top() << endl;
+    }
+    else{
+        cout << " Not Leaving Routine as CallStack empty without : "<< demangledNameNoParams << endl;
+    }
+
+ 
 }
 
 // IMG instrumentation routine - called once per image upon image load
@@ -250,9 +275,15 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
+    PrintCommunication();
+    PrintCommunicationDot(dotout, ADDtoName);
+
     fout <<  "===============================================" << endl;
-    fout <<  "          MCPROF Results:     " << endl;
+    fout <<  "          The End     " << endl;
     fout <<  "===============================================" << endl;
+
+    fout.close();
+    dotout.close();
 }
 
 /*!
@@ -273,7 +304,6 @@ void SetupPin(int argc, char *argv[])
     }
 
     string fileName = KnobOutputFile.Value();
-
     if (!fileName.empty()) {
         fout.open(fileName.c_str(), std::ios::out);
         if(fout.fail()){
@@ -285,6 +315,20 @@ void SetupPin(int argc, char *argv[])
         cerr << "Specify a non empty file name"<<endl;
         return;
     }
+
+    string dfileName = KnobOutputFile.Value();
+    if (!dfileName.empty()) {
+        dotout.open(dfileName.c_str(), std::ios::out);
+        if(dotout.fail()){
+            cerr << "Error Opening dot file"<<endl;
+            return;
+        }
+    }
+    else{
+        cerr << "Specify a non empty dot file name"<<endl;
+        return;
+    }
+
 
     //TRACE_AddInstrumentFunction(Trace_cb, 0);
     //RTN_AddInstrumentFunction(RecordRoutineEntry,0);

@@ -4,6 +4,8 @@
 #include "globals.h"
 #include <vector>
 #include <iostream>
+#include <map>
+#include <string>
 
 using namespace std;
 
@@ -46,10 +48,38 @@ public:
             cout<<endl;
         }
     }
+    void PrintDot(ostream &dotout, map<u16,string> & ADDtoName) {
+        dotout << "digraph {\ngraph []"
+               << "\nnode [fontcolor=black, style=filled, fontsize=20];"
+               << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
+               << endl;
 
+
+        for (u16 r=0; r<Matrix.size(); r++) {
+            dotout << "\"" << r << "[Label=" << ADDtoName[r] << "\"];" << endl;
+        }
+
+        //fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->producer , name2.c_str());
+        //"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " Bytes \\n %" PRIu64 " UnMAs \\n %" PRIu64 " UnDVs \" color=\"#%02x%02x%02x\"]\n",
+
+        for (u16 r=0; r<Matrix.size(); r++) {
+            for (u16 c=0; c<Matrix[r].size(); c++) {
+                u16 prod = r;
+                u16 cons = c; 
+                dotout << "\"" << prod << "\""
+                       << "->"
+                       << "\"" << cons << "\""
+                       << "[Label=\"" << Matrix[r][c] <<"\"]"
+                       << endl;
+            }
+        }
+
+        dotout << "}" << endl;
+    }
 };
 
 void RecordCommunication(FtnNo prod, FtnNo cons, int size);
 void PrintCommunication();
+void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName);
 
 #endif

@@ -12,8 +12,8 @@ int main(int argc, char *argv[])
 {
     SetupPin(argc,argv);
 
-    RecordWrite(2,4,2);
-    RecordRead(3,4,2);
+    //RecordWrite(2,4,2);
+    //RecordRead(3,4,2);
 
     PrintCommunication();
 
