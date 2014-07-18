@@ -12,7 +12,7 @@ unsigned int sumArr[SIZE], diffArr[SIZE];
 
 unsigned int sqrArr[SIZE];
 
-void init()
+void initVecs()
 {
     int i;
     for(i = 0; i < SIZE; i++)
@@ -22,7 +22,7 @@ void init()
     }
 }
 
-void sum()
+void sumVecs()
 {
     int i;
     for(i = 0; i < SIZE; i++)
@@ -31,7 +31,7 @@ void sum()
     }
 }
 
-void diff()
+void diffVecs()
 {
     int i;
     for(i = 0; i < SIZE; i++)
@@ -91,7 +91,7 @@ uint32_t SquareRootRounded(uint32_t a_nInput)
     return res;
 }
 
-void sqroot()
+void sqrootVecs()
 {
     int i;
     for(i = 0; i < SIZE; i++)
@@ -103,10 +103,10 @@ void sqroot()
 
 int main()
 {
-    init();
-    sum();
-    diff();
-    sqroot();
+    initVecs();
+    sumVecs();
+    diffVecs();
+    sqrootVecs();
     
     cout<<sumArr[1]+diffArr[1]<<endl;
     

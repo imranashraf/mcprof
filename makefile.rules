@@ -70,6 +70,7 @@ endif
 # Linux
 ifeq ($(TARGET_OS),linux)
 	TOOL_CXXFLAGS+=-MD
+	APP_CXXFLAGS+=-fno-inline
 endif
 
 # Windows

@@ -9,11 +9,13 @@
 #include "pintrace.h"
 #include <iostream>
 #include <fstream>
+#include <stack>
 
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
 std::ofstream fout;
+stack <string> CallStack; // Call Stack to trace function call
 
 /* ===================================================================== */
 // Command line switches
@@ -49,15 +51,23 @@ INT32 Usage()
 // Print a memory read record
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    fout << ip << " R " <<addr<< " " << refSize << endl;
-//     RecordRead(1,addr,refSize);
+    string ftnName("NA");
+    if( !CallStack.empty() )
+        ftnName = CallStack.top();
+
+    fout << ftnName << " " << ip << " R " <<addr<< " " << refSize << endl;
+    //RecordRead(ftnNo,addr,refSize);
 }
 
 // Print a memory write record
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    fout << ip << " W " <<addr<< " " << refSize << endl;
-//     RecordWrite(ftnNo,addr,refSize);
+    string ftnName("NA");
+    if( !CallStack.empty() )
+        ftnName = CallStack.top();
+
+    fout << ftnName << " " << ip << " W " <<addr<< " " << refSize << endl;
+    //RecordWrite(ftnNo,addr,refSize);
 }
 
 /* ===================================================================== */
@@ -139,6 +149,31 @@ void Image_cb1(IMG img, void *v)
     }
 }
 
+VOID RecordRoutineEntry(VOID *ip)
+{
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+
+    cout << "Entring Routine : "<< demangledNameNoParams << endl;
+    CallStack.push(demangledNameNoParams);
+}
+
+
+VOID RecordRoutineExit(VOID *ip)
+{
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+//     if(!(CallStack.empty()) && (CallStack.top()==rtnName)) {
+//     cerr << " Return Stack Top: "<<CallStack.top()<< endl;
+//     cerr << " Return Routine Name : "<<rtnName<< endl;
+
+    if( !(CallStack.empty()) ) {
+        cout << " Return Stack Top: "<< CallStack.top() << endl;
+        CallStack.pop();
+        cout << " Leaving Routine : "<< demangledNameNoParams << endl << endl;
+    }
+}
+
 // IMG instrumentation routine - called once per image upon image load
 VOID Image_cb(IMG img, VOID * v)
 {
@@ -146,11 +181,11 @@ VOID Image_cb(IMG img, VOID * v)
     string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
         KnobMainExecutableOnly.Value() == true) {
-        cerr << " Skipping Image "<<img_name<< " as it is not main executable " << endl;
+        cout << " Skipping Image "<<img_name<< " as it is not main executable " << endl;
         return;
     }
     else {
-        cerr << " Instrumenting "<<img_name<< " as it is the Main executable " <<endl;
+        cout << " Instrumenting "<<img_name<< " as it is the Main executable " <<endl;
     }
 
     // To find all the instructions in the image, we traverse the sections of the image.
@@ -160,14 +195,10 @@ VOID Image_cb(IMG img, VOID * v)
         for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
 
             // Many RTN APIs require that the RTN be opened first.
-            string rtnName = RTN_Name(rtn);
-            string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-//             string demangledName = PIN_UndecorateSymbolName(rtnName, UNDECORATION_COMPLETE);
-            cerr << " Routine Name = "<<rtnName<<endl;
-//             cerr << " UNDECORATION_COMPLETE = "<<demangledName<<endl;
-//             cerr << " UNDECORATION_NAME_ONLY = "<<demangledNameNoParams<<endl << endl;
-
             RTN_Open(rtn);
+
+            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
+                    IARG_INST_PTR ,IARG_END);
 
             // Call PIN_GetSourceLocation for all the instructions of the RTN.
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
@@ -197,18 +228,16 @@ VOID Image_cb(IMG img, VOID * v)
                             IARG_END);
                     }
                 }
+
+                if (INS_IsRet(ins)){
+                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                                             (AFUNPTR)RecordRoutineExit,
+                                             IARG_INST_PTR, IARG_END);
+                }
             }
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
         }
     }
-}
-
-VOID Routine_cb(RTN rtn,VOID *v)
-{
-    string RName=RTN_Name(rtn);
-    RTN_Open(rtn);
-    cout << "Routine "<< RName << endl;
-    RTN_Close(rtn);
 }
 
 
@@ -257,8 +286,8 @@ void SetupPin(int argc, char *argv[])
         return;
     }
 
-    TRACE_AddInstrumentFunction(Trace_cb, 0);
-//         RTN_AddInstrumentFunction(Routine_cb,0);
+    //TRACE_AddInstrumentFunction(Trace_cb, 0);
+    //RTN_AddInstrumentFunction(RecordRoutineEntry,0);
     IMG_AddInstrumentFunction(Image_cb, 0);
 
     // Register function to be called when the application exits
