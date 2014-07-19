@@ -276,7 +276,7 @@ VOID Image_cb(IMG img, VOID * v)
 VOID Fini(INT32 code, VOID *v)
 {
     PrintCommunication();
-    PrintCommunicationDot(dotout, ADDtoName);
+    PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
 
     fout <<  "===============================================" << endl;
     fout <<  "          The End     " << endl;
@@ -316,7 +316,7 @@ void SetupPin(int argc, char *argv[])
         return;
     }
 
-    string dfileName = KnobOutputFile.Value();
+    string dfileName = KnobDotFile.Value();
     if (!dfileName.empty()) {
         dotout.open(dfileName.c_str(), std::ios::out);
         if(dotout.fail()){

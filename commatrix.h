@@ -48,29 +48,35 @@ public:
             cout<<endl;
         }
     }
-    void PrintDot(ostream &dotout, map<u16,string> & ADDtoName) {
-        dotout << "digraph {\ngraph []"
+    void PrintDot(ostream &dotout, map<u16,string> & ADDtoName, u16 TotalFtns) {
+        dotout << "digraph {\ngraph [];"
                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
                << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
                << endl;
 
+        if ( TotalFtns > Matrix.size() ) {
+            cerr << " TotalFtns > Matrix.size() "<<endl;
+            return;
+        }
 
-        for (u16 r=0; r<Matrix.size(); r++) {
-            dotout << "\"" << r << "[Label=" << ADDtoName[r] << "\"];" << endl;
+        for (u16 r=0; r<TotalFtns; r++) {
+            dotout << "\"" << r << "\"" << " [label=\"" << ADDtoName[r] << "\"];" << endl;
         }
 
         //fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->producer , name2.c_str());
         //"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " Bytes \\n %" PRIu64 " UnMAs \\n %" PRIu64 " UnDVs \" color=\"#%02x%02x%02x\"]\n",
 
-        for (u16 r=0; r<Matrix.size(); r++) {
-            for (u16 c=0; c<Matrix[r].size(); c++) {
-                u16 prod = r;
-                u16 cons = c; 
-                dotout << "\"" << prod << "\""
-                       << "->"
-                       << "\"" << cons << "\""
-                       << "[Label=\"" << Matrix[r][c] <<"\"]"
-                       << endl;
+        for (u16 r=0; r<TotalFtns; r++) {
+            for (u16 c=0; c<TotalFtns; c++) {
+                u16 prod = c;
+                u16 cons = r;
+                if(Matrix[r][c] > 0 ) {
+                    dotout << "\"" << prod << "\""
+                           << "->"
+                           << "\"" << cons << "\""
+                           << "[label=\"" << Matrix[r][c] <<" Bytes\"]"
+                           << endl;
+                }
             }
         }
 
@@ -80,6 +86,6 @@ public:
 
 void RecordCommunication(FtnNo prod, FtnNo cons, int size);
 void PrintCommunication();
-void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName);
+void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName, u16 TotalFtns);
 
 #endif
