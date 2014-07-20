@@ -173,7 +173,7 @@ VOID RecordRoutineEntry(VOID *ip)
         ADDtoName[GlobalFunctionNo]=name;   // create the Number -> String binding
     }
 
-    cout << "Entring Routine : "<< name << endl;
+    dout << "Entring Routine : "<< name << endl;
     CallStack.push(name);
 }
 
@@ -185,15 +185,15 @@ VOID RecordRoutineExit(VOID *ip)
 
     //if( !(CallStack.empty()) ) {
     if(!(CallStack.empty()) && (CallStack.top() == demangledNameNoParams)) {
-        cout << " Leaving Routine : "<< demangledNameNoParams << endl;
+        dout << " Leaving Routine : "<< demangledNameNoParams << endl;
         CallStack.pop();
     }
     else if (!(CallStack.empty()) ) {
-        cout << " Not Leaving Routine : "<< demangledNameNoParams << endl;
-        cout << " Return Stack Top: "<< CallStack.top() << endl;
+        dout << " Not Leaving Routine : "<< demangledNameNoParams << endl;
+        dout << " Return Stack Top: "<< CallStack.top() << endl;
     }
     else{
-        cout << " Not Leaving Routine as CallStack empty without : "<< demangledNameNoParams << endl;
+        dout << " Not Leaving Routine as CallStack empty without : "<< demangledNameNoParams << endl;
     }
 
  
@@ -275,14 +275,14 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
-    PrintCommunication();
+    //PrintCommunication();
     PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
 
-    fout <<  "===============================================" << endl;
-    fout <<  "          The End     " << endl;
-    fout <<  "===============================================" << endl;
+/*    fout <<  "===============================================" << endl;*/
+    //fout <<  "          The End     " << endl;
+    /*fout <<  "===============================================" << endl;*/
 
-    fout.close();
+    //fout.close();
     dotout.close();
 }
 
@@ -303,18 +303,18 @@ void SetupPin(int argc, char *argv[])
         return;
     }
 
-    string fileName = KnobOutputFile.Value();
-    if (!fileName.empty()) {
-        fout.open(fileName.c_str(), std::ios::out);
-        if(fout.fail()){
-            cerr << "Error Opening file"<<endl;
-            return;
-        }
-    }
-    else{
-        cerr << "Specify a non empty file name"<<endl;
-        return;
-    }
+/*    string fileName = KnobOutputFile.Value();*/
+    //if (!fileName.empty()) {
+        //fout.open(fileName.c_str(), std::ios::out);
+        //if(fout.fail()){
+            //cerr << "Error Opening file"<<endl;
+            //return;
+        //}
+    //}
+    //else{
+        //cerr << "Specify a non empty file name"<<endl;
+        //return;
+    /*}*/
 
     string dfileName = KnobDotFile.Value();
     if (!dfileName.empty()) {

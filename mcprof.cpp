@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     //RecordWrite(2,4,2);
     //RecordRead(3,4,2);
 
-    PrintCommunication();
+    //PrintCommunication();
 
     // Start the program, never returns
     PIN_StartProgram();
