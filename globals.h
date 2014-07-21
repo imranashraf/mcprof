@@ -1,5 +1,18 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
+#include <iostream>
+
+//comment the following to hide debugging output
+// #define DEBUG
+
+extern std::ostream cnull;
+
+#ifdef DEBUG
+#define dout (std::cerr)
+#else
+#define dout (cnull)
+#endif
+
 
 #if defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.

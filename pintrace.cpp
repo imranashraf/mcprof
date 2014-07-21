@@ -2,25 +2,43 @@
  *  This file contains an ISA-portable PIN tool for tracing memory accesses.
  */
 
+#include "pin.H"
+#include "globals.h"
+#include "pintrace.h"
+#include "commatrix.h"
+#include "shadow.h"
 #include <iostream>
 #include <fstream>
+#include <stack>
+#include <set>
+#include <map>
 
-#include "pin.H"
+using namespace std;
 
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
-// std::ostream * fout = &cerr;
 std::ofstream fout;
+std::ofstream dotout;
+stack <string> CallStack;
+map <string,UINT16> NametoADD;
+map <UINT16,string> ADDtoName;
+set<string> SeenFname;
+UINT16 GlobalFunctionNo=0;
 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
-                            "o", "memtrace.out", "specify file name for MyPinTool output");
+                            "o", "memtrace.out", "specify file name for output");
 
-KNOB<BOOL>   KnobMemTrace(KNOB_MODE_WRITEONCE,  "pintool",
-                       "trace", "1", "trace memory accesses in the application");
+KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
+                         "d", "communication.dot", "specify file name for output in dot");
+
+KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
+                                  "MainExecutableOnly","1", "Trace functions that are contained only in the main\
+    executable image");
+
 /* ===================================================================== */
 // Utilities
 /* ===================================================================== */
@@ -33,7 +51,7 @@ INT32 Usage()
 {
     cerr << "This Pintool prints a trace of memory addresses"<<endl;
     cerr << KNOB_BASE::StringKnobSummary() << endl;
-    
+
     return -1;
 }
 
@@ -44,69 +62,219 @@ INT32 Usage()
 // Print a memory read record
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    fout << ip << " " << addr << " R " << refSize << "\n"; 
+    string ftnName("NA");
+    if( !CallStack.empty() )
+        ftnName = CallStack.top();
+
+    dout << ftnName << "(" << NametoADD[ftnName] << ") " << ip << " R "
+         <<addr<< " " << refSize << endl;
+    RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
 }
 
 // Print a memory write record
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    fout << ip << " " << addr << " W " << refSize << "\n"; 
+    string ftnName("NA");
+    if( !CallStack.empty() )
+        ftnName = CallStack.top();
+
+    dout << ftnName << "(" << NametoADD[ftnName] << ") " << ip << " W "
+         <<addr<< " " << refSize << endl;
+    RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
 }
 
 /* ===================================================================== */
 // Instrumentation callbacks
 /* ===================================================================== */
 
-// Is called for every instruction and instruments reads and writes
-VOID Instruction(INS ins, VOID *v)
+/*!
+ * Insert call to the CountBbl() analysis routine before every basic block
+ * of the trace.
+ * This function is called every time a new trace is encountered.
+ * @param[in]   trace    trace to be instrumented
+ * @param[in]   v        value specified by the tool in the TRACE_AddInstrumentFunction
+ *                       function call
+ */
+void Trace_cb(TRACE trace, void *v)
 {
-    // Instruments memory accesses using a predicated call, i.e.
-    // the instrumentation is called iff the instruction will actually be executed.
-    //
-    // On the IA-32 and Intel(R) 64 architectures conditional moves and REP 
-    // prefixed instructions appear as predicated instructions in Pin.
-    UINT32 memOperands = INS_MemoryOperandCount(ins);
+    RTN rtn = TRACE_Rtn(trace);
+    if (!RTN_Valid(rtn)) return;
+//     string rtn_name = RTN_Name(rtn);
 
-    // Iterate over each memory operand of the instruction.
-    for (UINT32 memOp = 0; memOp < memOperands; memOp++)
-    {
-        UINT32 refSize = INS_MemoryOperandSize(ins, memOp);
+    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
+        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins)) {
+            UINT32 memOperands = INS_MemoryOperandCount(ins);
+            for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
+                size_t refSize = INS_MemoryOperandSize(ins, memOp);
+//                 bool isStack = INS_IsStackRead(ins);
+//                 if(!isStack) return;
 
-        if (INS_MemoryOperandIsRead(ins, memOp))
-        {
-            INS_InsertPredicatedCall(
-                ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
-                IARG_INST_PTR,
-                IARG_MEMORYOP_EA, memOp,
-                IARG_UINT32, refSize,
-                IARG_END);
-        }
-        // Note that in some architectures a single memory operand can be 
-        // both read and written (for instance incl (%eax) on IA-32)
-        // In that case we instrument it once for read and once for write.
-        if (INS_MemoryOperandIsWritten(ins, memOp))
-        {
-            INS_InsertPredicatedCall(
-                ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
-                IARG_INST_PTR,
-                IARG_MEMORYOP_EA, memOp,
-                IARG_UINT32, refSize,
-                IARG_END);
+                if (INS_MemoryOperandIsRead(ins, memOp)) {
+                    INS_InsertPredicatedCall(
+                        ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
+                        IARG_INST_PTR,
+                        IARG_MEMORYOP_EA, memOp,
+                        IARG_UINT32, refSize,
+                        IARG_END);
+                }
+
+                if (INS_MemoryOperandIsWritten(ins, memOp)) {
+                    INS_InsertPredicatedCall(
+                        ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
+                        IARG_INST_PTR,
+                        IARG_MEMORYOP_EA, memOp,
+                        IARG_UINT32, refSize,
+                        IARG_END);
+                }
+            }
         }
     }
 }
 
-/* ===================================================================== */
-/* Fini                                                                  */
-/* ===================================================================== */
+VOID RecordRoutineEntry(VOID *ip)
+{
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string name = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+
+    if (
+        name[0]=='_' ||
+        name[0]=='?' ||
+#ifdef WIN32
+        !name.compare("GetPdbDll") ||
+        !name.compare("DebuggerRuntime") ||
+        !name.compare("atexit") ||
+        !name.compare("failwithmessage") ||
+        !name.compare("pre_c_init") ||
+        !name.compare("pre_cpp_init") ||
+        !name.compare("mainCRTStartup") ||
+        !name.compare("NtCurrentTeb") ||
+        !name.compare("check_managed_app") ||
+        !name.compare("DebuggerKnownHandle") ||
+        !name.compare("DebuggerProbe") ||
+        !name.compare("failwithmessage") ||
+        !name.compare("unnamedImageEntryPoint"
+#else
+        !name.compare(".plt") ||
+        !name.compare("call_gmon_start") ||
+        !name.compare("register_tm_clones") ||
+        !name.compare("deregister_tm_clones") ||
+        !name.compare("frame_dummy")
+#endif
+                     )
+        return;
+
+    if(!SeenFname.count(name)) { // this is the first time I see this function name
+        SeenFname.insert(name);  // mark this function name as seen
+            GlobalFunctionNo++;      // create a dummy Function Number for this function
+            NametoADD[name]=GlobalFunctionNo;   // create the string -> Number binding
+            ADDtoName[GlobalFunctionNo]=name;   // create the Number -> String binding
+        }
+
+    dout << "Entring Routine : "<< name << endl;
+    CallStack.push(name);
+}
+
+
+VOID RecordRoutineExit(VOID *ip)
+{
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+
+    //if( !(CallStack.empty()) ) {
+    if(!(CallStack.empty()) && (CallStack.top() == demangledNameNoParams)) {
+        dout << " Leaving Routine : "<< demangledNameNoParams << endl;
+        CallStack.pop();
+    } else if (!(CallStack.empty()) ) {
+        dout << " Not Leaving Routine : "<< demangledNameNoParams << endl;
+        dout << " Return Stack Top: "<< CallStack.top() << endl;
+    } else {
+        dout << " Not Leaving Routine as CallStack empty without : "<< demangledNameNoParams << endl;
+    }
+
+
+}
+
+// IMG instrumentation routine - called once per image upon image load
+VOID Image_cb(IMG img, VOID * v)
+{
+    // For simplicity, instrument only the main image. This can be extended to any other image of course.
+    string img_name = IMG_Name(img);
+    if (IMG_IsMainExecutable(img) == false &&
+    KnobMainExecutableOnly.Value() == true) {
+        cout << " Skipping Image "<<img_name<< " as it is not main executable " << endl;
+        return;
+    } else {
+        cout << " Instrumenting "<<img_name<< " as it is the Main executable " <<endl;
+    }
+
+    // To find all the instructions in the image, we traverse the sections of the image.
+    for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
+
+        // For each section, process all RTNs.
+        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
+
+            // Many RTN APIs require that the RTN be opened first.
+            RTN_Open(rtn);
+
+            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
+                           IARG_INST_PTR ,IARG_END);
+
+            for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
+                UINT32 memOperands = INS_MemoryOperandCount(ins);
+                for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
+                    size_t refSize = INS_MemoryOperandSize(ins, memOp);
+//                 bool isStack = INS_IsStackRead(ins);
+//                 if(!isStack) return;
+
+                    if (INS_MemoryOperandIsRead(ins, memOp)) {
+                        INS_InsertPredicatedCall(
+                            ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
+                            IARG_INST_PTR,
+                            IARG_MEMORYOP_EA, memOp,
+                            IARG_UINT32, refSize,
+                            IARG_END);
+                    }
+
+                    if (INS_MemoryOperandIsWritten(ins, memOp)) {
+                        INS_InsertPredicatedCall(
+                            ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
+                            IARG_INST_PTR,
+                            IARG_MEMORYOP_EA, memOp,
+                            IARG_UINT32, refSize,
+                            IARG_END);
+                    }
+                }
+
+                if (INS_IsRet(ins)) {
+                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                                             (AFUNPTR)RecordRoutineExit,
+                                             IARG_INST_PTR, IARG_END);
+                }
+            }
+            RTN_Close(rtn); // Don't forget to close the RTN once you're done.
+        }
+    }
+}
+
+
 /*!
- * The Fini procedure of the tool.
- * This function is called at the end of the application.
+ * Print out analysis results.
+ * This function is called when the application exits.
+ * @param[in]   code            exit code of the application
+ * @param[in]   v               value specified by the tool in the
+ *                              PIN_AddFiniFunction function call
  */
 VOID Fini(INT32 code, VOID *v)
 {
-    fout <<  "#eof"<<endl;
-    fout.close();
+    //PrintCommunication();
+    PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
+
+    /*    fout <<  "===============================================" << endl;*/
+    //fout <<  "          The End     " << endl;
+    /*fout <<  "===============================================" << endl;*/
+
+    //fout.close();
+    dotout.close();
 }
 
 /* ===================================================================== */
@@ -121,23 +289,48 @@ VOID Fini(INT32 code, VOID *v)
  */
 void SetupPin(int argc, char *argv[])
 {
-    // Initialize symbol processing
     PIN_InitSymbols();
-    
-    if (PIN_Init(argc, argv)){
-      Usage();
-      return;
+    // Initialize PIN library. Print help message if -h(elp) is specified
+    // in the command line or the command line is invalid
+    if( PIN_Init(argc,argv) ) {
+        Usage();
+        return;
     }
 
-    string fileName = KnobOutputFile.Value();
-    if (!fileName.empty()) {
-        fout.open(fileName.c_str()); 
-        if(fout.fail()){
-            cerr << "Error Opening File" << endl;
+    /*    string fileName = KnobOutputFile.Value();*/
+    //if (!fileName.empty()) {
+    //fout.open(fileName.c_str(), std::ios::out);
+    //if(fout.fail()){
+    //cerr << "Error Opening file"<<endl;
+    //return;
+    //}
+    //}
+    //else{
+    //cerr << "Specify a non empty file name"<<endl;
+    //return;
+    /*}*/
+
+    string dfileName = KnobDotFile.Value();
+    if (!dfileName.empty()) {
+        dotout.open(dfileName.c_str(), std::ios::out);
+        if(dotout.fail()) {
+            cerr << "Error Opening dot file"<<endl;
             return;
         }
+    } else {
+        cerr << "Specify a non empty dot file name"<<endl;
+        return;
     }
-    
-    INS_AddInstrumentFunction(Instruction, 0);
+
+    string fname("UNKNOWN");
+    SeenFname.insert(fname);             // Add UNKNOWN as the first function name
+    NametoADD[fname]=GlobalFunctionNo;   // create the string -> Number binding
+    ADDtoName[GlobalFunctionNo]=fname;   // create the Number -> String binding
+
+    //TRACE_AddInstrumentFunction(Trace_cb, 0);
+    //RTN_AddInstrumentFunction(RecordRoutineEntry,0);
+    IMG_AddInstrumentFunction(Image_cb, 0);
+
+    // Register function to be called when the application exits
     PIN_AddFiniFunction(Fini, 0);
 }
