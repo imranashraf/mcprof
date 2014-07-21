@@ -6,6 +6,8 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <cmath>
+#include <iomanip>
 
 using namespace std;
 
@@ -38,16 +40,27 @@ public:
             Matrix[row][col] += size;
     }
 
+    double MaxCommunication() {
+        double currmax=0;
+        // Following iterations can be optimized to TotalFtns instead of size
+        for (u16 r=0; r<Matrix.size(); r++) {
+            for (u16 c=0; c<Matrix.size(); c++) {
+                currmax = std::max(currmax, Matrix[r][c]);
+            }
+        }
+        return currmax;
+    }
+
     void Print() {
-//             for (u16 r=0; r<Matrix.size(); r++) {
+        // Print out the a part of communication matrix just for testing
         for (u16 r=0; r<10; r++) {
-//                 for (u16 c=0; c<Matrix[r].size(); c++) {
             for (u16 c=0; c<10; c++) {
                 cout << Matrix[r][c] <<"  ";
             }
             cout<<endl;
         }
     }
+
     void PrintDot(ostream &dotout, map<u16,string> & ADDtoName, u16 TotalFtns) {
         dotout << "digraph {\ngraph [];"
                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
@@ -63,18 +76,29 @@ public:
             dotout << "\"" << r << "\"" << " [label=\"" << ADDtoName[r] << "\"];" << endl;
         }
 
-        //fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->producer , name2.c_str());
-        //"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " Bytes \\n %" PRIu64 " UnMAs \\n %" PRIu64 " UnDVs \" color=\"#%02x%02x%02x\"]\n",
+
+        int color;
+        double maxComm = MaxCommunication();
 
         for (u16 r=0; r<TotalFtns; r++) {
             for (u16 c=0; c<TotalFtns; c++) {
                 u16 prod = c;
                 u16 cons = r;
                 if(Matrix[r][c] > 0 ) {
+                    color = (int) (  1023 *  log((double)(Matrix[r][c])) / log((double)maxComm)  );
                     dotout << "\"" << prod << "\""
                            << "->"
                            << "\"" << cons << "\""
-                           << "[label=\"" << Matrix[r][c] <<" Bytes\"]"
+                           << "[label=\""
+                           << dec
+                           << Matrix[r][c] <<" Bytes\""
+                           << "color = \"#"
+                           << hex
+                           << setw(2) << setfill('0') << max(0, color-768)
+                           << setw(2) << setfill('0') << min(255, 512-(int)abs(color-512))
+                           << setw(2) << setfill('0') << max(0, min(255,512-color))
+                           << "\""
+                           << "]"
                            << endl;
                 }
             }

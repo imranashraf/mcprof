@@ -7,10 +7,10 @@
 
 extern std::ostream cnull;
 
-#ifdef DEBUG 
-    #define dout (std::cerr)
+#ifdef DEBUG
+#define dout (std::cerr)
 #else
-    #define dout (cnull)
+#define dout (cnull)
 #endif
 
 

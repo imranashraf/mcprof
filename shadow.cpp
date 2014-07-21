@@ -21,8 +21,7 @@ void RecordRead(FtnNo cons, uptr addr, int size)
 
     for(int i=0; i<size; i++) {
         prod = ShadowMemory.getProducer(addr+i);
-        //RecordCommunication
         RecordCommunication(prod,cons,1);
-        dout<<"Communication b/w "<<(int)prod<<" and "<<(int)cons<<endl;
+        dout<<"Communication b/w " <<(int)prod<<" and "<<(int)cons<<endl;
     }
 }
