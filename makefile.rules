@@ -108,12 +108,12 @@ $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
 
 clean: cleantemp
 cleantemp:
-	rm -f *~ $(TESTDIR)*~
+	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf
 
 
 format:
 	astyle --style=kr *.h *.cpp
-	rm *.orig
+	rm -f *.orig
 
 open:
 	kate makefile.rules globals.h globals.cpp shadow.h shadow.cpp commatrix.h \

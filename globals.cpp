@@ -1,5 +1,6 @@
 #include "globals.h"
 
-//null stream for debugging
-std::ostream cnull(0);
-
+// void Die(){
+//     ECHO("Exiting, Good bye");
+//     std::exit(EXIT_FAILURE);
+// }

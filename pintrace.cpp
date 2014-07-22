@@ -33,11 +33,13 @@ KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
                             "o", "memtrace.out", "specify file name for output");
 
 KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
-                         "d", "communication.dot", "specify file name for output in dot");
+                         "d", "communication.dot",
+                         "specify file name for output in dot");
 
 KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
-                                  "MainExecutableOnly","1", "Trace functions that are contained only in the main\
-    executable image");
+                                  "MainExecutableOnly","1",
+                                  "Trace functions that are contained only in the\
+                                  executable image");
 
 /* ===================================================================== */
 // Utilities
@@ -49,9 +51,9 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
 
 INT32 Usage()
 {
-    cerr << "This Pintool prints a trace of memory addresses"<<endl;
-    cerr << KNOB_BASE::StringKnobSummary() << endl;
-
+    ECHO( "Memory and Data-Communication PROFiler.");
+    ECHO( KNOB_BASE::StringKnobSummary() << endl);
+    Die();
     return -1;
 }
 
@@ -59,27 +61,25 @@ INT32 Usage()
 // Analysis routines
 /* ===================================================================== */
 
-// Print a memory read record
+// Record a memory read
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
     string ftnName("NA");
     if( !CallStack.empty() )
         ftnName = CallStack.top();
 
-    dout << ftnName << "(" << NametoADD[ftnName] << ") " << ip << " R "
-         <<addr<< " " << refSize << endl;
+    DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" R "<<VARS2(addr, refSize) );
     RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
 }
 
-// Print a memory write record
+// Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
     string ftnName("NA");
     if( !CallStack.empty() )
         ftnName = CallStack.top();
 
-    dout << ftnName << "(" << NametoADD[ftnName] << ") " << ip << " W "
-         <<addr<< " " << refSize << endl;
+    DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" W "<<VARS2(addr, refSize) );
     RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
 }
 
@@ -88,8 +88,8 @@ VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 /* ===================================================================== */
 
 /*!
- * Insert call to the CountBbl() analysis routine before every basic block
- * of the trace.
+ * Insert call to RecordMemRead/RecordMemWrite analysis routine before
+ * every basic block of the trace.
  * This function is called every time a new trace is encountered.
  * @param[in]   trace    trace to be instrumented
  * @param[in]   v        value specified by the tool in the TRACE_AddInstrumentFunction
@@ -163,14 +163,14 @@ VOID RecordRoutineEntry(VOID *ip)
                      )
         return;
 
-    if(!SeenFname.count(name)) { // this is the first time I see this function name
+    if(!SeenFname.count(name)) { // First time seeing this function name
         SeenFname.insert(name);  // mark this function name as seen
-            GlobalFunctionNo++;      // create a dummy Function Number for this function
-            NametoADD[name]=GlobalFunctionNo;   // create the string -> Number binding
-            ADDtoName[GlobalFunctionNo]=name;   // create the Number -> String binding
+            GlobalFunctionNo++;      // create a Function Number for this function
+            NametoADD[name]=GlobalFunctionNo;   // create String -> Number binding
+            ADDtoName[GlobalFunctionNo]=name;   // create Number -> String binding
         }
 
-    dout << "Entring Routine : "<< name << endl;
+    DECHO ("Entring Routine : " << name);
     CallStack.push(name);
 }
 
@@ -178,17 +178,18 @@ VOID RecordRoutineEntry(VOID *ip)
 VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName,
+                                   UNDECORATION_NAME_ONLY);
 
-    //if( !(CallStack.empty()) ) {
     if(!(CallStack.empty()) && (CallStack.top() == demangledNameNoParams)) {
-        dout << " Leaving Routine : "<< demangledNameNoParams << endl;
+        DECHO("Leaving Routine : " << demangledNameNoParams);
         CallStack.pop();
     } else if (!(CallStack.empty()) ) {
-        dout << " Not Leaving Routine : "<< demangledNameNoParams << endl;
-        dout << " Return Stack Top: "<< CallStack.top() << endl;
+        DECHO("Not Leaving Routine : "<< VAR(demangledNameNoParams) );
+        DECHO(VAR(CallStack.top()));
     } else {
-        dout << " Not Leaving Routine as CallStack empty without : "<< demangledNameNoParams << endl;
+        DECHO("Not Leaving Routine as CallStack empty without : "
+              << VAR(demangledNameNoParams));
     }
 
 
@@ -197,17 +198,18 @@ VOID RecordRoutineExit(VOID *ip)
 // IMG instrumentation routine - called once per image upon image load
 VOID Image_cb(IMG img, VOID * v)
 {
-    // For simplicity, instrument only the main image. This can be extended to any other image of course.
+    // For simplicity, instrument only the main image.
+    // This can be extended to any other image of course.
     string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
     KnobMainExecutableOnly.Value() == true) {
-        cout << " Skipping Image "<<img_name<< " as it is not main executable " << endl;
+        ECHO("Skipping Image "<< img_name<< " as it is not main executable");
         return;
     } else {
-        cout << " Instrumenting "<<img_name<< " as it is the Main executable " <<endl;
+        ECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
     }
 
-    // To find all the instructions in the image, we traverse the sections of the image.
+    // Traverse the sections of the image.
     for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
 
         // For each section, process all RTNs.
@@ -219,6 +221,7 @@ VOID Image_cb(IMG img, VOID * v)
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
                            IARG_INST_PTR ,IARG_END);
 
+            // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
                 UINT32 memOperands = INS_MemoryOperandCount(ins);
                 for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
@@ -268,12 +271,6 @@ VOID Fini(INT32 code, VOID *v)
 {
     //PrintCommunication();
     PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
-
-    /*    fout <<  "===============================================" << endl;*/
-    //fout <<  "          The End     " << endl;
-    /*fout <<  "===============================================" << endl;*/
-
-    //fout.close();
     dotout.close();
 }
 
@@ -296,19 +293,6 @@ void SetupPin(int argc, char *argv[])
         Usage();
         return;
     }
-
-    /*    string fileName = KnobOutputFile.Value();*/
-    //if (!fileName.empty()) {
-    //fout.open(fileName.c_str(), std::ios::out);
-    //if(fout.fail()){
-    //cerr << "Error Opening file"<<endl;
-    //return;
-    //}
-    //}
-    //else{
-    //cerr << "Specify a non empty file name"<<endl;
-    //return;
-    /*}*/
 
     string dfileName = KnobDotFile.Value();
     if (!dfileName.empty()) {

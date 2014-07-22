@@ -1,18 +1,11 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
+
 #include <iostream>
+#include <cstdlib>
 
 //comment the following to hide debugging output
 // #define DEBUG
-
-extern std::ostream cnull;
-
-#ifdef DEBUG
-#define dout (std::cerr)
-#else
-#define dout (cnull)
-#endif
-
 
 #if defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
@@ -33,4 +26,90 @@ typedef signed   int        s32;
 typedef signed   long long  s64;
 
 typedef u8  FtnNo;
+
+// Common defs.
+#define INLINE inline
+// Platform-specific defs.
+#if defined(_MSC_VER)
+# define ALWAYS_INLINE __forceinline
+# define ALIAS(x)
+# define ALIGNED(x) __declspec(align(x))
+# define NOINLINE __declspec(noinline)
+// # define NORETURN __declspec(noreturn)
+# define LIKELY(x) (x)
+# define UNLIKELY(x) (x)
+# define PREFETCH(x) /* _mm_prefetch(x, _MM_HINT_NTA) */
+#else
+# define ALWAYS_INLINE inline __attribute__((always_inline))
+# define ALIAS(x) __attribute__((alias(x)))
+# define ALIGNED(x) __attribute__((aligned(x)))
+# define NOINLINE __attribute__((noinline))
+// # define NORETURN  __attribute__((noreturn))
+# define LIKELY(x)     __builtin_expect(!!(x), 1)
+# define UNLIKELY(x)   __builtin_expect(!!(x), 0)
+# if defined(__i386__) || defined(__x86_64__)
+// __builtin_prefetch(x) generates prefetchnt0 on x86
+#  define PREFETCH(x) __asm__("prefetchnta (%0)" : : "r" (x))
+# else
+#  define PREFETCH(x) __builtin_prefetch(x)
+# endif
+#endif  // _MSC_VER
+
+#define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
+#define VAR(v) "`" #v "': " << v
+#define VARS2(first, second) VAR(first) << " - " << VAR(second)
+#define VARS3(first, second, third) VAR(first) << " - " << VARS2(second, third)
+#define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
+
+#ifdef DEBUG
+#define DECHO(content)                          ECHO(content)
+#else
+#define DECHO(content)
+#endif
+
+// void Die();
+#define Die(){\
+    ECHO("Exiting, Good bye");\
+    std::exit(EXIT_FAILURE);\
+}
+
+// Check macro
+#define CHECK_IMPL(c1, op, c2) \
+do { \
+    u64 v1 = (u64)(c1); \
+    u64 v2 = (u64)(c2); \
+    if (UNLIKELY(!(v1 op v2))) {\
+        ECHO("Check Failed" << VAR(c1) << #op << VAR(c2) );\
+        Die(); \
+    }\
+}   while (false) \
+/**/
+
+#define CHECK(a)       CHECK_IMPL((a), !=, 0)
+#define CHECK_EQ(a, b) CHECK_IMPL((a), ==, (b))
+#define CHECK_NE(a, b) CHECK_IMPL((a), !=, (b))
+#define CHECK_LT(a, b) CHECK_IMPL((a), <,  (b))
+#define CHECK_LE(a, b) CHECK_IMPL((a), <=, (b))
+#define CHECK_GT(a, b) CHECK_IMPL((a), >,  (b))
+#define CHECK_GE(a, b) CHECK_IMPL((a), >=, (b))
+
+#ifdef DEBUG
+#define DCHECK(a)       CHECK(a)
+#define DCHECK_EQ(a, b) CHECK_EQ(a, b)
+#define DCHECK_NE(a, b) CHECK_NE(a, b)
+#define DCHECK_LT(a, b) CHECK_LT(a, b)
+#define DCHECK_LE(a, b) CHECK_LE(a, b)
+#define DCHECK_GT(a, b) CHECK_GT(a, b)
+#define DCHECK_GE(a, b) CHECK_GE(a, b)
+#else
+#define DCHECK(a)
+#define DCHECK_EQ(a, b)
+#define DCHECK_NE(a, b)
+#define DCHECK_LT(a, b)
+#define DCHECK_LE(a, b)
+#define DCHECK_GT(a, b)
+#define DCHECK_GE(a, b)
+#endif
+
+
 #endif

@@ -67,15 +67,11 @@ public:
                << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
                << endl;
 
-        if ( TotalFtns > Matrix.size() ) {
-            cerr << " TotalFtns > Matrix.size() "<<endl;
-            return;
-        }
+        CHECK_LT(TotalFtns, Matrix.size());
 
         for (u16 r=0; r<TotalFtns; r++) {
             dotout << "\"" << r << "\"" << " [label=\"" << ADDtoName[r] << "\"];" << endl;
         }
-
 
         int color;
         double maxComm = MaxCommunication();
@@ -86,11 +82,11 @@ public:
                 u16 cons = r;
                 if(Matrix[r][c] > 0 ) {
                     color = (int) (  1023 *  log((double)(Matrix[r][c])) / log((double)maxComm)  );
-                    dotout << "\"" << prod << "\""
+                    dotout << dec
+                           << "\"" << prod << "\""
                            << "->"
                            << "\"" << cons << "\""
                            << "[label=\""
-                           << dec
                            << Matrix[r][c] <<" Bytes\""
                            << "color = \"#"
                            << hex
