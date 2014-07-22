@@ -108,7 +108,7 @@ $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
 
 clean: cleantemp
 cleantemp:
-	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf
+	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps
 
 
 format:

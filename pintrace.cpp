@@ -18,8 +18,8 @@
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
-std::ofstream fout;
 std::ofstream dotout;
+std::ofstream mout;
 stack <string> CallStack;
 map <string,UINT16> NametoADD;
 map <UINT16,string> ADDtoName;
@@ -30,8 +30,8 @@ UINT16 GlobalFunctionNo=0;
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
-                            "o", "memtrace.out", "specify file name for output");
+KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
+                            "m", "matrix.out", "specify file name for matrix output");
 
 KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
                          "d", "communication.dot",
@@ -271,9 +271,11 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
-    //PrintCommunication();
+    PrintCommunication(cout, 5);
+    PrintMatrix(mout, ADDtoName, GlobalFunctionNo);
     PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
     dotout.close();
+    mout.close();
 }
 
 /*!
@@ -293,15 +295,27 @@ void SetupPin(int argc, char *argv[])
         return;
     }
 
-    string dfileName = KnobDotFile.Value();
-    if (!dfileName.empty()) {
-        dotout.open(dfileName.c_str(), std::ios::out);
+    string dfName = KnobDotFile.Value();
+    if (!dfName.empty()) {
+        dotout.open(dfName.c_str(), std::ios::out);
         if(dotout.fail()) {
-            cerr << "Error Opening dot file"<<endl;
+            ECHO("Error Opening dot file");
             return;
         }
     } else {
-        cerr << "Specify a non empty dot file name"<<endl;
+        ECHO("Specify a non empty dot file name");
+        return;
+    }
+
+    string mfName = KnobMatrixFile.Value();
+    if (!mfName.empty()) {
+        mout.open(mfName.c_str(), std::ios::out);
+        if(mout.fail()) {
+            ECHO("Error Opening matrix file");
+            return;
+        }
+    } else {
+        ECHO("Specify a non empty matrix file name");
         return;
     }
 

@@ -51,13 +51,27 @@ public:
         return currmax;
     }
 
-    void Print() {
-        // Print out the a part of communication matrix just for testing
-        for (u16 r=0; r<10; r++) {
-            for (u16 c=0; c<10; c++) {
-                cout << Matrix[r][c] <<"  ";
+    void Print(ostream &fout, u16 TotalFtns) {
+        for (u16 r=0; r<TotalFtns; r++) {
+            for (u16 c=0; c<TotalFtns; c++) {
+                fout << setw(12) << Matrix[r][c] <<" ";
             }
-            cout<<endl;
+            fout<<endl;
+        }
+    }
+
+    void PrintMatrix(ostream &fout, map<u16,string> & ADDtoName, u16 TotalFtns) {
+        for (u16 r=0; r<TotalFtns; r++) {
+            fout << setw(20) << ADDtoName[r] << "  ";
+        }
+        fout << endl;
+
+        for (u16 r=0; r<TotalFtns; r++) {
+            fout << setw(35) << ADDtoName[r] << "  ";
+            for (u16 c=0; c<TotalFtns; c++) {
+                fout << setw(12) << Matrix[r][c] <<" ";
+            }
+            fout<<endl;
         }
     }
 
@@ -105,7 +119,8 @@ public:
 };
 
 void RecordCommunication(FtnNo prod, FtnNo cons, int size);
-void PrintCommunication();
+void PrintCommunication(ostream &fout, u16 TotalFtns);
+void PrintMatrix(ostream &fout, map <u16,string> & ADDtoName, u16 TotalFtns);
 void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName, u16 TotalFtns);
 
 #endif

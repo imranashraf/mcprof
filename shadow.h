@@ -6,10 +6,10 @@
 #include <cassert>
 #include <cstddef>
 
-// No of bits required to address table entries
-static const u64 L1BITS = (16);
+// No of bits required to address table entries (20, 16, 12)
+static const u64 L1BITS = (20);
 static const u64 L2BITS = (16);
-static const u64 L3BITS = (16);
+static const u64 L3BITS = (12);
 
 // Sizes of tables
 static const u64 L1ENTRIES = (1ULL << L1BITS);
