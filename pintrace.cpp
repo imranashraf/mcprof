@@ -136,14 +136,11 @@ void Trace_cb(TRACE trace, void *v)
     }
 }
 
-
-VOID RecordRoutineEntry(VOID *ip)
+BOOL ValidFtnName(string name)
 {
-    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string name = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-
-    if (
-//         name[0]=='_' ||
+    return
+        !(
+        name[0]=='_' ||
         name[0]=='?' ||
 #ifdef WIN32
         !name.compare("GetPdbDll") ||
@@ -166,38 +163,35 @@ VOID RecordRoutineEntry(VOID *ip)
         !name.compare("deregister_tm_clones") ||
         !name.compare("frame_dummy")
 #endif
-                     )
-        return;
-
-    if(!SeenFname.count(name)) { // First time seeing this function name
-        SeenFname.insert(name);  // mark this function name as seen
-            GlobalFunctionNo++;      // create a Function Number for this function
-            NametoADD[name]=GlobalFunctionNo;   // create String -> Number binding
-            ADDtoName[GlobalFunctionNo]=name;   // create Number -> String binding
-        }
-
-    DECHO ("Entring Routine : " << name);
-    CallStack.push(name);
+        );
+}
+VOID RecordRoutineEntry(VOID *ip)
+{
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+//     if( !ValidFtnName(rname) )
+//         return;
+    DECHO ("Entring Routine : " << rname);
+    CallStack.push(rname);
 }
 
 
 VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string demangledNameNoParams = PIN_UndecorateSymbolName(rtnName,
+    string rname = PIN_UndecorateSymbolName(rtnName,
                                    UNDECORATION_NAME_ONLY);
 
-    if(!(CallStack.empty()) && (CallStack.top() == demangledNameNoParams)) {
-        DECHO("Leaving Routine : " << demangledNameNoParams);
+    if(!(CallStack.empty()) && (CallStack.top() == rname)) {
+        DECHO("Leaving Routine : " << rname);
         CallStack.pop();
-    } else if (!(CallStack.empty()) ) {
-        DECHO("Not Leaving Routine : "<< VAR(demangledNameNoParams) );
-        DECHO(VAR(CallStack.top()));
-    } else {
-        DECHO("Not Leaving Routine as CallStack empty without : "
-              << VAR(demangledNameNoParams));
+//     } else if (!(CallStack.empty()) ) {
+//         DECHO("Not Leaving Routine : "<< VAR(rname)
+//             << VAR(CallStack.top()));
+//     } else {
+//         DECHO("Not Leaving Routine as CallStack empty without : "
+//             << VAR(rname));
     }
-
 
 }
 
@@ -209,10 +203,10 @@ VOID Image_cb(IMG img, VOID * v)
     string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
     KnobMainExecutableOnly.Value() == true) {
-        ECHO("Skipping Image "<< img_name<< " as it is not main executable");
+        DECHO("Skipping Image "<< img_name<< " as it is not main executable");
         return;
     } else {
-        ECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
+        DECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
     }
 
     // Traverse the sections of the image.
@@ -223,41 +217,54 @@ VOID Image_cb(IMG img, VOID * v)
 
             // Many RTN APIs require that the RTN be opened first.
             RTN_Open(rtn);
+            string rname = PIN_UndecorateSymbolName( RTN_Name(rtn),
+                                   UNDECORATION_NAME_ONLY);
 
-            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                           IARG_INST_PTR ,IARG_END);
+            if( ValidFtnName(rname) ) {
+                DECHO ("Instrumenting a valid routine" << rname );
 
-            // Traverse all instructions
-            for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
-                UINT32 memOperands = INS_MemoryOperandCount(ins);
-                for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
-                    size_t refSize = INS_MemoryOperandSize(ins, memOp);
-//                 bool isStack = INS_IsStackRead(ins);
-//                 if(!isStack) return;
-
-                    if (INS_MemoryOperandIsRead(ins, memOp)) {
-                        INS_InsertPredicatedCall(
-                            ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
-                            IARG_INST_PTR,
-                            IARG_MEMORYOP_EA, memOp,
-                            IARG_UINT32, refSize,
-                            IARG_END);
-                    }
-
-                    if (INS_MemoryOperandIsWritten(ins, memOp)) {
-                        INS_InsertPredicatedCall(
-                            ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
-                            IARG_INST_PTR,
-                            IARG_MEMORYOP_EA, memOp,
-                            IARG_UINT32, refSize,
-                            IARG_END);
-                    }
+                if(!SeenFname.count(rname)) { // First time seeing this function name
+                    SeenFname.insert(rname);  // mark this function name as seen
+                    GlobalFunctionNo++;      // create a Function Number for this function
+                    NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
+                    ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
                 }
 
-                if (INS_IsRet(ins)) {
-                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
-                                             (AFUNPTR)RecordRoutineExit,
-                                             IARG_INST_PTR, IARG_END);
+                RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
+                            IARG_INST_PTR ,IARG_END);
+
+                // Traverse all instructions
+                for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
+                    UINT32 memOperands = INS_MemoryOperandCount(ins);
+                    for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
+                        size_t refSize = INS_MemoryOperandSize(ins, memOp);
+    //                 bool isStack = INS_IsStackRead(ins);
+    //                 if(!isStack) return;
+
+                        if (INS_MemoryOperandIsRead(ins, memOp)) {
+                            INS_InsertPredicatedCall(
+                                ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
+                                IARG_INST_PTR,
+                                IARG_MEMORYOP_EA, memOp,
+                                IARG_UINT32, refSize,
+                                IARG_END);
+                        }
+
+                        if (INS_MemoryOperandIsWritten(ins, memOp)) {
+                            INS_InsertPredicatedCall(
+                                ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
+                                IARG_INST_PTR,
+                                IARG_MEMORYOP_EA, memOp,
+                                IARG_UINT32, refSize,
+                                IARG_END);
+                        }
+                    }
+
+                    if (INS_IsRet(ins)) {
+                        INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                                                (AFUNPTR)RecordRoutineExit,
+                                                IARG_INST_PTR, IARG_END);
+                    }
                 }
             }
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
