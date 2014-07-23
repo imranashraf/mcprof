@@ -65,23 +65,27 @@ INT32 Usage()
 // Record a memory read
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    string ftnName("NA");
-    if( !CallStack.empty() )
-        ftnName = CallStack.top();
+//     string ftnName("NA");
+//     if( !CallStack.empty() )
+//         ftnName = CallStack.top();
 
-    DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" R "<<VARS2(addr, refSize) );
-    RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
+//     DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" R "<<VARS2(addr, refSize) );
+//     RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
+if( !CallStack.empty() )
+    RecordRead( NametoADD[CallStack.top()], (uptr)addr, refSize);
 }
 
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    string ftnName("NA");
-    if( !CallStack.empty() )
-        ftnName = CallStack.top();
+//     string ftnName("NA");
+//     if( !CallStack.empty() )
+//         ftnName = CallStack.top();
 
-    DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" W "<<VARS2(addr, refSize) );
-    RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
+//     DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" W "<<VARS2(addr, refSize) );
+//     RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
+if( !CallStack.empty() )
+    RecordWrite(NametoADD[CallStack.top()], (uptr)addr,refSize);
 }
 
 /* ===================================================================== */
@@ -139,7 +143,7 @@ VOID RecordRoutineEntry(VOID *ip)
     string name = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
     if (
-        name[0]=='_' ||
+//         name[0]=='_' ||
         name[0]=='?' ||
 #ifdef WIN32
         !name.compare("GetPdbDll") ||
@@ -271,7 +275,7 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
-    PrintCommunication(cout, 5);
+//     PrintCommunication(cout, 5);
     PrintMatrix(mout, ADDtoName, GlobalFunctionNo);
     PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
     dotout.close();
