@@ -7,9 +7,9 @@
 #include <cstddef>
 
 // No of bits required to address table entries
-static const u64 L1BITS = (16);
-static const u64 L2BITS = (16);
-static const u64 L3BITS = (16);
+static const u64 L1BITS = (12);
+static const u64 L2BITS = (18);
+static const u64 L3BITS = (18);
 
 // Sizes of tables
 static const u64 L1ENTRIES = (1ULL << L1BITS);
@@ -20,25 +20,25 @@ static const u64 L3ENTRIES = (1ULL << L3BITS);
 #define UNACCESSED NULL
 #define UNKNOWN_PRODUCER (0)
 
-// class Entry
-// {
-// private:
-//     FtnNo producer;
-// public:
-//     Entry() {
-//         producer=UNKNOWN_PRODUCER;
-//     }
-//     void setProducer(FtnNo p) {
-//         producer=p;
-//     }
-//     FtnNo getProducer() {
-//         return producer;
-//     }
-// };
-
-struct Entry {
+class Entry
+{
+private:
     FtnNo producer;
+public:
+    Entry() {
+        producer=UNKNOWN_PRODUCER;
+    }
+    void setProducer(FtnNo p) {
+        producer=p;
+    }
+    FtnNo getProducer() {
+        return producer;
+    }
 };
+
+// struct Entry {
+//     FtnNo producer;
+// };
 
 class L1Table
 {
@@ -47,15 +47,17 @@ private:
 public:
     L1Table() { }
     FtnNo getProducer(uptr L1Index) {
-        return Table[L1Index].producer;
+//         return Table[L1Index].producer;
+        return Table[L1Index].getProducer();
     }
     void setProducer(uptr L1Index, FtnNo prod) {
-        Table[L1Index].producer = prod;
+//         Table[L1Index].producer = prod;
+        Table[L1Index].setProducer(prod);
     }
     void setProducerRange(uptr L1Index, FtnNo prod, int size) {
         for(int i=0; i<size; i++) {
-            Table[L1Index + i].producer = prod;
-//             Table[L1Index+i].setProducer(prod);
+//             Table[L1Index + i].producer = prod;
+            Table[L1Index+i].setProducer(prod);
         }
     }
 };

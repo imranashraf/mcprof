@@ -28,12 +28,12 @@ void RecordRead(FtnNo cons, uptr addr, int size)
     for(int i=0; i<size; i++) {
         prod = ShadowTable.getProducer(addr+i);
         RecordCommunication(prod, cons, 1);
-        DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of size: 1" );
+        //DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of size: 1" );
     }
 #else
     prod = ShadowTable.getProducer(addr);
     RecordCommunication(prod, cons, size);
-    DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of " << VAR(size) );
+    //DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of " << VAR(size) );
 #endif
 
 }

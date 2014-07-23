@@ -42,6 +42,8 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   "Trace functions that are contained only in the\
                                   executable image");
 
+KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
+                                  "s","1", "Ignore Stack Accesses");
 
 /* ===================================================================== */
 // Utilities
@@ -65,26 +67,12 @@ INT32 Usage()
 // Record a memory read
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-//     string ftnName("NA");
-//     if( !CallStack.empty() )
-//         ftnName = CallStack.top();
-
-//     DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" R "<<VARS2(addr, refSize) );
-//     RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
-if( !CallStack.empty() )
     RecordRead( NametoADD[CallStack.top()], (uptr)addr, refSize);
 }
 
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-//     string ftnName("NA");
-//     if( !CallStack.empty() )
-//         ftnName = CallStack.top();
-
-//     DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" W "<<VARS2(addr, refSize) );
-//     RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
-if( !CallStack.empty() )
     RecordWrite(NametoADD[CallStack.top()], (uptr)addr,refSize);
 }
 
@@ -158,6 +146,10 @@ BOOL ValidFtnName(string name)
         !name.compare("unnamedImageEntryPoint"
 #else
         !name.compare(".plt") ||
+//         !name.compare("_start") ||
+//         !name.compare("_init") ||
+//         !name.compare("__do_global_dtors_aux") ||
+//         !name.compare("__libc_csu_init") ||
         !name.compare("call_gmon_start") ||
         !name.compare("register_tm_clones") ||
         !name.compare("deregister_tm_clones") ||
@@ -169,8 +161,16 @@ VOID RecordRoutineEntry(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-//     if( !ValidFtnName(rname) )
-//         return;
+    if( !ValidFtnName(rname) )
+        return;
+
+    if( !SeenFname.count(rname)) { // First time seeing this valid function name
+        SeenFname.insert(rname);  // mark this function name as seen
+        GlobalFunctionNo++;      // create a Function Number for this function
+        NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
+        ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
+    }
+
     DECHO ("Entring Routine : " << rname);
     CallStack.push(rname);
 }
@@ -179,18 +179,19 @@ VOID RecordRoutineEntry(VOID *ip)
 VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string rname = PIN_UndecorateSymbolName(rtnName,
-                                   UNDECORATION_NAME_ONLY);
+    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
     if(!(CallStack.empty()) && (CallStack.top() == rname)) {
         DECHO("Leaving Routine : " << rname);
         CallStack.pop();
-//     } else if (!(CallStack.empty()) ) {
-//         DECHO("Not Leaving Routine : "<< VAR(rname)
-//             << VAR(CallStack.top()));
-//     } else {
-//         DECHO("Not Leaving Routine as CallStack empty without : "
-//             << VAR(rname));
+#ifdef DEBUG
+    } else if (!(CallStack.empty()) ) {
+        DECHO("Not Leaving Routine : "<< VAR(rname)
+            << VAR(CallStack.top()));
+    } else {
+        DECHO("Not Leaving Routine as CallStack empty without : "
+            << VAR(rname));
+#endif
     }
 
 }
@@ -217,30 +218,31 @@ VOID Image_cb(IMG img, VOID * v)
 
             // Many RTN APIs require that the RTN be opened first.
             RTN_Open(rtn);
-            string rname = PIN_UndecorateSymbolName( RTN_Name(rtn),
-                                   UNDECORATION_NAME_ONLY);
+/*
+ * The following function recording can be done at the instrumentation time as below
+ * instead of doing at analysis time in RecordRoutineEntry(). This will simply result
+ * in more functions in SeenFname which may not be even involved in communication,
+ * which is not as such a problem as it will simply clutter the output.
+            string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
+            if( ValidFtnName(rname) && !SeenFname.count(rname)) { // First time seeing this valid function name
+                SeenFname.insert(rname);  // mark this function name as seen
+                GlobalFunctionNo++;      // create a Function Number for this function
+                NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
+                ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
+            }
+*/
 
-            if( ValidFtnName(rname) ) {
-                DECHO ("Instrumenting a valid routine" << rname );
+            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
+                        IARG_INST_PTR ,IARG_END);
 
-                if(!SeenFname.count(rname)) { // First time seeing this function name
-                    SeenFname.insert(rname);  // mark this function name as seen
-                    GlobalFunctionNo++;      // create a Function Number for this function
-                    NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
-                    ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
-                }
+            // Traverse all instructions
+            for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
+                UINT32 memOperands = INS_MemoryOperandCount(ins);
 
-                RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                            IARG_INST_PTR ,IARG_END);
-
-                // Traverse all instructions
-                for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
-                    UINT32 memOperands = INS_MemoryOperandCount(ins);
+                bool isStack = INS_IsStackRead(ins) || INS_IsStackWrite(ins);
+                if(!isStack || !KnobStackAccess.Value()) {
                     for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
                         size_t refSize = INS_MemoryOperandSize(ins, memOp);
-    //                 bool isStack = INS_IsStackRead(ins);
-    //                 if(!isStack) return;
-
                         if (INS_MemoryOperandIsRead(ins, memOp)) {
                             INS_InsertPredicatedCall(
                                 ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
@@ -259,12 +261,12 @@ VOID Image_cb(IMG img, VOID * v)
                                 IARG_END);
                         }
                     }
+                }
 
-                    if (INS_IsRet(ins)) {
-                        INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
-                                                (AFUNPTR)RecordRoutineExit,
-                                                IARG_INST_PTR, IARG_END);
-                    }
+                if (INS_IsRet(ins)) {
+                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                                            (AFUNPTR)RecordRoutineExit,
+                                            IARG_INST_PTR, IARG_END);
                 }
             }
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
@@ -280,7 +282,7 @@ VOID Image_cb(IMG img, VOID * v)
  * @param[in]   v               value specified by the tool in the
  *                              PIN_AddFiniFunction function call
  */
-VOID Fini(INT32 code, VOID *v)
+VOID TheEnd(INT32 code, VOID *v)
 {
 //     PrintCommunication(cout, 5);
     PrintMatrix(mout, ADDtoName, GlobalFunctionNo);
@@ -334,13 +336,14 @@ void SetupPin(int argc, char *argv[])
     SeenFname.insert(fname);             // Add UNKNOWN as the first function name
     NametoADD[fname]=GlobalFunctionNo;   // create the string -> Number binding
     ADDtoName[GlobalFunctionNo]=fname;   // create the Number -> String binding
+    CallStack.push(fname);
 
     //TRACE_AddInstrumentFunction(Trace_cb, 0);
     //RTN_AddInstrumentFunction(RecordRoutineEntry,0);
     IMG_AddInstrumentFunction(Image_cb, 0);
 
     // Register function to be called when the application exits
-    PIN_AddFiniFunction(Fini, 0);
+    PIN_AddFiniFunction(TheEnd, 0);
 }
 
 /* ===================================================================== */
