@@ -65,23 +65,25 @@ INT32 Usage()
 // Record a memory read
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    string ftnName("NA");
-    if( !CallStack.empty() )
-        ftnName = CallStack.top();
+//     string ftnName("NA");
+//     if( !CallStack.empty() )
+//         ftnName = CallStack.top();
 
 //     DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" R "<<VARS2(addr, refSize) );
-    RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
+//     RecordRead( NametoADD[ftnName], (uptr)addr, refSize);
+    RecordRead( NametoADD[CallStack.top()], (uptr)addr, refSize);
 }
 
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    string ftnName("NA");
-    if( !CallStack.empty() )
-        ftnName = CallStack.top();
+//     string ftnName("NA");
+//     if( !CallStack.empty() )
+//         ftnName = CallStack.top();
 
 //     DECHO( VARS3(ftnName , NametoADD[ftnName], ip) <<" W "<<VARS2(addr, refSize) );
-    RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
+//     RecordWrite(NametoADD[ftnName], (uptr)addr,refSize);
+    RecordWrite(NametoADD[CallStack.top()], (uptr)addr,refSize);
 }
 
 /* ===================================================================== */
