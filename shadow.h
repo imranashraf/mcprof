@@ -6,10 +6,10 @@
 #include <cassert>
 #include <cstddef>
 
-// No of bits required to address table entries (20, 16, 12)
-static const u64 L1BITS = (20);
+// No of bits required to address table entries
+static const u64 L1BITS = (16);
 static const u64 L2BITS = (16);
-static const u64 L3BITS = (12);
+static const u64 L3BITS = (16);
 
 // Sizes of tables
 static const u64 L1ENTRIES = (1ULL << L1BITS);
@@ -20,20 +20,24 @@ static const u64 L3ENTRIES = (1ULL << L3BITS);
 #define UNACCESSED NULL
 #define UNKNOWN_PRODUCER (0)
 
-class Entry
-{
-private:
+// class Entry
+// {
+// private:
+//     FtnNo producer;
+// public:
+//     Entry() {
+//         producer=UNKNOWN_PRODUCER;
+//     }
+//     void setProducer(FtnNo p) {
+//         producer=p;
+//     }
+//     FtnNo getProducer() {
+//         return producer;
+//     }
+// };
+
+struct Entry {
     FtnNo producer;
-public:
-    Entry() {
-        producer=UNKNOWN_PRODUCER;
-    }
-    void setProducer(FtnNo p) {
-        producer=p;
-    }
-    FtnNo getProducer() {
-        return producer;
-    }
 };
 
 class L1Table
@@ -43,10 +47,16 @@ private:
 public:
     L1Table() { }
     FtnNo getProducer(uptr L1Index) {
-        return Table[L1Index].getProducer();
+        return Table[L1Index].producer;
     }
     void setProducer(uptr L1Index, FtnNo prod) {
-        Table[L1Index].setProducer(prod);
+        Table[L1Index].producer = prod;
+    }
+    void setProducerRange(uptr L1Index, FtnNo prod, int size) {
+        for(int i=0; i<size; i++) {
+            Table[L1Index + i].producer = prod;
+//             Table[L1Index+i].setProducer(prod);
+        }
     }
 };
 
@@ -73,6 +83,13 @@ public:
         }
         Table[L2Index]->setProducer(L1Index, prod);
     }
+    void setProducerRange(uptr L1Index, uptr L2Index, FtnNo prod, int size) {
+        if(Table[L2Index] == UNACCESSED) {
+            Table[L2Index] = new L1Table;
+        }
+        Table[L2Index]->setProducerRange(L1Index, prod, size);
+    }
+    
 };
 
 class L3Table
@@ -109,6 +126,17 @@ public:
         }
         Table[L3Index]->setProducer(L1Index, L2Index, prod);
     }
+
+    void setProducerRange(uptr addr, FtnNo prod, int size) {
+        uptr L1Index=( (L1ENTRIES-1) & addr);
+        uptr L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
+        uptr L3Index=( (L3ENTRIES-1) & (addr>>(L1BITS+L2BITS)) );
+        if(Table[L3Index] == UNACCESSED) {
+            Table[L3Index] = new L2Table;
+        }
+        Table[L3Index]->setProducerRange(L1Index, L2Index, prod, size);
+    }
+
 };
 
 void RecordWrite(FtnNo prod, uptr addr, int size);
