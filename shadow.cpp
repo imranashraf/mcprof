@@ -6,7 +6,7 @@
 L3Table ShadowTable;
 MemMap  ShadowMem;
 
-#define BYTELEVEL
+// #define BYTELEVEL
 #define SHADOWMEM
 
 void PrintShadowMap()
@@ -24,9 +24,13 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
 
     if (shadowAddr)
     {
+#ifdef BYTELEVEL
         for(int i=0; i<size; i++) {
             *( (u8*) (shadowAddr+i) ) = prod;
         }
+#else
+        *( (u8*) (shadowAddr) ) = prod;
+#endif
     }
     else
 #endif
@@ -52,10 +56,15 @@ void RecordRead(FtnNo cons, uptr addr, int size)
 
     if (shadowAddr)
     {
+#ifdef BYTELEVEL
         for(int i=0; i<size; i++) {
             prod = *( (u8*) (shadowAddr + i ));
             RecordCommunication(prod, cons, 1);
         }
+#else
+        prod = *( (u8*) (shadowAddr));
+        RecordCommunication(prod, cons, size);
+#endif
     }
     else
 #endif
