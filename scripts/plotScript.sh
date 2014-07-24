@@ -44,7 +44,8 @@ set ytics nomirror rotate by 45 scale 0 font ",7"
 set grid x
 set grid y
 
-set palette defined (0 "white", 1 "yellow", 2 "green", 3 "blue", 4 "brown", 5 "red")
+#set palette defined (0 "white", 1 "yellow", 2 "green", 3 "blue", 4 "brown", 5 "red")
+set palette defined ( 0 "white", 1 "green", 2 "blue", 3 "brown", 4 "red")
 # set palette defined (0 0 0 0, 1 0 0 1, 3 0 1 0, 4 1 0 0, 6 1 1 1)
 
 # 7,5,15   ... traditional pm3d (black-blue-red-yellow)
