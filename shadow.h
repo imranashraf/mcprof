@@ -218,16 +218,9 @@ public:
         cout << "================ 0x" << setw(12) << setfill ('0') << M0L << endl;
         cout << dec;
     }
-    uptr Mem2Shadow(uptr addr) {
-        uptr shadowAddr;
-        if(addr >=M0L && addr <= M0H)           // in low mem
-            shadowAddr = addr + M0OFFSET;
-        else if (addr >=M1L && addr <= M1H)     // in high mem
-            shadowAddr = addr - M1OFFSET;
-        else
-            shadowAddr = 0;
-
-        return (shadowAddr);
+    uptr inline Mem2Shadow(uptr addr) {
+        return (addr >=M0L && addr <= M0H)*(addr + M0OFFSET) +
+               (addr >=M1L && addr <= M1H)*(addr - M1OFFSET) ;
     }
 
     ~MemMap(){

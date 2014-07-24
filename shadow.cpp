@@ -6,7 +6,8 @@
 L3Table ShadowTable;
 MemMap  ShadowMem;
 
-// #define BYTELEVEL
+#define BYTELEVEL
+#define SHADOWMEM
 
 void PrintShadowMap()
 {
@@ -15,18 +16,20 @@ void PrintShadowMap()
 
 void RecordWrite(FtnNo prod, uptr addr, int size)
 {
+#ifdef SHADOWMEM
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
-//     cout << hex << "0x" << setw(12) << setfill ('0') << addr << " -> "
-//          << hex << "0x" << setw(12) << setfill ('0') << shadowAddr
-//          << dec << endl;
+    DECHO(  hex << "0x" << setw(12) << setfill ('0') << addr << " -> "
+         << hex << "0x" << setw(12) << setfill ('0') << shadowAddr
+         << dec );
 
     if (shadowAddr)
     {
         for(int i=0; i<size; i++) {
-            *( (unsigned char *) (shadowAddr+i) ) = prod;
+            *( (u8*) (shadowAddr+i) ) = prod;
         }
     }
     else
+#endif
     {
 #ifdef BYTELEVEL
         for(int i=0; i<size; i++) {
@@ -41,20 +44,21 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
 void RecordRead(FtnNo cons, uptr addr, int size)
 {
     FtnNo prod;
-
+#ifdef SHADOWMEM
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
-//     cout << hex << "0x" << setw(12) << setfill ('0') << addr << " -> "
-//          << hex << "0x" << setw(12) << setfill ('0') << shadowAddr
-//          << dec << endl;
+    DECHO(  hex << "0x" << setw(12) << setfill ('0') << addr << " -> "
+         << hex << "0x" << setw(12) << setfill ('0') << shadowAddr
+         << dec );
 
     if (shadowAddr)
     {
         for(int i=0; i<size; i++) {
-            prod = *( (unsigned char *) (shadowAddr + i ));
+            prod = *( (u8*) (shadowAddr + i ));
             RecordCommunication(prod, cons, 1);
         }
     }
     else
+#endif
     {
 #ifdef BYTELEVEL
         for(int i=0; i<size; i++) {
@@ -66,7 +70,6 @@ void RecordRead(FtnNo cons, uptr addr, int size)
         prod = ShadowTable.getProducer(addr);
         RecordCommunication(prod, cons, size);
         //DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of " << VAR(size) );
-    }
 #endif
-
+    }
 }

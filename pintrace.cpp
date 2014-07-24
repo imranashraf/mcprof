@@ -43,7 +43,7 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   executable image");
 
 KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
-                                  "s","1", "Ignore Stack Accesses");
+                                  "s","0", "Include Stack Accesses");
 
 /* ===================================================================== */
 // Utilities
@@ -240,7 +240,7 @@ VOID Image_cb(IMG img, VOID * v)
                 UINT32 memOperands = INS_MemoryOperandCount(ins);
 
                 bool isStack = INS_IsStackRead(ins) || INS_IsStackWrite(ins);
-                if(!isStack || !KnobStackAccess.Value()) {
+                if(!isStack || KnobStackAccess.Value()) {
                     for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
                         size_t refSize = INS_MemoryOperandSize(ins, memOp);
                         if (INS_MemoryOperandIsRead(ins, memOp)) {
