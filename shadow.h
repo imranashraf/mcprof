@@ -167,7 +167,7 @@ static const uptr M0H = M0L + M0SIZE -1;
 //Following May obtained at runtime !!!
 static const uptr SM0L = 0x400000000000ULL;
 static const uptr SM0H = SM0L + M0SIZE -1;
-static const uptr OFFSETM0 = M0L-SM0L;
+static const uptr M0OFFSET = SM0L-M0L;
 
 static const uptr M1SIZE = 2*GB;
 static const uptr M1H = (1ULL<<47) -1;
@@ -175,7 +175,7 @@ static const uptr M1L = M1H - M1SIZE +1;
 //Following May obtained at runtime !!!
 static const uptr SM1L = 0x500000000000ULL;
 static const uptr SM1H = SM1L + M1SIZE -1;
-static const uptr OFFSETM1 = M1L-SM1L;
+static const uptr M1OFFSET = M1L-SM1L;
 
 public:
     MemMap(){
@@ -202,7 +202,7 @@ public:
             cout<<"mmap Failed"<<endl;
     }
 
-    void Print(){
+    void Print() {
         cout << hex;
         cout << "================ 0x" << setw(12) << setfill ('0') << M1H << endl;
         cout << "| M1 = "<< M1SIZE/GB <<" GB    |" <<endl;
@@ -217,6 +217,17 @@ public:
         cout << "| M0 = "<< M0SIZE/GB <<" GB    |" <<endl;
         cout << "================ 0x" << setw(12) << setfill ('0') << M0L << endl;
         cout << dec;
+    }
+    uptr Mem2Shadow(uptr addr) {
+        uptr shadowAddr;
+        if(addr >=M0L && addr <= M0H)           // in low mem
+            shadowAddr = addr + M0OFFSET;
+        else if (addr >=M1L && addr <= M1H)     // in high mem
+            shadowAddr = addr - M1OFFSET;
+        else
+            shadowAddr = 0;
+
+        return (shadowAddr);
     }
 
     ~MemMap(){
@@ -236,6 +247,7 @@ public:
     }
 };
 
+void PrintShadowMap();
 /**
  ****************
  **/

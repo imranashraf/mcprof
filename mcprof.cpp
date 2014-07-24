@@ -10,8 +10,9 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    MemMap ShadowMap;
-    ShadowMap.Print();
+#ifdef DEBUG
+    PrintShadowMap();
+#endif
 
     SetupPin(argc,argv);
 
