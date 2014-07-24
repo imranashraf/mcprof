@@ -3,8 +3,16 @@
 
 #include "globals.h"
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include <cassert>
 #include <cstddef>
+#include <iomanip>
+#include <iostream>
+
+using namespace std;
 
 // No of bits required to address table entries
 static const u64 L1BITS = (12);
@@ -143,5 +151,93 @@ public:
 
 void RecordWrite(FtnNo prod, uptr addr, int size);
 void RecordRead(FtnNo cons, uptr addr, int size);
+
+
+/**
+ ****************
+ **/
+#define PAGESIZE (sysconf(_SC_PAGE_SIZE))
+class MemMap
+{
+private:
+static const uptr GB   = (1ULL << 30);
+static const uptr M0SIZE = 2*GB;
+static const uptr M0L = 0ULL;
+static const uptr M0H = M0L + M0SIZE -1;
+//Following May obtained at runtime !!!
+static const uptr SM0L = 0x400000000000ULL;
+static const uptr SM0H = SM0L + M0SIZE -1;
+static const uptr OFFSETM0 = M0L-SM0L;
+
+static const uptr M1SIZE = 2*GB;
+static const uptr M1H = (1ULL<<47) -1;
+static const uptr M1L = M1H - M1SIZE +1;
+//Following May obtained at runtime !!!
+static const uptr SM1L = 0x500000000000ULL;
+static const uptr SM1H = SM1L + M1SIZE -1;
+static const uptr OFFSETM1 = M1L-SM1L;
+
+public:
+    MemMap(){
+        uptr *retAddr;
+        uptr startAddr;
+        uptr length;
+
+        startAddr = SM0L; length = M0SIZE;
+        retAddr = (uptr *)mmap((void *)startAddr,
+                    length,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+                    -1, 0);
+        if (retAddr == MAP_FAILED)
+            cout<<"mmap Failed"<<endl;
+
+        startAddr = SM1L; length = M1SIZE;
+        retAddr = (uptr *)mmap((void *)startAddr,
+                    length,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+                    -1, 0);
+        if (retAddr == MAP_FAILED)
+            cout<<"mmap Failed"<<endl;
+    }
+
+    void Print(){
+        cout << hex;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M1H << endl;
+        cout << "| M1 = "<< M1SIZE/GB <<" GB    |" <<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M1L << endl<<endl<<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM1H << endl;
+        cout << "| SM1 = "<< M1SIZE/GB <<" GB   |" <<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM1L << endl<<endl<<endl<<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM0H << endl;
+        cout << "| SM0 = "<< M0SIZE/GB <<" GB   |" <<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM0L << endl<<endl<<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M0H << endl;
+        cout << "| M0 = "<< M0SIZE/GB <<" GB    |" <<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M0L << endl;
+        cout << dec;
+    }
+
+    ~MemMap(){
+    int retVal;
+    uptr startAddr;
+    uptr length;
+
+    startAddr = SM0L; length = M0SIZE;
+    retVal = munmap((void *)startAddr, length);
+    if( retVal == -1)
+        cout<<"munmap Failed"<<endl;
+
+    startAddr = SM1L; length = M1SIZE;
+    retVal = munmap((void *)startAddr, length);
+    if( retVal == -1)
+        cout<<"munmap Failed"<<endl;
+    }
+};
+
+/**
+ ****************
+ **/
 
 #endif

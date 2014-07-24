@@ -2,9 +2,6 @@
 #include "shadow.h"
 #include "commatrix.h"
 
-#include <iostream>
-
-using namespace std;
 
 L3Table ShadowTable;
 
