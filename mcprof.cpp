@@ -10,7 +10,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-#ifdef DEBUG
+#if (DEBUG>0)
     PrintShadowMap();
 #endif
 

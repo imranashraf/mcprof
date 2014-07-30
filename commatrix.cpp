@@ -13,12 +13,12 @@ void PrintCommunication(ostream &fout, u16 TotalFtns)
     ComMatrix.Print(fout, TotalFtns);
 }
 
-void PrintMatrix(ostream &fout, map <u16,string> & ADDtoName, u16 TotalFtns)
+void PrintMatrix(ostream &fout, u16 TotalFtns)
 {
-    ComMatrix.PrintMatrix(fout, ADDtoName, TotalFtns);
+    ComMatrix.PrintMatrix(fout, TotalFtns);
 }
 
-void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName, u16 TotalFtns)
+void PrintCommunicationDot(ostream &dotout, u16 TotalFtns)
 {
-    ComMatrix.PrintDot(dotout, ADDtoName, TotalFtns);
+    ComMatrix.PrintDot(dotout, TotalFtns);
 }

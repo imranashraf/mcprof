@@ -137,5 +137,5 @@ $(OBJDIR)simple1$(EXE_SUFFIX): $(TESTDIR)simple1.c
 $(OBJDIR)simple2$(EXE_SUFFIX): $(TESTDIR)simple2.cpp
 	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)vectOps$(EXE_SUFFIX): $(TESTDIR)vectOps.cpp
-	$(APP_CXX) -fno-inline -O1 $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+$(OBJDIR)vectOps$(EXE_SUFFIX): $(TESTDIR)vectOps.c
+	$(APP_CC) -fno-inline -O1 $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)

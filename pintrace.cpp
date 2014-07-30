@@ -171,7 +171,7 @@ VOID RecordRoutineEntry(VOID *ip)
         ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
     }
 
-    DECHO ("Entring Routine : " << rname);
+    D1ECHO ("Entring Routine : " << rname << VAR(GlobalFunctionNo));
     CallStack.push(rname);
 }
 
@@ -182,14 +182,14 @@ VOID RecordRoutineExit(VOID *ip)
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
     if(!(CallStack.empty()) && (CallStack.top() == rname)) {
-        DECHO("Leaving Routine : " << rname);
+        D1ECHO("Leaving Routine : " << rname);
         CallStack.pop();
-#ifdef DEBUG
+#if (DEBUG>0)
     } else if (!(CallStack.empty()) ) {
-        DECHO("Not Leaving Routine : "<< VAR(rname)
+        D1ECHO("Not Leaving Routine : "<< VAR(rname)
             << VAR(CallStack.top()));
     } else {
-        DECHO("Not Leaving Routine as CallStack empty without : "
+        D1ECHO("Not Leaving Routine as CallStack empty without : "
             << VAR(rname));
 #endif
     }
@@ -204,10 +204,10 @@ VOID Image_cb(IMG img, VOID * v)
     string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
     KnobMainExecutableOnly.Value() == true) {
-        DECHO("Skipping Image "<< img_name<< " as it is not main executable");
+        D1ECHO("Skipping Image "<< img_name<< " as it is not main executable");
         return;
     } else {
-        DECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
+        D1ECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
     }
 
     // Traverse the sections of the image.
@@ -284,9 +284,11 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
-//     PrintCommunication(cout, 5);
-    PrintMatrix(mout, ADDtoName, GlobalFunctionNo);
-    PrintCommunicationDot(dotout, ADDtoName, GlobalFunctionNo);
+#if (DEBUG>0)
+    PrintCommunication(cout, 7);
+#endif
+    PrintMatrix(mout, GlobalFunctionNo+1);
+    PrintCommunicationDot(dotout, GlobalFunctionNo+1);
     dotout.close();
     mout.close();
 }

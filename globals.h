@@ -2,10 +2,11 @@
 #define GLOBALS_H
 
 #include <iostream>
+#include <map>
 #include <cstdlib>
 
 //comment the following to hide debugging output
-// #define DEBUG
+#define DEBUG 0
 
 #if defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
@@ -55,16 +56,40 @@ typedef u8  FtnNo;
 # endif
 #endif  // _MSC_VER
 
+extern std::map <std::string,u16> NametoADD;
+extern std::map <u16,std::string> ADDtoName;
+
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
-#define VAR(v) "`" #v "': " << v
+#define VAR(v) " `" #v "': " << v << " "
 #define VARS2(first, second) VAR(first) << " - " << VAR(second)
 #define VARS3(first, second, third) VAR(first) << " - " << VARS2(second, third)
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
-#ifdef DEBUG
+#define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
+#define FUNC(v)  ADDtoName[(int)v] << "(" << (int)v << ")"
+
+#if (DEBUG>0)
 #define DECHO(content)                          ECHO(content)
 #else
 #define DECHO(content)
+#endif
+
+#if (DEBUG>=1)
+#define D1ECHO(content)                          ECHO(content)
+#else
+#define D1ECHO(content)
+#endif
+
+#if (DEBUG>=2)
+#define D2ECHO(content)                          ECHO(content)
+#else
+#define D2ECHO(content)
+#endif
+
+#if (DEBUG>=3)
+#define D3ECHO(content)                          ECHO(content)
+#else
+#define D3ECHO(content)
 #endif
 
 // void Die();
@@ -93,7 +118,7 @@ do { \
 #define CHECK_GT(a, b) CHECK_IMPL((a), >,  (b))
 #define CHECK_GE(a, b) CHECK_IMPL((a), >=, (b))
 
-#ifdef DEBUG
+#if (DEBUG>0)
 #define DCHECK(a)       CHECK(a)
 #define DCHECK_EQ(a, b) CHECK_EQ(a, b)
 #define DCHECK_NE(a, b) CHECK_NE(a, b)

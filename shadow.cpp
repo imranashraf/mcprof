@@ -16,12 +16,10 @@ void PrintShadowMap()
 
 void RecordWrite(FtnNo prod, uptr addr, int size)
 {
+    D2ECHO("Write " << VAR(size) << FUNC(prod) << ADDR(addr));
 #ifdef SHADOWMEM
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
-    DECHO(  hex << "0x" << setw(12) << setfill ('0') << addr << " -> "
-         << hex << "0x" << setw(12) << setfill ('0') << shadowAddr
-         << dec );
-
+    D3ECHO(  ADDR(addr) << " -> " << ADDR(shadowAddr));
     if (shadowAddr)
     {
 #ifdef BYTELEVEL
@@ -48,11 +46,10 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
 void RecordRead(FtnNo cons, uptr addr, int size)
 {
     FtnNo prod;
+    D2ECHO("Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
 #ifdef SHADOWMEM
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
-    DECHO(  hex << "0x" << setw(12) << setfill ('0') << addr << " -> "
-         << hex << "0x" << setw(12) << setfill ('0') << shadowAddr
-         << dec );
+    D3ECHO(  ADDR(addr) << " -> " << ADDR(shadowAddr));
 
     if (shadowAddr)
     {
@@ -60,10 +57,12 @@ void RecordRead(FtnNo cons, uptr addr, int size)
         for(int i=0; i<size; i++) {
             prod = *( (u8*) (shadowAddr + i ));
             RecordCommunication(prod, cons, 1);
+            D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of size: 1" );
         }
 #else
         prod = *( (u8*) (shadowAddr));
         RecordCommunication(prod, cons, size);
+        D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of " << VAR(size) );
 #endif
     }
     else
@@ -73,12 +72,12 @@ void RecordRead(FtnNo cons, uptr addr, int size)
         for(int i=0; i<size; i++) {
             prod = ShadowTable.getProducer(addr+i);
             RecordCommunication(prod, cons, 1);
-            //DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of size: 1" );
+            D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of size: 1" );
         }
 #else
         prod = ShadowTable.getProducer(addr);
         RecordCommunication(prod, cons, size);
-        //DECHO("Communication b/w " << (int)prod << " and " << (int)cons << " of " << VAR(size) );
+        D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of " << VAR(size) );
 #endif
     }
 }

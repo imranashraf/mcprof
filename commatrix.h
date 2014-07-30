@@ -60,7 +60,7 @@ public:
         }
     }
 
-    void PrintMatrix(ostream &fout, map<u16,string> & ADDtoName, u16 TotalFtns) {
+    void PrintMatrix(ostream &fout, u16 TotalFtns) {
         for (u16 r=0; r<TotalFtns; r++) {
             fout << setw(20) << ADDtoName[r] << "  ";
         }
@@ -75,7 +75,7 @@ public:
         }
     }
 
-    void PrintDot(ostream &dotout, map<u16,string> & ADDtoName, u16 TotalFtns) {
+    void PrintDot(ostream &dotout, u16 TotalFtns) {
         dotout << "digraph {\ngraph [];"
                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
                << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
@@ -120,7 +120,7 @@ public:
 
 void RecordCommunication(FtnNo prod, FtnNo cons, int size);
 void PrintCommunication(ostream &fout, u16 TotalFtns);
-void PrintMatrix(ostream &fout, map <u16,string> & ADDtoName, u16 TotalFtns);
-void PrintCommunicationDot(ostream &dotout, map <u16,string> & ADDtoName, u16 TotalFtns);
+void PrintMatrix(ostream &fout, u16 TotalFtns);
+void PrintCommunicationDot(ostream &dotout, u16 TotalFtns);
 
 #endif

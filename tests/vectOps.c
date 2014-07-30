@@ -1,10 +1,7 @@
-#include <iostream>
-#include <iostream>
+#include <stdio.h>
 
 #define SIZE 10
 typedef int uint32_t;
-
-using namespace std;
 
 unsigned int coeff = 2;
 unsigned int srcArr1[SIZE], srcArr2[SIZE];
@@ -107,9 +104,7 @@ int main()
     sumVecs();
     diffVecs();
     sqrootVecs();
-    
-    cout<<sumArr[1]+diffArr[1]<<endl;
-    
+
+    printf("output : %d\n",sumArr[1]+diffArr[1]);
     return 0;
-    
 }
