@@ -32,14 +32,16 @@ set key samplen 2 spacing .5 font ",8"
 #set boxwidth 0.25
 set title "Communication Matrix"
 
+set logscale zcb
+
 XTICS="`awk 'BEGIN{getline}{printf "%s ",$1}' matrix.out`"
 YTICS="`head -1 matrix.out`"
 
 set for [i=1:words(XTICS)] xtics ( word(XTICS,i) i-1 )
 set for [i=1:words(YTICS)] ytics ( word(YTICS,i) i-1 )
 
-set xtics nomirror rotate by 45 scale 0 font ",7"
-set ytics nomirror rotate by 45 scale 0 font ",7"
+set xtics nomirror rotate by 45 scale 0 font ",6" offset -2
+set ytics nomirror rotate by 0 scale 0 font ",6"
 
 set grid x
 set grid y
