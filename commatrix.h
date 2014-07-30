@@ -61,15 +61,16 @@ public:
     }
 
     void PrintMatrix(ostream &fout, u16 TotalFtns) {
+        fout << setw(25) << " ";
         for (u16 r=0; r<TotalFtns; r++) {
-            fout << setw(20) << ADDtoName[r] << "  ";
+            fout << setw(25) << ADDtoName[r];
         }
         fout << endl;
 
         for (u16 r=0; r<TotalFtns; r++) {
-            fout << setw(35) << ADDtoName[r] << "  ";
+            fout << setw(25) << ADDtoName[r];
             for (u16 c=0; c<TotalFtns; c++) {
-                fout << setw(12) << Matrix[r][c] <<" ";
+                fout << setw(25) << Matrix[r][c];
             }
             fout<<endl;
         }

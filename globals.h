@@ -5,7 +5,9 @@
 #include <map>
 #include <cstdlib>
 
-//comment the following to hide debugging output
+//Set the debugging level (0-3)
+// 0   -> No Debug
+// 1-3 -> Debug mode, while 3 is the most verbose
 #define DEBUG 0
 
 #if defined(_WIN64)
@@ -136,5 +138,21 @@ do { \
 #define DCHECK_GE(a, b)
 #endif
 
+inline bool IsPowerOfTwo(uptr x) {
+    return (x & (x - 1)) == 0;
+}
+
+inline uptr RoundUpTo(uptr size, uptr boundary) {
+  CHECK(IsPowerOfTwo(boundary));
+  return (size + boundary - 1) & ~(boundary - 1);
+}
+
+inline uptr RoundDownTo(uptr x, uptr boundary) {
+  return x & ~(boundary - 1);
+}
+
+inline bool IsAligned(uptr a, uptr alignment) {
+  return (a & (alignment - 1)) == 0;
+}
 
 #endif

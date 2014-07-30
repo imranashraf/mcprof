@@ -12,14 +12,14 @@ int main(int argc, char *argv[])
 {
 #if (DEBUG>0)
     PrintShadowMap();
+//     cin.get();
 #endif
 
     SetupPin(argc,argv);
 
-    //RecordWrite(2,4,2);
-    //RecordRead(3,4,2);
-
-    //PrintCommunication();
+//     RecordWrite(2,4,4);
+//     RecordRead(3,4,4);
+//     PrintCommunication(cout, 5);
 
     // Start the program, never returns
     PIN_StartProgram();
