@@ -128,7 +128,7 @@ BOOL ValidFtnName(string name)
 {
     return
         !(
-        name[0]=='_' ||
+//         name[0]=='_' ||
         name[0]=='?' ||
 #ifdef WIN32
         !name.compare("GetPdbDll") ||
@@ -146,21 +146,25 @@ BOOL ValidFtnName(string name)
         !name.compare("unnamedImageEntryPoint"
 #else
         !name.compare(".plt") ||
-//         !name.compare("_start") ||
-//         !name.compare("_init") ||
-//         !name.compare("__do_global_dtors_aux") ||
-//         !name.compare("__libc_csu_init") ||
+        !name.compare("_start") ||
+        !name.compare("_init") ||
+        !name.compare("__do_global_dtors_aux") ||
+        !name.compare("__libc_csu_init") ||
         !name.compare("call_gmon_start") ||
         !name.compare("register_tm_clones") ||
         !name.compare("deregister_tm_clones") ||
-        !name.compare("frame_dummy")
+        !name.compare("frame_dummy") ||
+        !name.compare("_fini") ||
+        !name.compare("__libc_csu_fini")
 #endif
         );
 }
+#define RTNOPT 0
 VOID RecordRoutineEntry(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+#if (RTNOPT==0)
     if( !ValidFtnName(rname) )
         return;
 
@@ -170,6 +174,7 @@ VOID RecordRoutineEntry(VOID *ip)
         NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
         ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
     }
+#endif
 
     D1ECHO ("Entring Routine : " << rname << VAR(GlobalFunctionNo));
     CallStack.push(rname);
@@ -203,10 +208,11 @@ VOID Image_cb(IMG img, VOID * v)
     // This can be extended to any other image of course.
     string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
-    KnobMainExecutableOnly.Value() == true) {
+        KnobMainExecutableOnly.Value() == true) {
         D1ECHO("Skipping Image "<< img_name<< " as it is not main executable");
         return;
-    } else {
+    }
+    else {
         D1ECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
     }
 
@@ -216,21 +222,30 @@ VOID Image_cb(IMG img, VOID * v)
         // For each section, process all RTNs.
         for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
 
-            // Many RTN APIs require that the RTN be opened first.
-            RTN_Open(rtn);
 /*
  * The following function recording can be done at the instrumentation time as below
  * instead of doing at analysis time in RecordRoutineEntry(). This will simply result
  * in more functions in SeenFname which may not be even involved in communication,
  * which is not as such a problem as it will simply clutter the output.
+ */
+            #if (RTNOPT==1)
             string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
-            if( ValidFtnName(rname) && !SeenFname.count(rname)) { // First time seeing this valid function name
+            if (!ValidFtnName(rname)) {
+                D1ECHO ("Skipping Instrumentation of Routine : " << rname);
+                continue;
+            }
+
+            if( !SeenFname.count(rname)) { // First time seeing this valid function name
                 SeenFname.insert(rname);  // mark this function name as seen
                 GlobalFunctionNo++;      // create a Function Number for this function
                 NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
                 ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
             }
-*/
+            D1ECHO ("Instrumenting Routine : " << rname);
+            #endif
+
+            // Many RTN APIs require that the RTN be opened first.
+            RTN_Open(rtn);
 
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
                         IARG_INST_PTR ,IARG_END);
