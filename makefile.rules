@@ -98,7 +98,7 @@ endif
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
 mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -- $(OBJDIR)vectOps$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -s 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
 # 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -- $(OBJDIR)simple2$(EXE_SUFFIX)
 
 ##############################################################

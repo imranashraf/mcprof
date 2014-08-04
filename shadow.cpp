@@ -7,8 +7,8 @@
 #define TABLES 2
 #define HYBRID 1
 // Un-comment *ONLY ONE* of the following three to select Mode
-#define MODE MEMMAP
-// #define MODE TABLES
+// #define MODE MEMMAP
+#define MODE TABLES
 // #define MODE HYBRID
 
 // if BYTELEVEL is defined than the granularity is Byte

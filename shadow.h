@@ -19,9 +19,9 @@ static const uptr GB   = (1ULL << 30);
 static const uptr TB   = (1ULL << 40);
 
 // No of bits required to address table entries
-static const u64 L1BITS = (12);
-static const u64 L2BITS = (18);
-static const u64 L3BITS = (18);
+static const u64 L1BITS = (18);
+static const u64 L2BITS = (16);
+static const u64 L3BITS = (14);
 
 // Sizes of tables
 static const u64 L1ENTRIES = (1ULL << L1BITS);

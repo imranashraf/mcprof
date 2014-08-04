@@ -40,8 +40,8 @@ YTICS="`head -1 matrix.out`"
 set for [i=1:words(XTICS)] xtics ( word(XTICS,i) i-1 )
 set for [i=1:words(YTICS)] ytics ( word(YTICS,i) i-1 )
 
-set xtics nomirror rotate by 45 scale 0 font ",6" offset -2
-set ytics nomirror rotate by 0 scale 0 font ",6"
+set xtics nomirror rotate by 45 scale 0 font ",8" offset -2
+set ytics nomirror rotate by 0 scale 0 font ",8"
 
 set grid x
 set grid y
