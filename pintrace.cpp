@@ -6,6 +6,7 @@
 
 #include "pin.H"
 #include "globals.h"
+#include "selectinstr.h"
 #include "pintrace.h"
 #include "commatrix.h"
 #include "shadow.h"
@@ -25,11 +26,9 @@ std::ofstream mout;
 stack <string> CallStack;
 map <string,UINT16> NametoADD;
 map <UINT16,string> ADDtoName;
-// set<string> SeenFname;
-vector<string> SeenFname;
-// deque <string> SeenFname;
 UINT16 GlobalFunctionNo=0;
-
+string UnKnownFtn("UNKNOWN");
+FtnList SeenFnames;
 
 /* ===================================================================== */
 // Command line switches
@@ -178,14 +177,7 @@ VOID RecordRoutineEntry(VOID *ip)
     if( !ValidFtnName(rname) )
         return;
 
-//     if( !SeenFname.count(rname)) { // First time seeing this valid function name
-//         SeenFname.insert(rname);  // mark this function name as seen
-    if(find(SeenFname.begin(), SeenFname.end(), rname) == SeenFname.end()) {
-        SeenFname.push_back(rname);  // mark this function name as seen
-        NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
-        ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
-        GlobalFunctionNo++;      // create a Function Number for this function
-    }
+    SeenFnames.AddIfNotFound(rname);
 #endif
 
     D1ECHO ("Entring Routine : " << rname << VAR(GlobalFunctionNo));
@@ -237,7 +229,7 @@ VOID Image_cb(IMG img, VOID * v)
             /*
             * The following function recording can be done at the instrumentation time as below
             * instead of doing at analysis time in RecordRoutineEntry(). This will simply result
-            * in more functions in SeenFname which may not be even involved in communication,
+            * in more functions in SeenFnames which may not be even involved in communication,
             * which is not as such a problem as it will simply clutter the output.
             */
             #if (RTNOPT==1)
@@ -247,22 +239,16 @@ VOID Image_cb(IMG img, VOID * v)
                 continue;
             }
 
-            if( KnobSelecInstr.Value() )
-            {
+            if( KnobSelecInstr.Value() ) {
                 // If this valid function name is not in the selected instr. list
-//                 if( SeenFname.count(rname)) {
-                if(find(SeenFname.begin(), SeenFname.end(), rname) == SeenFname.end()) {
+                if(!SeenFnames.Find(rname)) {
                     D1ECHO ("Skipping Instrumentation of Routine : " << rname);
                     continue; // skip it
                 }
             }
             else {
                 // First time seeing this valid function name
-//                 SeenFname.insert(rname);  // mark this function name as seen
-                SeenFname.push_back(rname);  // mark this function name as seen
-                NametoADD[rname]=GlobalFunctionNo;   // create String -> Number binding
-                ADDtoName[GlobalFunctionNo]=rname;   // create Number -> String binding
-                GlobalFunctionNo++;      // create a Function Number for this function
+                SeenFnames.Add(rname);
             }
             D1ECHO ("Instrumenting Routine : " << rname);
             #endif
@@ -331,10 +317,6 @@ VOID TheEnd(INT32 code, VOID *v)
     mout.close();
 }
 
-bool isEmpty(std::ifstream& fin) {
-    return fin.peek() == std::ifstream::traits_type::eof();
-}
-
 /*!
  * The main procedure of the tool.
  * This function is called when the application image is loaded but not yet started.
@@ -376,43 +358,11 @@ void SetupPin(int argc, char *argv[])
         return;
     }
 
-    string fname("UNKNOWN");
-//     SeenFname.insert(fname);             // Add UNKNOWN as the first function name
-    SeenFname.push_back(fname);
-    NametoADD[fname]=GlobalFunctionNo;   // create the string -> Number binding
-    ADDtoName[GlobalFunctionNo]=fname;   // create the Number -> String binding
-    CallStack.push(fname);
-    D1ECHO("Adding " << VAR(fname) << GlobalFunctionNo << "to SeenFname list");
-    GlobalFunctionNo++;      // create a Function Number for this function
-
+    // Push the first ftn as UNKNOWN
+    // The name can be adjusted from globals.h
+    CallStack.push(UnKnownFtn); 
     if(KnobSelecInstr.Value()) {
-        string selInstrfilename = "SelecInstrList.txt";
-        string rname;
-        ifstream sifin;
-        sifin.open(selInstrfilename.c_str());
-        if ( sifin.fail() ) {
-            ECHO("Can not open the selected instrumentation function list file ("
-                    <<selInstrfilename.c_str() << ")... Aborting!");
-            return;
-        }
-        if(isEmpty(sifin)){
-            ECHO( "Specified selected instrumentation function list file ("
-                    << selInstrfilename.c_str()<<") is empty\n"
-                    << "No function to instrument"
-                    << "Specify at least 1 function in the list... Aborting!");
-            return;
-        }
-
-        while(sifin >> rname) { // while there are function names in file
-//             SeenFname.insert(fname);             // Add UNKNOWN as the first function name
-            SeenFname.push_back(rname);
-            NametoADD[rname] = GlobalFunctionNo;   // create the string -> Number binding
-            ADDtoName[GlobalFunctionNo] = rname;   // create the Number -> String binding
-            CallStack.push(rname);
-            D1ECHO("Adding " << VAR(rname) << GlobalFunctionNo << "to SeenFname list");
-            GlobalFunctionNo++;      // create a Function Number for this function
-        }
-        sifin.close();
+        SeenFnames.InitFromFile();
     }
 
     //TRACE_AddInstrumentFunction(Trace_cb, 0);

@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <string>
 #include <cstdlib>
 
 //Set the debugging level (0-3)
@@ -60,6 +61,8 @@ typedef u8  FtnNo;
 
 extern std::map <std::string,u16> NametoADD;
 extern std::map <u16,std::string> ADDtoName;
+extern u16 GlobalFunctionNo;
+extern std::string UnKnownFtn;
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 #define VAR(v) " `" #v "': " << v << " "
