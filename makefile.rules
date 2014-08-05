@@ -128,7 +128,8 @@ format:
 
 open:
 	kate makefile.rules globals.h globals.cpp shadow.h shadow.cpp commatrix.h \
-	commatrix.cpp pintrace.h pintrace.cpp mcprof.cpp &> /dev/null &
+	commatrix.cpp selectInstr.h selectInstr.cpp pintrace.h pintrace.cpp \
+	mcprof.cpp &> /dev/null &
 
 ###### Special applications' build rules ######
 $(OBJDIR)simple1$(EXE_SUFFIX): $(TESTDIR)simple1.c
