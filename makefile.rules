@@ -69,7 +69,7 @@ endif
 
 # Linux
 ifeq ($(TARGET_OS),linux)
-	TOOL_CXXFLAGS+= -MD
+	TOOL_CXXFLAGS+= -MD -std=c++11
 # 	TOOL_CXXFLAGS=-Wall -Werror -Wno-unknown-pragmas -fno-stack-protector\
 # 	-DTARGET_IA32E -DHOST_IA32E -fPIC -DTARGET_LINUX \
 # 	-I/home/imran/pin-2.13-65163/source/include/pin \

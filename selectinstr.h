@@ -11,18 +11,21 @@
 #include <set>
 #include <map>
 #include <deque>
-// #include <unordered_map>
 #include <algorithm>
+
+#include <unordered_set>
+// #include <tr1/unordered_set>
+// using std::tr1::unordered_set;
 
 using namespace std;
 
 class FtnList
 {
     private:
-        // set<string> fNames;
-        vector<string> fNames;
-        // deque <string> fNames;
-//         unordered_map<string,bool>fNames;
+//         set<string> fNames;
+//         vector<string> fNames;
+//         deque <string> fNames;
+        unordered_set<string>fNames;
         string selInstrfilename;
 
     public:
@@ -32,7 +35,8 @@ class FtnList
         }
         void Add(string fname)
         {
-            fNames.push_back(fname);
+//             fNames.push_back(fname);
+            fNames.insert(fname);
             NametoADD[fname]=GlobalFunctionNo;   // create the string -> Number binding
             ADDtoName[GlobalFunctionNo]=fname;   // create the Number -> String binding
             D1ECHO("Adding " << VAR(fname) << "(" << GlobalFunctionNo << ") " << "to SeenFname list");
@@ -41,8 +45,8 @@ class FtnList
 
         bool Find(string fname)
         {
-        //     if( !fNames.count(fname)) { // First time seeing this valid function name
-            if(find(fNames.begin(), fNames.end(), fname) == fNames.end())
+//             if(find(fNames.begin(), fNames.end(), fname) == fNames.end())
+            if ( fNames.find (fname) == fNames.end() )
                 return false;
             else
                 return true;

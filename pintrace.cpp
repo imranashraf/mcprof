@@ -139,10 +139,10 @@ BOOL ValidFtnName(string name)
         !(
 //         name[0]=='_' ||
         name[0]=='?' ||
+        !name.compare("atexit") ||
 #ifdef WIN32
         !name.compare("GetPdbDll") ||
         !name.compare("DebuggerRuntime") ||
-        !name.compare("atexit") ||
         !name.compare("failwithmessage") ||
         !name.compare("pre_c_init") ||
         !name.compare("pre_cpp_init") ||
@@ -152,19 +152,20 @@ BOOL ValidFtnName(string name)
         !name.compare("DebuggerKnownHandle") ||
         !name.compare("DebuggerProbe") ||
         !name.compare("failwithmessage") ||
-        !name.compare("unnamedImageEntryPoint"
+        !name.compare("unnamedImageEntryPoint")
 #else
         !name.compare(".plt") ||
         !name.compare("_start") ||
         !name.compare("_init") ||
+        !name.compare("_fini") ||
         !name.compare("__do_global_dtors_aux") ||
         !name.compare("__libc_csu_init") ||
+        !name.compare("__gmon_start__") ||
+        !name.compare("__libc_csu_fini") ||
         !name.compare("call_gmon_start") ||
         !name.compare("register_tm_clones") ||
         !name.compare("deregister_tm_clones") ||
-        !name.compare("frame_dummy") ||
-        !name.compare("_fini") ||
-        !name.compare("__libc_csu_fini")
+        !name.compare("frame_dummy")
 #endif
         );
 }
@@ -234,10 +235,6 @@ VOID Image_cb(IMG img, VOID * v)
             */
             #if (RTNOPT==1)
             string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
-            if (!ValidFtnName(rname)) {
-                D1ECHO ("Skipping Instrumentation of Routine : " << rname);
-                continue;
-            }
 
             if( KnobSelecInstr.Value() ) {
                 // If this valid function name is not in the selected instr. list
@@ -247,7 +244,12 @@ VOID Image_cb(IMG img, VOID * v)
                 }
             }
             else {
-                // First time seeing this valid function name
+                if (!ValidFtnName(rname)) {
+                    D1ECHO ("Skipping Instrumentation of Routine : " << rname);
+                    continue;
+                }
+
+                // First time seeing this valid function name, save it in the list
                 SeenFnames.Add(rname);
             }
             D1ECHO ("Instrumenting Routine : " << rname);

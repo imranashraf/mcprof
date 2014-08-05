@@ -11,8 +11,8 @@ set output 'matrix.eps'
 
 unset key
 
-set xlabel "Producer"
-set ylabel "Consumer"
+set xlabel "Consumers"
+set ylabel "Producers"
 set zlabel "Communication in Bytes"
 
 set xlabel font "Times-Roman, 14" offset 0,-2

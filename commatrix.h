@@ -35,26 +35,26 @@ public:
         Matrix.resize( cols , vector<double>( rows , value) );
     }
 
-    void Increment(u16 col, u16 row, u16 size) {
-        if( col<Matrix.size() && row < Matrix.size() )
-            Matrix[row][col] += size;
+    void Increment(u16 prod, u16 cons, u16 size) {
+        if( prod<Matrix.size() && cons < Matrix.size() )
+            Matrix[prod][cons] += size;
     }
 
     double MaxCommunication() {
         double currmax=0;
         // Following iterations can be optimized to TotalFtns instead of size
-        for (u16 r=0; r<Matrix.size(); r++) {
+        for (u16 p=0; p<Matrix.size(); p++) {
             for (u16 c=0; c<Matrix.size(); c++) {
-                currmax = std::max(currmax, Matrix[r][c]);
+                currmax = std::max(currmax, Matrix[p][c]);
             }
         }
         return currmax;
     }
 
     void Print(ostream &fout, u16 TotalFtns) {
-        for (u16 r=0; r<TotalFtns; r++) {
+        for (u16 p=0; p<TotalFtns; p++) {
             for (u16 c=0; c<TotalFtns; c++) {
-                fout << setw(12) << Matrix[r][c] <<" ";
+                fout << setw(12) << Matrix[p][c] <<" ";
             }
             fout<<endl;
         }
@@ -62,15 +62,15 @@ public:
 
     void PrintMatrix(ostream &fout, u16 TotalFtns) {
         fout << setw(25) << " ";
-        for (u16 r=0; r<TotalFtns; r++) {
-            fout << setw(25) << ADDtoName[r];
+        for (u16 c=0; c<TotalFtns; c++) {
+            fout << setw(25) << ADDtoName[c];
         }
         fout << endl;
 
-        for (u16 r=0; r<TotalFtns; r++) {
-            fout << setw(25) << ADDtoName[r];
+        for (u16 p=0; p<TotalFtns; p++) {
+            fout << setw(25) << ADDtoName[p];
             for (u16 c=0; c<TotalFtns; c++) {
-                fout << setw(25) << Matrix[r][c];
+                fout << setw(25) << Matrix[p][c];
             }
             fout<<endl;
         }
@@ -84,25 +84,24 @@ public:
 
         CHECK_LT(TotalFtns, Matrix.size());
 
-        for (u16 r=0; r<TotalFtns; r++) {
-            dotout << "\"" << r << "\"" << " [label=\"" << ADDtoName[r] << "\"];" << endl;
+        for (u16 c=0; c<TotalFtns; c++) {
+            dotout << "\"" << c << "\"" << " [label=\"" << ADDtoName[c] << "\"];" << endl;
         }
 
         int color;
         double maxComm = MaxCommunication();
 
-        for (u16 r=0; r<TotalFtns; r++) {
+        for (u16 p=0; p<TotalFtns; p++) {
             for (u16 c=0; c<TotalFtns; c++) {
-                u16 prod = c;
-                u16 cons = r;
-                if(Matrix[r][c] > 0 ) {
-                    color = (int) (  1023 *  log((double)(Matrix[r][c])) / log((double)maxComm)  );
+                double comm = Matrix[p][c];
+                if(comm > 0 ) {
+                    color = (int) (  1023 *  log((double)(comm)) / log((double)maxComm)  );
                     dotout << dec
-                           << "\"" << prod << "\""
+                           << "\"" << p << "\""
                            << "->"
-                           << "\"" << cons << "\""
+                           << "\"" << c << "\""
                            << "[label=\""
-                           << Matrix[r][c] <<" Bytes\""
+                           << comm <<" Bytes\""
                            << "color = \"#"
                            << hex
                            << setw(2) << setfill('0') << max(0, color-768)
