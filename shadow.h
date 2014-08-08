@@ -37,13 +37,16 @@ class Entry
 private:
     FtnNo producer;
 public:
-    Entry() {
+    Entry()
+    {
         producer=UNKNOWN_PRODUCER;
     }
-    void setProducer(FtnNo p) {
+    void setProducer(FtnNo p)
+    {
         producer=p;
     }
-    FtnNo getProducer() {
+    FtnNo getProducer()
+    {
         return producer;
     }
 };
@@ -58,16 +61,20 @@ private:
     Entry Table[L1ENTRIES];
 public:
     L1Table() { }
-    FtnNo getProducer(uptr L1Index) {
+    FtnNo getProducer(uptr L1Index)
+    {
 //         return Table[L1Index].producer;
         return Table[L1Index].getProducer();
     }
-    void setProducer(uptr L1Index, FtnNo prod) {
+    void setProducer(uptr L1Index, FtnNo prod)
+    {
 //         Table[L1Index].producer = prod;
         Table[L1Index].setProducer(prod);
     }
-    void setProducerRange(uptr L1Index, FtnNo prod, int size) {
-        for(int i=0; i<size; i++) {
+    void setProducerRange(uptr L1Index, FtnNo prod, int size)
+    {
+        for(int i=0; i<size; i++)
+        {
 //             Table[L1Index + i].producer = prod;
             Table[L1Index+i].setProducer(prod);
         }
@@ -79,26 +86,34 @@ class L2Table
 private:
     L1Table* Table[L2ENTRIES];
 public:
-    L2Table() {
+    L2Table()
+    {
         // initially all the entries are UNACCESSED
-        for(uptr i=0; i<L2ENTRIES; i++) {
+        for(uptr i=0; i<L2ENTRIES; i++)
+        {
             Table[i]=UNACCESSED;
         }
     }
-    FtnNo getProducer(uptr L1Index, uptr L2Index) {
-        if(Table[L2Index] == UNACCESSED) {
+    FtnNo getProducer(uptr L1Index, uptr L2Index)
+    {
+        if(Table[L2Index] == UNACCESSED)
+        {
             Table[L2Index] = new L1Table;
         }
         return Table[L2Index]->getProducer(L1Index);
     }
-    void setProducer(uptr L1Index, uptr L2Index, FtnNo prod) {
-        if(Table[L2Index] == UNACCESSED) {
+    void setProducer(uptr L1Index, uptr L2Index, FtnNo prod)
+    {
+        if(Table[L2Index] == UNACCESSED)
+        {
             Table[L2Index] = new L1Table;
         }
         Table[L2Index]->setProducer(L1Index, prod);
     }
-    void setProducerRange(uptr L1Index, uptr L2Index, FtnNo prod, int size) {
-        if(Table[L2Index] == UNACCESSED) {
+    void setProducerRange(uptr L1Index, uptr L2Index, FtnNo prod, int size)
+    {
+        if(Table[L2Index] == UNACCESSED)
+        {
             Table[L2Index] = new L1Table;
         }
         Table[L2Index]->setProducerRange(L1Index, prod, size);
@@ -111,41 +126,49 @@ class L3Table
 private:
     L2Table* Table[L3ENTRIES];
 public:
-    L3Table() {
+    L3Table()
+    {
         // initially all the entries are UNACCESSED
-        for(uptr i=0; i<L3ENTRIES; i++) {
+        for(uptr i=0; i<L3ENTRIES; i++)
+        {
             Table[i]=UNACCESSED;
         }
     }
 
-    FtnNo getProducer(uptr addr) {
+    FtnNo getProducer(uptr addr)
+    {
         FtnNo prod;
 
         uptr L1Index=( (L1ENTRIES-1) & addr);
         uptr L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
         uptr L3Index=( (L3ENTRIES-1) & (addr>>(L1BITS+L2BITS)) );
-        if(Table[L3Index] == UNACCESSED) {
+        if(Table[L3Index] == UNACCESSED)
+        {
             Table[L3Index] = new L2Table;
         }
         prod = Table[L3Index]->getProducer(L1Index, L2Index);
         return prod;
     }
 
-    void setProducer(uptr addr, FtnNo prod) {
+    void setProducer(uptr addr, FtnNo prod)
+    {
         uptr L1Index=( (L1ENTRIES-1) & addr);
         uptr L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
         uptr L3Index=( (L3ENTRIES-1) & (addr>>(L1BITS+L2BITS)) );
-        if(Table[L3Index] == UNACCESSED) {
+        if(Table[L3Index] == UNACCESSED)
+        {
             Table[L3Index] = new L2Table;
         }
         Table[L3Index]->setProducer(L1Index, L2Index, prod);
     }
 
-    void setProducerRange(uptr addr, FtnNo prod, int size) {
+    void setProducerRange(uptr addr, FtnNo prod, int size)
+    {
         uptr L1Index=( (L1ENTRIES-1) & addr);
         uptr L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
         uptr L3Index=( (L3ENTRIES-1) & (addr>>(L1BITS+L2BITS)) );
-        if(Table[L3Index] == UNACCESSED) {
+        if(Table[L3Index] == UNACCESSED)
+        {
             Table[L3Index] = new L2Table;
         }
         Table[L3Index]->setProducerRange(L1Index, L2Index, prod, size);
@@ -164,48 +187,52 @@ void RecordRead(FtnNo cons, uptr addr, int size);
 class MemMap
 {
 private:
-static const uptr M0SIZE = 2*GB;
-static const uptr M0L = 0ULL;
-static const uptr M0H = M0L + M0SIZE -1;
+    static const uptr M0SIZE = 2*GB;
+    static const uptr M0L = 0ULL;
+    static const uptr M0H = M0L + M0SIZE -1;
 //Following May obtained at runtime !!!
-static const uptr SM0L = 0x400000000000ULL;
-static const uptr SM0H = SM0L + M0SIZE -1;
-static const uptr M0OFFSET = SM0L-M0L;
+    static const uptr SM0L = 0x400000000000ULL;
+    static const uptr SM0H = SM0L + M0SIZE -1;
+    static const uptr M0OFFSET = SM0L-M0L;
 
-static const uptr M1SIZE = 2*GB;
-static const uptr M1H = (1ULL<<47) -1;
-static const uptr M1L = M1H - M1SIZE +1;
+    static const uptr M1SIZE = 2*GB;
+    static const uptr M1H = (1ULL<<47) -1;
+    static const uptr M1L = M1H - M1SIZE +1;
 //Following May obtained at runtime !!!
-static const uptr SM1L = 0x500000000000ULL;
-static const uptr SM1H = SM1L + M1SIZE -1;
-static const uptr M1OFFSET = M1L-SM1L;
+    static const uptr SM1L = 0x500000000000ULL;
+    static const uptr SM1H = SM1L + M1SIZE -1;
+    static const uptr M1OFFSET = M1L-SM1L;
 
 public:
-    MemMap(){
+    MemMap()
+    {
         uptr *retAddr;
         uptr startAddr;
         uptr length;
 
-        startAddr = SM0L; length = M0SIZE;
+        startAddr = SM0L;
+        length = M0SIZE;
         retAddr = (uptr *)mmap((void *)startAddr,
-                    length,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANON | MAP_FIXED,
-                    -1, 0);
+                               length,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+                               -1, 0);
         if (retAddr == MAP_FAILED)
             cout<<"mmap Failed"<<endl;
 
-        startAddr = SM1L; length = M1SIZE;
+        startAddr = SM1L;
+        length = M1SIZE;
         retAddr = (uptr *)mmap((void *)startAddr,
-                    length,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANON | MAP_FIXED,
-                    -1, 0);
+                               length,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+                               -1, 0);
         if (retAddr == MAP_FAILED)
             cout<<"mmap Failed"<<endl;
     }
 
-    void Print() {
+    void Print()
+    {
         cout << hex;
         cout << "================ 0x" << setw(12) << setfill ('0') << M1H << endl;
         cout << "| M1 = "<< M1SIZE/GB <<" GB    |" <<endl;
@@ -221,25 +248,29 @@ public:
         cout << "================ 0x" << setw(12) << setfill ('0') << M0L << endl;
         cout << dec;
     }
-    uptr inline Mem2Shadow(uptr addr) {
+    uptr inline Mem2Shadow(uptr addr)
+    {
         return (addr >=M0L && addr <= M0H)*(addr + M0OFFSET) +
                (addr >=M1L && addr <= M1H)*(addr - M1OFFSET) ;
     }
 
-    ~MemMap(){
-    int retVal;
-    uptr startAddr;
-    uptr length;
+    ~MemMap()
+    {
+        int retVal;
+        uptr startAddr;
+        uptr length;
 
-    startAddr = SM0L; length = M0SIZE;
-    retVal = munmap((void *)startAddr, length);
-    if( retVal == -1)
-        cout<<"munmap Failed"<<endl;
+        startAddr = SM0L;
+        length = M0SIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            cout<<"munmap Failed"<<endl;
 
-    startAddr = SM1L; length = M1SIZE;
-    retVal = munmap((void *)startAddr, length);
-    if( retVal == -1)
-        cout<<"munmap Failed"<<endl;
+        startAddr = SM1L;
+        length = M1SIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            cout<<"munmap Failed"<<endl;
     }
 };
 
@@ -266,28 +297,29 @@ void PrintShadowMap();
 class MemMap8th
 {
 private:
-static const uptr M0L = 0ULL;
-static const uptr M0H = 0x00007fff7fffULL;
-static const uptr M0SIZE=(M0H-M0L);
+    static const uptr M0L = 0ULL;
+    static const uptr M0H = 0x00007fff7fffULL;
+    static const uptr M0SIZE=(M0H-M0L);
 
-static const uptr SM0L = 0x00007fff8000ULL;
-static const uptr SM0H = 0x00008fff6fffULL;
-static const uptr SM0SIZE=(SM0H-SM0L);
+    static const uptr SM0L = 0x00007fff8000ULL;
+    static const uptr SM0H = 0x00008fff6fffULL;
+    static const uptr SM0SIZE=(SM0H-SM0L);
 
-static const uptr SGL = 0x00008fff7000ULL;
-static const uptr SGH = 0x02008fff6fffULL;
-static const uptr SGSIZE=(SGH-SGL);
+    static const uptr SGL = 0x00008fff7000ULL;
+    static const uptr SGH = 0x02008fff6fffULL;
+    static const uptr SGSIZE=(SGH-SGL);
 
-static const uptr SM1L = 0x02008fff7000ULL;
-static const uptr SM1H = 0x10007fff7fffULL;
-static const uptr SM1SIZE=(SM1H-SM1L);
+    static const uptr SM1L = 0x02008fff7000ULL;
+    static const uptr SM1H = 0x10007fff7fffULL;
+    static const uptr SM1SIZE=(SM1H-SM1L);
 
-static const uptr M1L = 0x10007fff8000ULL;
-static const uptr M1H = 0x7fffffffffffULL;
-static const uptr M1SIZE=(M1H-M1L);
+    static const uptr M1L = 0x10007fff8000ULL;
+    static const uptr M1H = 0x7fffffffffffULL;
+    static const uptr M1SIZE=(M1H-M1L);
 
 public:
-    MemMap8th(){
+    MemMap8th()
+    {
         uptr *retAddr;
         uptr startAddr;
         uptr length;
@@ -300,11 +332,12 @@ public:
         length = RoundUpTo(length, PAGESIZE);
         D1ECHO(ADDR(startAddr) << " " << VAR(length));
         retAddr = (uptr *)mmap((void *)(startAddr),
-                    length,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANON | MAP_FIXED | MAP_NORESERVE,
-                    -1, 0);
-        if (retAddr == MAP_FAILED){
+                               length,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANON | MAP_FIXED | MAP_NORESERVE,
+                               -1, 0);
+        if (retAddr == MAP_FAILED)
+        {
             ECHO("mmap Failed");
             Die();
         }
@@ -320,7 +353,8 @@ public:
                                PROT_NONE,
                                MAP_PRIVATE | MAP_ANON | MAP_FIXED | MAP_NORESERVE,
                                -1, 0);
-        if (retAddr == MAP_FAILED){
+        if (retAddr == MAP_FAILED)
+        {
             ECHO("mmap Failed");
             Die();
         }
@@ -336,13 +370,15 @@ public:
                                PROT_READ | PROT_WRITE,
                                MAP_PRIVATE | MAP_ANON | MAP_FIXED | MAP_NORESERVE,
                                -1, 0);
-        if (retAddr == MAP_FAILED){
+        if (retAddr == MAP_FAILED)
+        {
             ECHO("mmap Failed");
             Die();
         }
     }
 
-    void Print() {
+    void Print()
+    {
         cout << hex << "================ 0x" << setw(16) << setfill ('0') << M1H << endl;
         cout << dec << "| M1 = "<< M1SIZE/TB <<" TB    |" <<endl;
         cout << hex << "================ 0x" << setw(16) << setfill ('0') << M1L << endl<<endl<<endl;
@@ -365,25 +401,29 @@ public:
         cout << dec;
     }
 
-    ~MemMap8th(){
-    int retVal;
-    uptr startAddr;
-    uptr length;
+    ~MemMap8th()
+    {
+        int retVal;
+        uptr startAddr;
+        uptr length;
 
-    startAddr = SM0L; length = SM0SIZE;
-    retVal = munmap((void *)startAddr, length);
-    if( retVal == -1)
-        ECHO("munmap Failed");
+        startAddr = SM0L;
+        length = SM0SIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            ECHO("munmap Failed");
 
-    startAddr = SGL; length = SGSIZE;
-    retVal = munmap((void *)startAddr, length);
-    if( retVal == -1)
-        ECHO("munmap Failed");
+        startAddr = SGL;
+        length = SGSIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            ECHO("munmap Failed");
 
-    startAddr = SM1L; length = SM1SIZE;
-    retVal = munmap((void *)startAddr, length);
-    if( retVal == -1)
-        ECHO("munmap Failed");
+        startAddr = SM1L;
+        length = SM1SIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            ECHO("munmap Failed");
 
     }
 

@@ -141,21 +141,25 @@ do { \
 #define DCHECK_GE(a, b)
 #endif
 
-inline bool IsPowerOfTwo(uptr x) {
+inline bool IsPowerOfTwo(uptr x)
+{
     return (x & (x - 1)) == 0;
 }
 
-inline uptr RoundUpTo(uptr size, uptr boundary) {
-  CHECK(IsPowerOfTwo(boundary));
-  return (size + boundary - 1) & ~(boundary - 1);
+inline uptr RoundUpTo(uptr size, uptr boundary)
+{
+    CHECK(IsPowerOfTwo(boundary));
+    return (size + boundary - 1) & ~(boundary - 1);
 }
 
-inline uptr RoundDownTo(uptr x, uptr boundary) {
-  return x & ~(boundary - 1);
+inline uptr RoundDownTo(uptr x, uptr boundary)
+{
+    return x & ~(boundary - 1);
 }
 
-inline bool IsAligned(uptr a, uptr alignment) {
-  return (a & (alignment - 1)) == 0;
+inline bool IsAligned(uptr a, uptr alignment)
+{
+    return (a & (alignment - 1)) == 0;
 }
 
 #endif

@@ -56,11 +56,12 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
 {
     D2ECHO("Write " << VAR(size) << FUNC(prod) << ADDR(addr));
 #ifdef BYTELEVEL
-        for(int i=0; i<size; i++) {
-            ShadowTable.setProducer(addr+i, prod);
-        }
+    for(int i=0; i<size; i++)
+    {
+        ShadowTable.setProducer(addr+i, prod);
+    }
 #else
-        ShadowTable.setProducerRange(addr, prod, size);
+    ShadowTable.setProducerRange(addr, prod, size);
 #endif
 }
 #endif
@@ -74,7 +75,8 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
     if (shadowAddr)
     {
 #ifdef BYTELEVEL
-        for(int i=0; i<size; i++) {
+        for(int i=0; i<size; i++)
+        {
             *( (u8*) (shadowAddr+i) ) = prod;
         }
 #else
@@ -84,7 +86,8 @@ void RecordWrite(FtnNo prod, uptr addr, int size)
     else
     {
 #ifdef BYTELEVEL
-        for(int i=0; i<size; i++) {
+        for(int i=0; i<size; i++)
+        {
             ShadowTable.setProducer(addr+i, prod);
         }
 #else
@@ -106,7 +109,7 @@ void RecordRead(FtnNo cons, uptr addr, int size)
         prod = *(shadowAddr);
         RecordCommunication(prod, cons, size);
         D2ECHO("Read of " << size << " bytes by " << FUNC(cons)
-                          << "producer was " << FUNC(prod));
+               << "producer was " << FUNC(prod));
     }
 }
 #endif
@@ -117,7 +120,8 @@ void RecordRead(FtnNo cons, uptr addr, int size)
     FtnNo prod;
     D2ECHO("Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
 #ifdef BYTELEVEL
-    for(int i=0; i<size; i++) {
+    for(int i=0; i<size; i++)
+    {
         prod = ShadowTable.getProducer(addr+i);
         RecordCommunication(prod, cons, 1);
         D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of size: 1" );
@@ -141,7 +145,8 @@ void RecordRead(FtnNo cons, uptr addr, int size)
     if (shadowAddr)
     {
 #ifdef BYTELEVEL
-        for(int i=0; i<size; i++) {
+        for(int i=0; i<size; i++)
+        {
             prod = *( (u8*) (shadowAddr + i ));
             RecordCommunication(prod, cons, 1);
             D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of size: 1" );
@@ -155,7 +160,8 @@ void RecordRead(FtnNo cons, uptr addr, int size)
     else
     {
 #ifdef BYTELEVEL
-        for(int i=0; i<size; i++) {
+        for(int i=0; i<size; i++)
+        {
             prod = ShadowTable.getProducer(addr+i);
             RecordCommunication(prod, cons, 1);
             D2ECHO("Communication b/w " << FUNC(prod) << " and " << FUNC(cons) << " of size: 1" );

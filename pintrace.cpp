@@ -41,12 +41,12 @@ KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
                          "specify file name for output in dot");
 
 KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
-                          "MainExecOnly","1",
-                          "Trace functions that are contained only in the\
+                                  "MainExecOnly","1",
+                                  "Trace functions that are contained only in the\
                           executable image");
 
 KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
-                          "s","0", "Include Stack Accesses");
+                           "s","0", "Include Stack Accesses");
 
 KNOB<BOOL> KnobSelecInstr(KNOB_MODE_WRITEONCE, "pintool",
                           "SelecInstr", "0",
@@ -103,15 +103,19 @@ void Trace_cb(TRACE trace, void *v)
     if (!RTN_Valid(rtn)) return;
 //     string rtn_name = RTN_Name(rtn);
 
-    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
-        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins)) {
+    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
+    {
+        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins))
+        {
             UINT32 memOperands = INS_MemoryOperandCount(ins);
-            for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
+            for (UINT32 memOp = 0; memOp < memOperands; memOp++)
+            {
                 size_t refSize = INS_MemoryOperandSize(ins, memOp);
 //                 bool isStack = INS_IsStackRead(ins);
 //                 if(!isStack) return;
 
-                if (INS_MemoryOperandIsRead(ins, memOp)) {
+                if (INS_MemoryOperandIsRead(ins, memOp))
+                {
                     INS_InsertPredicatedCall(
                         ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
                         IARG_INST_PTR,
@@ -120,7 +124,8 @@ void Trace_cb(TRACE trace, void *v)
                         IARG_END);
                 }
 
-                if (INS_MemoryOperandIsWritten(ins, memOp)) {
+                if (INS_MemoryOperandIsWritten(ins, memOp))
+                {
                     INS_InsertPredicatedCall(
                         ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
                         IARG_INST_PTR,
@@ -138,34 +143,34 @@ BOOL ValidFtnName(string name)
     return
         !(
 //         name[0]=='_' ||
-        name[0]=='?' ||
-        !name.compare("atexit") ||
+            name[0]=='?' ||
+            !name.compare("atexit") ||
 #ifdef WIN32
-        !name.compare("GetPdbDll") ||
-        !name.compare("DebuggerRuntime") ||
-        !name.compare("failwithmessage") ||
-        !name.compare("pre_c_init") ||
-        !name.compare("pre_cpp_init") ||
-        !name.compare("mainCRTStartup") ||
-        !name.compare("NtCurrentTeb") ||
-        !name.compare("check_managed_app") ||
-        !name.compare("DebuggerKnownHandle") ||
-        !name.compare("DebuggerProbe") ||
-        !name.compare("failwithmessage") ||
-        !name.compare("unnamedImageEntryPoint")
+            !name.compare("GetPdbDll") ||
+            !name.compare("DebuggerRuntime") ||
+            !name.compare("failwithmessage") ||
+            !name.compare("pre_c_init") ||
+            !name.compare("pre_cpp_init") ||
+            !name.compare("mainCRTStartup") ||
+            !name.compare("NtCurrentTeb") ||
+            !name.compare("check_managed_app") ||
+            !name.compare("DebuggerKnownHandle") ||
+            !name.compare("DebuggerProbe") ||
+            !name.compare("failwithmessage") ||
+            !name.compare("unnamedImageEntryPoint")
 #else
-        !name.compare(".plt") ||
-        !name.compare("_start") ||
-        !name.compare("_init") ||
-        !name.compare("_fini") ||
-        !name.compare("__do_global_dtors_aux") ||
-        !name.compare("__libc_csu_init") ||
-        !name.compare("__gmon_start__") ||
-        !name.compare("__libc_csu_fini") ||
-        !name.compare("call_gmon_start") ||
-        !name.compare("register_tm_clones") ||
-        !name.compare("deregister_tm_clones") ||
-        !name.compare("frame_dummy")
+//         !name.compare(".plt") ||
+            !name.compare("_start") ||
+            !name.compare("_init") ||
+            !name.compare("_fini") ||
+            !name.compare("__do_global_dtors_aux") ||
+            !name.compare("__libc_csu_init") ||
+            !name.compare("__gmon_start__") ||
+            !name.compare("__libc_csu_fini") ||
+            !name.compare("call_gmon_start") ||
+            !name.compare("register_tm_clones") ||
+            !name.compare("deregister_tm_clones") ||
+            !name.compare("frame_dummy")
 #endif
         );
 }
@@ -191,41 +196,169 @@ VOID RecordRoutineExit(VOID *ip)
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
-    if(!(CallStack.empty()) && (CallStack.top() == rname)) {
+    if(!(CallStack.empty()) && (CallStack.top() == rname))
+    {
         D1ECHO("Leaving Routine : " << rname);
         CallStack.pop();
 #if (DEBUG>0)
-    } else if (!(CallStack.empty()) ) {
+    }
+    else if (!(CallStack.empty()) )
+    {
         D1ECHO("Not Leaving Routine : "<< VAR(rname)
-            << VAR(CallStack.top()));
-    } else {
+               << VAR(CallStack.top()));
+    }
+    else
+    {
         D1ECHO("Not Leaving Routine as CallStack empty without : "
-            << VAR(rname));
+               << VAR(rname));
 #endif
     }
 
 }
 
+
+/* ===================================================================== */
+/* Names of malloc and free */
+/* ===================================================================== */
+BOOL IsPLT(SEC sec)
+{
+    return ( ".plt" == SEC_Name(sec) );
+//     RTN rtn = TRACE_Rtn(trace);
+
+    // All .plt thunks have a valid RTN
+//     if (!RTN_Valid(rtn))
+//         return FALSE;
+//     if ( ".plt" == SEC_Name(sec) )
+//         return TRUE;
+//     return FALSE;
+}
+
+string invalid = "invalid_rtn";
+const string *Target2String(ADDRINT target)
+{
+    string name = RTN_FindNameByAddress(target);
+    if (name == "")
+        return &invalid;
+    else
+        return new string(name);
+}
+
+const string& Target2RtnName(ADDRINT target)
+{
+    const string & name = RTN_FindNameByAddress(target);
+
+    if (name == "")
+        return *new string("[Unknown routine]");
+    else
+        return *new string(name);
+}
+
+const string& Target2LibName(ADDRINT target)
+{
+    PIN_LockClient();
+
+    const RTN rtn = RTN_FindByAddress(target);
+    static const string _invalid_rtn("[Unknown image]");
+
+    string name;
+
+    if( RTN_Valid(rtn) )
+    {
+        name = IMG_Name(SEC_Img(RTN_Sec(rtn)));
+    }
+    else
+    {
+        name = _invalid_rtn;
+    }
+
+    PIN_UnlockClient();
+
+    return *new string(name);
+}
+
+void ProcessDirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp)
+{
+    cout << "Direct call: " << Target2RtnName(target) << endl;
+    cout << "Direct call: " << ADDR(target) << endl;
+    cout << "Direct call: " << ADDR(ip) << endl;
+    cout << "Direct call: " << ADDR(sp) << endl;
+}
+
+void ProcessIndirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp, ADDRINT size)
+{
+    cout << "Indirect call: " << Target2RtnName(target) << " " << size <<endl;
+    cout << "Indirect call: " << ADDR(target) << endl;
+    cout << "Indirect call + ip: " << ADDR(target+ip) << endl;
+    cout << "Indirect call: " << ADDR(ip) << endl;
+    cout << "Indirect call: " << ADDR(sp) << endl;
+}
+
+void ProcessStub(ADDRINT ip, ADDRINT target)
+{
+    cout << "Instrumenting stub: " << Target2String(target) << endl;
+    cout << "STUB: ";
+    cout << Target2RtnName(target) << endl;
+}
+
+
+#if defined(TARGET_MAC)
+#define MALLOC "_malloc"
+#define FREE "_free"
+#else
+#define MALLOC "malloc"
+#define FREE "free"
+#endif
+
+VOID Arg1Before(CHAR * name, ADDRINT size)
+{
+    ECHO(name << "(" << size << ") from " << CallStack.top() );
+}
+VOID MallocAfter(ADDRINT ret)
+{
+    ECHO("  returns " << ADDR(ret) );
+}
+
 // IMG instrumentation routine - called once per image upon image load
 VOID Image_cb(IMG img, VOID * v)
 {
+    RTN mallocRtn = RTN_FindByName(img, MALLOC);
+    if (RTN_Valid(mallocRtn))
+    {
+        RTN_Open(mallocRtn);
+
+        // Instrument malloc() to print the input argument value and the return value.
+        RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)Arg1Before,
+                       IARG_ADDRINT, MALLOC,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                       IARG_END);
+        RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
+                       IARG_FUNCRET_EXITPOINT_VALUE,
+                       IARG_END);
+
+        RTN_Close(mallocRtn);
+    }
+
     // For simplicity, instrument only the main image.
     // This can be extended to any other image of course.
     string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
-        KnobMainExecutableOnly.Value() == true) {
+            KnobMainExecutableOnly.Value() == true)
+    {
         D1ECHO("Skipping Image "<< img_name<< " as it is not main executable");
         return;
     }
-    else {
+    else
+    {
         D1ECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
     }
 
     // Traverse the sections of the image.
-    for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) {
+    for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec))
+    {
 
         // For each section, process all RTNs.
-        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn)) {
+        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn))
+        {
 
             /*
             * The following function recording can be done at the instrumentation time as below
@@ -233,18 +366,22 @@ VOID Image_cb(IMG img, VOID * v)
             * in more functions in SeenFnames which may not be even involved in communication,
             * which is not as such a problem as it will simply clutter the output.
             */
-            #if (RTNOPT==1)
+#if (RTNOPT==1)
             string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
 
-            if( KnobSelecInstr.Value() ) {
+            if( KnobSelecInstr.Value() )
+            {
                 // If this valid function name is not in the selected instr. list
-                if(!SeenFnames.Find(rname)) {
+                if(!SeenFnames.Find(rname))
+                {
                     D1ECHO ("Skipping Instrumentation of Routine : " << rname);
                     continue; // skip it
                 }
             }
-            else {
-                if (!ValidFtnName(rname)) {
+            else
+            {
+                if (!ValidFtnName(rname))
+                {
                     D1ECHO ("Skipping Instrumentation of Routine : " << rname);
                     continue;
                 }
@@ -253,23 +390,81 @@ VOID Image_cb(IMG img, VOID * v)
                 SeenFnames.Add(rname);
             }
             D1ECHO ("Instrumenting Routine : " << rname);
-            #endif
+#endif
 
             // Many RTN APIs require that the RTN be opened first.
             RTN_Open(rtn);
 
+            if (rname == ".plt")
+            {
+                ECHO("in .plt ");
+                // Traverse all instructions
+                for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
+                {
+                    string  inscode = INS_Disassemble (ins);
+                    ECHO(VAR(inscode));
+
+                    // All calls and returns
+                    if( INS_IsCall(ins) )
+                    {
+                        ECHO("INS_IsCall");
+                    }
+
+                    if( INS_IsBranchOrCall(ins) )
+                    {
+                        if( INS_IsDirectBranchOrCall(ins) )
+                        {
+                            ECHO("INS_IsDirectBranchOrCall");
+                            ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
+                            string rtnName = RTN_FindNameByAddress(target);
+                            string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+                            INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                                                     (AFUNPTR)ProcessDirectCall,
+                                                     IARG_INST_PTR,
+                                                     IARG_ADDRINT, target,
+                                                     IARG_REG_VALUE, REG_STACK_PTR,
+                                                     IARG_END);
+
+                        }
+                        else if( INS_IsIndirectBranchOrCall(ins) )
+                        {
+                            ECHO("INS_IsIndirectBranchOrCall");
+                            INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                                                     (AFUNPTR)ProcessIndirectCall,
+                                                     IARG_INST_PTR,
+                                                     IARG_BRANCH_TARGET_ADDR,
+                                                     IARG_REG_VALUE, REG_STACK_PTR,
+                                                     IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                                                     IARG_END);
+                        }
+                        else
+                        {
+                            ECHO("some other branch");
+                        }
+                    }
+                }
+                //we dont need to do any thing else for .plt
+                RTN_Close(rtn); // so close the RTN once you're done.
+                continue;       // and go back
+            }
+
+            // Rest (apart from .plt) of the valid routines are instrumented
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                        IARG_INST_PTR ,IARG_END);
+                           IARG_INST_PTR ,IARG_END);
 
             // Traverse all instructions
-            for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins)) {
+            for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
+            {
                 UINT32 memOperands = INS_MemoryOperandCount(ins);
 
                 bool isStack = INS_IsStackRead(ins) || INS_IsStackWrite(ins);
-                if(!isStack || KnobStackAccess.Value()) {
-                    for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
+                if(!isStack || KnobStackAccess.Value())
+                {
+                    for (UINT32 memOp = 0; memOp < memOperands; memOp++)
+                    {
                         size_t refSize = INS_MemoryOperandSize(ins, memOp);
-                        if (INS_MemoryOperandIsRead(ins, memOp)) {
+                        if (INS_MemoryOperandIsRead(ins, memOp))
+                        {
                             INS_InsertPredicatedCall(
                                 ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
                                 IARG_INST_PTR,
@@ -278,7 +473,8 @@ VOID Image_cb(IMG img, VOID * v)
                                 IARG_END);
                         }
 
-                        if (INS_MemoryOperandIsWritten(ins, memOp)) {
+                        if (INS_MemoryOperandIsWritten(ins, memOp))
+                        {
                             INS_InsertPredicatedCall(
                                 ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
                                 IARG_INST_PTR,
@@ -289,12 +485,14 @@ VOID Image_cb(IMG img, VOID * v)
                     }
                 }
 
-                if (INS_IsRet(ins)) {
+                if (INS_IsRet(ins))
+                {
                     INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
-                                            (AFUNPTR)RecordRoutineExit,
-                                            IARG_INST_PTR, IARG_END);
+                                             (AFUNPTR)RecordRoutineExit,
+                                             IARG_INST_PTR, IARG_END);
                 }
             }
+
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
         }
     }
@@ -331,39 +529,49 @@ void SetupPin(int argc, char *argv[])
     PIN_InitSymbols();
     // Initialize PIN library. Print help message if -h(elp) is specified
     // in the command line or the command line is invalid
-    if( PIN_Init(argc,argv) ) {
+    if( PIN_Init(argc,argv) )
+    {
         Usage();
         return;
     }
 
     string dfName = KnobDotFile.Value();
-    if (!dfName.empty()) {
+    if (!dfName.empty())
+    {
         dotout.open(dfName.c_str(), std::ios::out);
-        if(dotout.fail()) {
+        if(dotout.fail())
+        {
             ECHO("Error Opening dot file");
             return;
         }
-    } else {
+    }
+    else
+    {
         ECHO("Specify a non empty dot file name");
         return;
     }
 
     string mfName = KnobMatrixFile.Value();
-    if (!mfName.empty()) {
+    if (!mfName.empty())
+    {
         mout.open(mfName.c_str(), std::ios::out);
-        if(mout.fail()) {
+        if(mout.fail())
+        {
             ECHO("Error Opening matrix file");
             return;
         }
-    } else {
+    }
+    else
+    {
         ECHO("Specify a non empty matrix file name");
         return;
     }
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
-    CallStack.push(UnKnownFtn); 
-    if(KnobSelecInstr.Value()) {
+    CallStack.push(UnKnownFtn);
+    if(KnobSelecInstr.Value())
+    {
         SeenFnames.InitFromFile();
     }
 

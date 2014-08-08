@@ -10,8 +10,8 @@ ASTYLE := $(shell which astyle)
 ifeq ($(ASTYLE),)
 $(info command <astyle> not found! \
 Install it to get advantage of automatic code formatting.\
-After installation, run <make format> to format all the files to Kernighan & \
-Ritchie (K&R) style code formatting.)
+After installation, run <make format> to format all the files to
+allman style code formatting.)
 endif
 
 ##############################################################
@@ -123,7 +123,8 @@ cleantemp:
 
 
 format:
-	astyle --style=kr *.h *.cpp
+	astyle --style=allman *.h *.cpp
+# 	astyle --style=kr *.h *.cpp
 	rm -f *.orig
 
 open:

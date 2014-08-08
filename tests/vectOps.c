@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #define SIZE 10
 typedef int uint32_t;
@@ -6,8 +7,8 @@ typedef int uint32_t;
 unsigned int coeff = 2;
 unsigned int srcArr1[SIZE], srcArr2[SIZE];
 unsigned int sumArr[SIZE], diffArr[SIZE];
-
-unsigned int sqrArr[SIZE];
+/*unsigned int sqrArr[SIZE];*/
+unsigned int *sqrArr;
 
 void initVecs()
 {
@@ -37,24 +38,6 @@ void diffVecs()
     }
 }
 
-/**
- * \brief    Fast Square root algorithm, with rounding
- *
- * This does arithmetic rounding of the result. That is, if the real answer
- * would have a fractional part of 0.5 or greater, the result is rounded up to
- * the next integer.
- *      - SquareRootRounded(2) --> 1
- *      - SquareRootRounded(3) --> 2
- *      - SquareRootRounded(4) --> 2
- *      - SquareRootRounded(6) --> 2
- *      - SquareRootRounded(7) --> 3
- *      - SquareRootRounded(8) --> 3
- *      - SquareRootRounded(9) --> 3
- *
- * \param[in] a_nInput - unsigned integer for which to find the square root
- *
- * \return Integer square root of the input value.
- */
 uint32_t SquareRootRounded(uint32_t a_nInput)
 {
     uint32_t op  = a_nInput;
@@ -100,11 +83,17 @@ void sqrootVecs()
 
 int main()
 {
+    sqrArr = malloc(SIZE * sizeof(uint32_t));
+    printf("addr : 0x%x\n",sqrArr);
+
     initVecs();
     sumVecs();
     diffVecs();
-    sqrootVecs();
+//     sqrootVecs();
 
-    printf("output : %d\n",sumArr[1]+diffArr[1]);
+//     printf("output : %d\n",sumArr[1]+diffArr[1]);
+
+    free(sqrArr);
+
     return 0;
 }
