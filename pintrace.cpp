@@ -220,18 +220,8 @@ VOID RecordRoutineExit(VOID *ip)
 /* ===================================================================== */
 /* Names of malloc and free */
 /* ===================================================================== */
-BOOL IsPLT(SEC sec)
-{
-    return ( ".plt" == SEC_Name(sec) );
-//     RTN rtn = TRACE_Rtn(trace);
-
-    // All .plt thunks have a valid RTN
-//     if (!RTN_Valid(rtn))
-//         return FALSE;
-//     if ( ".plt" == SEC_Name(sec) )
-//         return TRUE;
-//     return FALSE;
-}
+#define MALLOC "malloc"
+#define FREE "free"
 
 string invalid = "invalid_rtn";
 const string *Target2String(ADDRINT target)
@@ -278,66 +268,29 @@ const string& Target2LibName(ADDRINT target)
 
 void ProcessDirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp)
 {
-    cout << "Direct call: " << Target2RtnName(target) << endl;
-    cout << "Direct call: " << ADDR(target) << endl;
-    cout << "Direct call: " << ADDR(ip) << endl;
-    cout << "Direct call: " << ADDR(sp) << endl;
+    ECHO("Direct call: " << Target2RtnName(target));
 }
 
-void ProcessIndirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp, ADDRINT size)
+void ProcessIndirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp, ADDRINT arg, ADDRINT rip)
 {
-    cout << "Indirect call: " << Target2RtnName(target) << " " << size <<endl;
-    cout << "Indirect call: " << ADDR(target) << endl;
-    cout << "Indirect call + ip: " << ADDR(target+ip) << endl;
-    cout << "Indirect call: " << ADDR(ip) << endl;
-    cout << "Indirect call: " << ADDR(sp) << endl;
+    string rtnName = Target2RtnName(target);
+    // apply undecoration ???
+    if( rtnName == MALLOC)
+        ECHO("Indirect call : " << rtnName << " " << arg << ADDR(rip) );
+    else if (rtnName == FREE)
+        ECHO("Indirect call : " << rtnName << " " << ADDR(arg));
 }
 
 void ProcessStub(ADDRINT ip, ADDRINT target)
 {
-    cout << "Instrumenting stub: " << Target2String(target) << endl;
-    cout << "STUB: ";
-    cout << Target2RtnName(target) << endl;
+    ECHO("Instrumenting stub: " << Target2String(target));
+    ECHO("STUB: " << Target2RtnName(target) );
 }
 
-
-#if defined(TARGET_MAC)
-#define MALLOC "_malloc"
-#define FREE "_free"
-#else
-#define MALLOC "malloc"
-#define FREE "free"
-#endif
-
-VOID Arg1Before(CHAR * name, ADDRINT size)
-{
-    ECHO(name << "(" << size << ") from " << CallStack.top() );
-}
-VOID MallocAfter(ADDRINT ret)
-{
-    ECHO("  returns " << ADDR(ret) );
-}
 
 // IMG instrumentation routine - called once per image upon image load
 VOID Image_cb(IMG img, VOID * v)
 {
-    RTN mallocRtn = RTN_FindByName(img, MALLOC);
-    if (RTN_Valid(mallocRtn))
-    {
-        RTN_Open(mallocRtn);
-
-        // Instrument malloc() to print the input argument value and the return value.
-        RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)Arg1Before,
-                       IARG_ADDRINT, MALLOC,
-                       IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                       IARG_END);
-        RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
-                       IARG_FUNCRET_EXITPOINT_VALUE,
-                       IARG_END);
-
-        RTN_Close(mallocRtn);
-    }
-
     // For simplicity, instrument only the main image.
     // This can be extended to any other image of course.
     string img_name = IMG_Name(img);
@@ -395,6 +348,11 @@ VOID Image_cb(IMG img, VOID * v)
             // Many RTN APIs require that the RTN be opened first.
             RTN_Open(rtn);
 
+            // The .plt sec of main image is instrumented for calls to malloc
+            // and free. Furthermore, based on the logic of decoding the
+            // address of these routines in shared libraries, a dummy malloc
+            // should be called first. Suceeding mallocs will be detected and
+            // decoded properly.
             if (rname == ".plt")
             {
                 ECHO("in .plt ");
@@ -404,19 +362,14 @@ VOID Image_cb(IMG img, VOID * v)
                     string  inscode = INS_Disassemble (ins);
                     ECHO(VAR(inscode));
 
-                    // All calls and returns
-                    if( INS_IsCall(ins) )
-                    {
-                        ECHO("INS_IsCall");
-                    }
-
                     if( INS_IsBranchOrCall(ins) )
                     {
                         if( INS_IsDirectBranchOrCall(ins) )
                         {
-                            ECHO("INS_IsDirectBranchOrCall");
+                            ECHO("Instrumenting INS_IsDirectBranchOrCall");
                             ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                             string rtnName = RTN_FindNameByAddress(target);
+                            ECHO("Instrumenting "<< rtnName);
                             string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
                             INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
                                                      (AFUNPTR)ProcessDirectCall,
@@ -428,13 +381,14 @@ VOID Image_cb(IMG img, VOID * v)
                         }
                         else if( INS_IsIndirectBranchOrCall(ins) )
                         {
-                            ECHO("INS_IsIndirectBranchOrCall");
+                            ECHO("Instrumenting INS_IsIndirectBranchOrCall");
                             INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
                                                      (AFUNPTR)ProcessIndirectCall,
                                                      IARG_INST_PTR,
                                                      IARG_BRANCH_TARGET_ADDR,
                                                      IARG_REG_VALUE, REG_STACK_PTR,
                                                      IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                                                     IARG_RETURN_IP,
                                                      IARG_END);
                         }
                         else

@@ -5,10 +5,10 @@
 typedef int uint32_t;
 
 unsigned int coeff = 2;
-unsigned int srcArr1[SIZE], srcArr2[SIZE];
+unsigned int srcArr2[SIZE];
 unsigned int sumArr[SIZE], diffArr[SIZE];
 /*unsigned int sqrArr[SIZE];*/
-unsigned int *sqrArr;
+unsigned int *sqrArr, *srcArr1;
 
 void initVecs()
 {
@@ -83,9 +83,15 @@ void sqrootVecs()
 
 int main()
 {
-    sqrArr = malloc(SIZE * sizeof(uint32_t));
-    printf("addr : 0x%x\n",sqrArr);
+    char *dummy = malloc(1);
+    printf("Dummy malloc addr : 0x%x\n", dummy);
 
+    sqrArr = malloc(SIZE * sizeof(uint32_t));
+    printf("sqrArr addr : 0x%x\n",sqrArr);
+
+    srcArr1 = malloc(SIZE * sizeof(uint32_t));
+    printf("srcArr1 addr : 0x%x\n",srcArr1);
+    
     initVecs();
     sumVecs();
     diffVecs();
@@ -93,7 +99,9 @@ int main()
 
 //     printf("output : %d\n",sumArr[1]+diffArr[1]);
 
+    free(dummy);
     free(sqrArr);
+    free(srcArr1);
 
     return 0;
 }
