@@ -159,7 +159,7 @@ BOOL ValidFtnName(string name)
             !name.compare("failwithmessage") ||
             !name.compare("unnamedImageEntryPoint")
 #else
-//         !name.compare(".plt") ||
+            //!name.compare(".plt") ||
             !name.compare("_start") ||
             !name.compare("_init") ||
             !name.compare("_fini") ||
@@ -235,7 +235,7 @@ const string *Target2String(ADDRINT target)
 
 const string& Target2RtnName(ADDRINT target)
 {
-    const string & name = RTN_FindNameByAddress(target);
+    const string& name = RTN_FindNameByAddress(target);
 
     if (name == "")
         return *new string("[Unknown routine]");
@@ -287,22 +287,21 @@ void ProcessStub(ADDRINT ip, ADDRINT target)
     ECHO("STUB: " << Target2RtnName(target) );
 }
 
-
 // IMG instrumentation routine - called once per image upon image load
 VOID Image_cb(IMG img, VOID * v)
 {
+    string imgname = IMG_Name(img);
     // For simplicity, instrument only the main image.
     // This can be extended to any other image of course.
-    string img_name = IMG_Name(img);
     if (IMG_IsMainExecutable(img) == false &&
             KnobMainExecutableOnly.Value() == true)
     {
-        D1ECHO("Skipping Image "<< img_name<< " as it is not main executable");
+        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
         return;
     }
     else
     {
-        D1ECHO("Instrumenting "<<img_name<<" as it is the Main executable ");
+        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
     }
 
     // Traverse the sections of the image.

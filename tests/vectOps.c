@@ -5,8 +5,11 @@
 typedef int uint32_t;
 
 unsigned int coeff = 2;
-unsigned int srcArr2[SIZE];
-unsigned int sumArr[SIZE], diffArr[SIZE];
+/*unsigned int srcArr1[SIZE];*/
+ unsigned int srcArr2[SIZE];
+/*unsigned int *srcArr2;*/
+unsigned int sumArr[SIZE];
+unsigned int diffArr[SIZE];
 /*unsigned int sqrArr[SIZE];*/
 unsigned int *sqrArr, *srcArr1;
 
@@ -91,7 +94,7 @@ int main()
 
     srcArr1 = malloc(SIZE * sizeof(uint32_t));
     printf("srcArr1 addr : 0x%x\n",srcArr1);
-    
+
     initVecs();
     sumVecs();
     diffVecs();

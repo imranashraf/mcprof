@@ -81,7 +81,8 @@ ifeq ($(TARGET_OS),linux)
 # 	-MD -g -pg
 # 	TOOL_LDFLAGS+= -pg
 # 	TOOL_LIBS+= -pg
-	APP_CXXFLAGS+= -fno-inline
+	APP_CXXFLAGS+= -fno-inline -g
+# 	APP_CCFLAGS+= -fno-inline -g
 endif
 
 # Windows
@@ -141,4 +142,4 @@ $(OBJDIR)simple2$(EXE_SUFFIX): $(TESTDIR)simple2.cpp
 	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)vectOps$(EXE_SUFFIX): $(TESTDIR)vectOps.c
-	$(APP_CC) -fno-inline -O1 $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+	$(APP_CC) -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
