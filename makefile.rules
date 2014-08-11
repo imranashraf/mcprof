@@ -131,7 +131,7 @@ format:
 open:
 	kate makefile.rules globals.h globals.cpp utility.h utility.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
-	selectinstr.h selectinstr.cpp pintrace.h pintrace.cpp \
+	selectinstr.h selectinstr.cpp objects.h pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 
 ###### Special applications' build rules ######

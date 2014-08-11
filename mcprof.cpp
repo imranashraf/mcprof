@@ -2,6 +2,7 @@
 #include "shadow.h"
 #include "commatrix.h"
 #include "pintrace.h"
+#include "objects.h"
 #include "pin.H"
 
 #include <iostream>
@@ -15,6 +16,12 @@ int main(int argc, char *argv[])
 //     cin.get();
 #endif
 
+//     Objects table;
+//     table.Insert(Object(800, 4, 35, "testing.cpp"));
+//     table.Insert(Object(800, 4, 36, "testing.cpp"));
+//     table.Insert(Object(800, 4, 37, "testing.cpp"));
+//     table.Print();
+    
     SetupPin(argc,argv);
 
 //     RecordWrite(2,4,4);
