@@ -33,7 +33,7 @@ string UnKnownFtn("UNKNOWN");
 FtnList SeenFnames;
 Objects objTable;
 Object objLast;
-
+ 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -52,11 +52,10 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
                            "s","0", "Include Stack Accesses");
 
-KNOB<BOOL> KnobSelecInstr(KNOB_MODE_WRITEONCE, "pintool",
-                          "SelecInstr", "0",
+KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
+                          "SelectFunctions", "0",
                           "Instrument only the selected functions. \
-                          The functions are listed in <SelecInstrList.txt> file");
-
+                          User provides functions in <SelectFunctions.txt> file");
 
 /* ===================================================================== */
 // Utilities
@@ -260,23 +259,31 @@ const string& Target2LibName(ADDRINT target)
     return *new string(name);
 }
 
-void setLoc(int l, char* f)
+void setLoc(int l, string* f)
 {
-    cout << "setting last function call location as " << f << ":" << l << endl;
-    objLast.SetLineFile(l, f);
+    //ECHO("setting last function call location as " << *f << ":" << l);
+    objLast.SetLineFile(l, *f);
 }
 
-VOID Arg1Before(ADDRINT size)
+VOID MallocBefore(ADDRINT size)
 {
-    cout << " setting malloc size " << size << endl;
+    ECHO(" setting malloc size " << size );
     objLast.SetSize(size);
 }
 
 VOID MallocAfter(ADDRINT addr)
 {
-    cout << " setting malloc start address " << ADDR(addr) << endl;
+    ECHO("setting malloc start address " << ADDR(addr) );
     objLast.SetAddr(addr);
+    ECHO("Inserting following object in object table");
+    objLast.Print();
     objTable.Insert(objLast);
+}
+
+VOID FreeBefore(ADDRINT addr)
+{
+    ECHO("removing object with start address " << ADDR(addr) );
+    objTable.Remove(addr);
 }
 
 // IMG instrumentation routine - called once per image upon image load
@@ -289,9 +296,6 @@ VOID Image_cb(IMG img, VOID * v)
     {
         ECHO("Instrumenting "<<imgname<<" for malloc, free etc ");
 
-        // Instrument the malloc() and free() functions.  Print the input argument
-        // of each malloc() or free(), and the return value of malloc().
-        //
         //  Find the malloc() function.
         RTN mallocRtn = RTN_FindByName(img, MALLOC.c_str() );
         if (RTN_Valid(mallocRtn))
@@ -299,29 +303,26 @@ VOID Image_cb(IMG img, VOID * v)
             RTN_Open(mallocRtn);
 
             // Instrument malloc() to print the input argument value and the return value.
-            RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)Arg1Before,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                        IARG_END);
+            RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
                         IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
 
             RTN_Close(mallocRtn);
         }
 
-//         // Find the free() function.
-//         RTN freeRtn = RTN_FindByName(img, FREE);
-//         if (RTN_Valid(freeRtn))
-//         {
-//             RTN_Open(freeRtn);
-//             // Instrument free() to print the input argument value.
-//             RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)Arg1Before,
-//                         IARG_ADDRINT, FREE,
-//                         IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-//                         IARG_END);
-//             RTN_Close(freeRtn);
-//         }
+        // Find the free() function.
+        RTN freeRtn = RTN_FindByName(img, FREE.c_str() );
+        if (RTN_Valid(freeRtn))
+        {
+            RTN_Open(freeRtn);
+            // Instrument free() to print the input argument value.
+            RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)FreeBefore,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
+            RTN_Close(freeRtn);
+        }
 
-
+        // no need to do any thing else for libc, so can return
         return;
     }
 
@@ -356,7 +357,7 @@ VOID Image_cb(IMG img, VOID * v)
 #if (RTNOPT==1)
             string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
 
-            if( KnobSelecInstr.Value() )
+            if( KnobSelectFunctions.Value() )
             {
                 // If this valid function name is not in the selected instr. list
                 if(!SeenFnames.Find(rname))
@@ -389,21 +390,31 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                UINT32 memOperands = INS_MemoryOperandCount(ins);
-
                 if( INS_IsCall(ins) ) // or should it be procedure call?
                 {
-                    string filename;    // This will hold the source file name.
+                    ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
+                    string tname = Target2RtnName(target);
+                    ECHO( "Calling " << tname );
+
+                    if(tname == ".plt")
+                    {
+                    string filename("");    // This will hold the source file name.
                     INT32 line = 0;     // This will hold the line number within the file.
                     PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
-                    INS_InsertCall(ins,
-                        IPOINT_BEFORE,
-                        AFUNPTR(setLoc),
-                        IARG_UINT32, line,
-                        IARG_PTR, filename.c_str(),
-                        IARG_END);
+                    ECHO("Instrumenting function call at " << filename <<":"<< line);
+                    INS_InsertCall
+                        (
+                         ins,
+                         IPOINT_BEFORE,
+                         AFUNPTR(setLoc),
+                         IARG_UINT32, line,
+                         IARG_PTR, new string( filename.c_str() ),
+                         IARG_END
+                        );
+                    }
                 }
 
+                UINT32 memOperands = INS_MemoryOperandCount(ins);
                 bool isStack = INS_IsStackRead(ins) || INS_IsStackWrite(ins);
                 if(!isStack || KnobStackAccess.Value())
                 {
@@ -519,7 +530,7 @@ void SetupPin(int argc, char *argv[])
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
     CallStack.push(UnKnownFtn);
-    if(KnobSelecInstr.Value())
+    if(KnobSelectFunctions.Value())
     {
         SeenFnames.InitFromFile();
     }
@@ -535,85 +546,3 @@ void SetupPin(int argc, char *argv[])
 /* ===================================================================== */
 /* eof */
 /* ===================================================================== */
-
-// analysis routines for the below
-// void ProcessDirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp)
-// {
-//     ECHO("Direct call: " << Target2RtnName(target));
-// }
-// 
-// void ProcessIndirectCall(ADDRINT ip, ADDRINT target, ADDRINT sp, ADDRINT arg, ADDRINT rip)
-// {
-//     string rtnName = Target2RtnName(target);
-//     // apply undecoration ???
-//     if( rtnName == MALLOC)
-//         ECHO("Indirect call : " << rtnName << " " << arg << ADDR(rip) );
-//     else if (rtnName == FREE)
-//         ECHO("Indirect call : " << rtnName << " " << ADDR(arg));
-// }
-// 
-// void ProcessStub(ADDRINT ip, ADDRINT target)
-// {
-//     ECHO("Instrumenting stub: " << Target2String(target));
-//     ECHO("STUB: " << Target2RtnName(target) );
-// }
-
-
-// following was the instrumentation done for .plt section
-//             // The .plt sec of main image is instrumented for calls to malloc
-//             // and free. Furthermore, based on the logic of decoding the
-//             // address of these routines in shared libraries, a dummy malloc
-//             // should be called first. Suceeding mallocs will be detected and
-//             // decoded properly.
-//             if (rname == ".plt")
-//             {
-//                 ECHO("in .plt ");
-//                 // Traverse all instructions
-//                 for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
-//                 {
-//                     string  inscode = INS_Disassemble (ins);
-//                     ECHO(VAR(inscode));
-// 
-//                     if( INS_IsBranchOrCall(ins) )
-//                     {
-//                         if( INS_IsDirectBranchOrCall(ins) )
-//                         {
-//                             ECHO("Instrumenting INS_IsDirectBranchOrCall");
-//                             ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
-//                             string rtnName = RTN_FindNameByAddress(target);
-//                             ECHO("Instrumenting "<< rtnName);
-//                             string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-//                             INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
-//                                                      (AFUNPTR)ProcessDirectCall,
-//                                                      IARG_INST_PTR,
-//                                                      IARG_ADDRINT, target,
-//                                                      IARG_REG_VALUE, REG_STACK_PTR,
-//                                                      IARG_END);
-// 
-//                         }
-//                         else if( INS_IsIndirectBranchOrCall(ins) )
-//                         {
-//                             ECHO("Instrumenting INS_IsIndirectBranchOrCall");
-//                             string filename;    // This will hold the source file name.
-//                             INT32 line = 0;     // This will hold the line number within the file.
-//                             PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
-//                             ECHO( "src info " << filename <<":"<<line);
-//                             INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
-//                                                      (AFUNPTR)ProcessIndirectCall,
-//                                                      IARG_INST_PTR,
-//                                                      IARG_BRANCH_TARGET_ADDR,
-//                                                      IARG_REG_VALUE, REG_STACK_PTR,
-//                                                      IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-//                                                      IARG_RETURN_IP,
-//                                                      IARG_END);
-//                         }
-//                         else
-//                         {
-//                             ECHO("some other branch");
-//                         }
-//                     }
-//                 }
-//                 //we dont need to do any thing else for .plt
-//                 RTN_Close(rtn); // so close the RTN once you're done.
-//                 continue;       // and go back
-//             }

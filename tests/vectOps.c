@@ -4,14 +4,16 @@
 #define SIZE 10
 typedef int uint32_t;
 
-unsigned int coeff = 2;
-/*unsigned int srcArr1[SIZE];*/
- unsigned int srcArr2[SIZE];
-/*unsigned int *srcArr2;*/
+// unsigned int srcArr1[SIZE];
+// unsigned int srcArr2[SIZE];
+// unsigned int sqrArr[SIZE];
+unsigned int *srcArr1;
+unsigned int *srcArr2;
+unsigned int *sqrArr;
 unsigned int sumArr[SIZE];
 unsigned int diffArr[SIZE];
-/*unsigned int sqrArr[SIZE];*/
-unsigned int *sqrArr, *srcArr1;
+
+unsigned int coeff = 2;
 
 void initVecs()
 {
@@ -47,12 +49,9 @@ uint32_t SquareRootRounded(uint32_t a_nInput)
     uint32_t res = 0;
     uint32_t one = 1uL << 30; // The second-to-top bit is set: use 1u << 14 for uint16_t type; use 1uL<<30 for uint32_t type
 
-
     // "one" starts at the highest power of four <= than the argument.
     while (one > op)
-    {
         one >>= 2;
-    }
 
     while (one != 0)
     {
@@ -91,20 +90,25 @@ int main()
 
     sqrArr = malloc(SIZE * sizeof(uint32_t));
     printf("sqrArr addr : 0x%x\n",sqrArr);
-
+    
     srcArr1 = malloc(SIZE * sizeof(uint32_t));
     printf("srcArr1 addr : 0x%x\n",srcArr1);
-
+    
+    srcArr2 = malloc(SIZE * sizeof(uint32_t));
+    printf("srcArr2 addr : 0x%x\n",srcArr2);
+    
     initVecs();
     sumVecs();
     diffVecs();
 //     sqrootVecs();
 
 //     printf("output : %d\n",sumArr[1]+diffArr[1]);
+    printf("output : %d\n",sumArr[1]+diffArr[1]);
 
     free(dummy);
-    free(sqrArr);
     free(srcArr1);
+    free(srcArr2);
+    free(sqrArr);
 
     return 0;
 }

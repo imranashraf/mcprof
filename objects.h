@@ -5,6 +5,8 @@
 #include "globals.h"
 
 #include <vector>
+#include <algorithm>
+
 using namespace std;
 
 class Object
@@ -30,6 +32,7 @@ public:
     }
     void SetSize(int s) {size = s;}
     void SetAddr(int a) {startAddr = a;}
+    ADDRINT GetStartAddr() { return startAddr; }
 };
 
 class Objects
@@ -42,15 +45,11 @@ public:
     void Insert(Object o) {objs.push_back(o); }
     void Remove(ADDRINT saddr)
     {
-//         for ( auto& o : objs )
-        {
-//             if(o.startAddr == saddr )
-//                 objs.erase(remove(objs.begin(), objs.end(), o), objs.end());
-        }
+        objs.erase(std::remove_if(objs.begin(), objs.end(),
+                [saddr](Object & o) { return o.GetStartAddr() == saddr; }),
+                objs.end());
     }
-    void Print()
-    {
-        for ( auto& o : objs ) { o.Print(); }
-    }
+
+    void Print() { ECHO("Object Table"); for ( auto& o : objs ) { o.Print(); } }
 };
 #endif

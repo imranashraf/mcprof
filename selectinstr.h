@@ -62,7 +62,7 @@ public:
 
     void InitFromFile()
     {
-        selInstrfilename = "SelecInstrList.txt";
+        selInstrfilename = "SelectFunctions.txt";
         string fname;
         ifstream sifin;
         sifin.open(selInstrfilename.c_str());

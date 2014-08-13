@@ -1,0 +1,3 @@
+/data/repositories/mcprof/tests/vectOps.c:91
+/data/repositories/mcprof/tests/vectOps.c:94
+/data/repositories/mcprof/tests/vectOps.c:97
