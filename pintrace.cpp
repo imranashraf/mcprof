@@ -32,8 +32,9 @@ UINT16 GlobalFunctionNo=0;
 string UnKnownFtn("UNKNOWN");
 FtnList SeenFnames;
 Objects objTable;
-Object objLast;
- 
+Object newObj;
+Object* currObj = &newObj;
+
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -56,6 +57,11 @@ KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                           "SelectFunctions", "0",
                           "Instrument only the selected functions. \
                           User provides functions in <SelectFunctions.txt> file");
+
+KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
+                             "SelectObjects", "1",
+                               "Instrument only the selected objects. \
+                               User provides objects in <SelectObjects.txt> file");
 
 /* ===================================================================== */
 // Utilities
@@ -259,31 +265,47 @@ const string& Target2LibName(ADDRINT target)
     return *new string(name);
 }
 
+// void selectObject(VOID *obj)
+void selectObject(int index)
+{
+    ECHO("selecting currObj as already available in table");
+    currObj = objTable.GetObjectPtr(index);
+//     currObj = (Object*) obj;
+}
+
 void setLoc(int l, string* f)
 {
-    //ECHO("setting last function call location as " << *f << ":" << l);
-    objLast.SetLineFile(l, *f);
+    ECHO("setting last function call location as " << *f << ":" << l);
+    newObj.SetLineFile(l, *f);
+    currObj = &newObj;
 }
 
 VOID MallocBefore(ADDRINT size)
 {
     ECHO(" setting malloc size " << size );
-    objLast.SetSize(size);
+    currObj->SetSize(size);
 }
 
 VOID MallocAfter(ADDRINT addr)
 {
     ECHO("setting malloc start address " << ADDR(addr) );
-    objLast.SetAddr(addr);
-    ECHO("Inserting following object in object table");
-    objLast.Print();
-    objTable.Insert(objLast);
+    currObj->SetAddr(addr);
+
+    if( !KnobSelectObjects.Value() )
+    {
+        ECHO("Inserting following object in object table");
+        currObj->Print();
+        objTable.Insert(*currObj);
+    }
 }
 
 VOID FreeBefore(ADDRINT addr)
 {
-    ECHO("removing object with start address " << ADDR(addr) );
-    objTable.Remove(addr);
+    if(addr != 0)
+    {
+        ECHO("removing object with start address " << ADDR(addr) );
+        objTable.Remove(addr);
+    }
 }
 
 // IMG instrumentation routine - called once per image upon image load
@@ -394,23 +416,49 @@ VOID Image_cb(IMG img, VOID * v)
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
-                    ECHO( "Calling " << tname );
+                    D1ECHO( "Calling " << tname );
 
                     if(tname == ".plt")
                     {
-                    string filename("");    // This will hold the source file name.
-                    INT32 line = 0;     // This will hold the line number within the file.
-                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
-                    ECHO("Instrumenting function call at " << filename <<":"<< line);
-                    INS_InsertCall
-                        (
-                         ins,
-                         IPOINT_BEFORE,
-                         AFUNPTR(setLoc),
-                         IARG_UINT32, line,
-                         IARG_PTR, new string( filename.c_str() ),
-                         IARG_END
-                        );
+                        string filename("");    // This will hold the source file name.
+                        INT32 line = 0;     // This will hold the line number within the file.
+                        PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
+
+                        if (KnobSelectObjects.Value() )
+                        {
+//                             Object* objectPtr = nullptr;
+                            int index=-1;
+//                             if ( objTable.isAvailable(filename, line, objectPtr) )
+                            if ( objTable.isAvailable(filename, line, index) )
+                            {
+                                ECHO("Instrumenting object (re)alloc/free call at "
+                                    << filename <<":"<< line << " available in table");
+
+                                INS_InsertCall
+                                (
+                                    ins,
+                                    IPOINT_BEFORE,
+                                    AFUNPTR(selectObject),
+                                    IARG_UINT32, index,
+//                                     IARG_PTR, objectPtr,
+                                    IARG_END
+                                );
+                            }
+                        }
+                        else
+                        {
+                            ECHO("Instrumenting object (re)alloc/free call at " 
+                                << filename <<":"<< line);
+                            INS_InsertCall
+                            (
+                                ins,
+                                IPOINT_BEFORE,
+                                AFUNPTR(setLoc),
+                                IARG_UINT32, line,
+                                IARG_PTR, new string( filename.c_str() ),
+                                IARG_END
+                            );
+                        }
                     }
                 }
 
@@ -466,15 +514,14 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
+    objTable.Print();
 #if (DEBUG>0)
     PrintCommunication(cout, 7);
 #endif
     PrintMatrix(mout, GlobalFunctionNo);
+    mout.close();
     PrintCommunicationDot(dotout, GlobalFunctionNo);
     dotout.close();
-    mout.close();
-
-    objTable.Print();
 }
 
 /*!
@@ -533,6 +580,12 @@ void SetupPin(int argc, char *argv[])
     if(KnobSelectFunctions.Value())
     {
         SeenFnames.InitFromFile();
+    }
+
+    if(KnobSelectObjects.Value() )
+    {
+        objTable.InitFromFile();
+        objTable.Print();
     }
 
     //TRACE_AddInstrumentFunction(Trace_cb, 0);

@@ -85,6 +85,7 @@ void sqrootVecs()
 
 int main()
 {
+    printf("Vector Operations Test.\n");
     char *dummy = malloc(1);
     printf("Dummy malloc addr : 0x%x\n", dummy);
 
