@@ -2,6 +2,7 @@
 #define GLOBALS_H
 
 #include <iostream>
+#include <iomanip>
 #include <map>
 #include <string>
 #include <cstdlib>

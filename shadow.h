@@ -29,7 +29,7 @@ static const u64 L2ENTRIES = (1ULL << L2BITS);
 static const u64 L3ENTRIES = (1ULL << L3BITS);
 
 // should be greater than max(L1ENTRIES,L2ENTRIES,L3ENTRIES)
-#define UNACCESSED NULL
+#define UNACCESSED nullptr
 #define UNKNOWN_PRODUCER (0)
 
 class Entry
@@ -37,10 +37,7 @@ class Entry
 private:
     FtnNo producer;
 public:
-    Entry()
-    {
-        producer=UNKNOWN_PRODUCER;
-    }
+    Entry() : producer(UNKNOWN_PRODUCER) {}
     void setProducer(FtnNo p)
     {
         producer=p;

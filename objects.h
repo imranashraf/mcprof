@@ -58,7 +58,14 @@ public:
                 objs.end());
     }
 
-    void Print() { ECHO("Object Table"); for ( auto& o : objs ) { o.Print(); } }
+    void Print()
+    {
+        ECHO("Printing Object Table");
+        if(objs.empty() )
+            ECHO("Object Table Empty");
+        else
+            for ( auto& o : objs ) { o.Print(); }
+    }
 
     void InitFromFile()
     {
@@ -81,7 +88,7 @@ public:
             << "Specify at least 1 object in the list... Aborting!");
             Die();
         }
-        
+
         // while there are objects in file
         while( (sifin >> ofile) && (sifin >> oline) )
         {
@@ -96,7 +103,7 @@ public:
         }
     }
 
-    bool isAvailable(string f, int l)
+    bool Find(string f, int l)
     {
         for ( auto& o : objs )
         {
@@ -106,7 +113,7 @@ public:
         return false;
     }
 
-    bool isAvailable(string f, int l, Object* ptr)
+    bool Find(string f, int l, Object* ptr)
     {
         for ( auto& o : objs )
         {
@@ -119,7 +126,7 @@ public:
         return false;
     }
 
-    bool isAvailable(string f, int l, int& index)
+    bool Find(string f, int l, int& index)
     {
         int i=0;
         for ( auto& o : objs )

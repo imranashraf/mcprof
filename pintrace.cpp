@@ -6,7 +6,7 @@
 
 #include "pin.H"
 #include "globals.h"
-#include "selectinstr.h"
+#include "functions.h"
 #include "pintrace.h"
 #include "commatrix.h"
 #include "shadow.h"
@@ -428,8 +428,8 @@ VOID Image_cb(IMG img, VOID * v)
                         {
 //                             Object* objectPtr = nullptr;
                             int index=-1;
-//                             if ( objTable.isAvailable(filename, line, objectPtr) )
-                            if ( objTable.isAvailable(filename, line, index) )
+//                             if ( objTable.Find(filename, line, objectPtr) )
+                            if ( objTable.Find(filename, line, index) )
                             {
                                 ECHO("Instrumenting object (re)alloc/free call at "
                                     << filename <<":"<< line << " available in table");

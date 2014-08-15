@@ -1,5 +1,5 @@
-#ifndef SELECTINSTR_H
-#define SELECTINSTR_H
+#ifndef FUNCTIONS_H
+#define FUNCTIONS_H
 
 #include "globals.h"
 #include "utility.h"
