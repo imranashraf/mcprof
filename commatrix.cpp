@@ -5,6 +5,8 @@ Matrix2D ComMatrix;
 
 void RecordCommunication(FtnNo prod, FtnNo cons, int size)
 {
+    D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
+        << FUNC(cons) << " of size: " << size );
     ComMatrix.Increment(prod, cons, size);
 }
 

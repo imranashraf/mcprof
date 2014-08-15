@@ -28,6 +28,9 @@ static const u64 L1ENTRIES = (1ULL << L1BITS);
 static const u64 L2ENTRIES = (1ULL << L2BITS);
 static const u64 L3ENTRIES = (1ULL << L3BITS);
 
+void SetProducer(FtnNo prod, uptr addr);
+FtnNo GetProducer(uptr addr);
+
 // should be greater than max(L1ENTRIES,L2ENTRIES,L3ENTRIES)
 #define UNACCESSED nullptr
 #define UNKNOWN_PRODUCER (0)
@@ -172,9 +175,6 @@ public:
     }
 
 };
-
-void RecordWrite(FtnNo prod, uptr addr, int size);
-void RecordRead(FtnNo cons, uptr addr, int size);
 
 
 /**

@@ -11,6 +11,7 @@
 #include "commatrix.h"
 #include "shadow.h"
 #include "objects.h"
+#include "mode1.h"
 #include <iostream>
 #include <fstream>
 #include <stack>
@@ -70,12 +71,10 @@ KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
 /*!
  *  Print out help message.
  */
-INT32 Usage()
+VOID Usage()
 {
     ECHO( "Memory and Data-Communication PROFiler.");
     ECHO( KNOB_BASE::StringKnobSummary() << endl);
-    Die();
-    return -1;
 }
 
 /* ===================================================================== */
@@ -91,7 +90,7 @@ VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    RecordWrite(NametoADD[CallStack.top()], (uptr)addr,refSize);
+    RecordWrite(NametoADD[CallStack.top()], (uptr)addr, refSize);
 }
 
 /* ===================================================================== */
@@ -265,35 +264,33 @@ const string& Target2LibName(ADDRINT target)
     return *new string(name);
 }
 
-// void selectObject(VOID *obj)
 void selectObject(int index)
 {
-    ECHO("selecting currObj as already available in table");
+    D2ECHO("selecting currObj as already available in table");
     currObj = objTable.GetObjectPtr(index);
-//     currObj = (Object*) obj;
 }
 
 void setLoc(int l, string* f)
 {
-    ECHO("setting last function call location as " << *f << ":" << l);
+    D2ECHO("setting last function call location as " << *f << ":" << l);
     newObj.SetLineFile(l, *f);
     currObj = &newObj;
 }
 
 VOID MallocBefore(ADDRINT size)
 {
-    ECHO(" setting malloc size " << size );
+    D2ECHO(" setting malloc size " << size );
     currObj->SetSize(size);
 }
 
 VOID MallocAfter(ADDRINT addr)
 {
-    ECHO("setting malloc start address " << ADDR(addr) );
+    D2ECHO("setting malloc start address " << ADDR(addr) );
     currObj->SetAddr(addr);
 
     if( !KnobSelectObjects.Value() )
     {
-        ECHO("Inserting following object in object table");
+        D2ECHO("Inserting following object in object table");
         currObj->Print();
         objTable.Insert(*currObj);
     }
@@ -303,7 +300,7 @@ VOID FreeBefore(ADDRINT addr)
 {
     if(addr != 0)
     {
-        ECHO("removing object with start address " << ADDR(addr) );
+        D2ECHO("removing object with start address " << ADDR(addr) );
         objTable.Remove(addr);
     }
 }
@@ -316,7 +313,7 @@ VOID Image_cb(IMG img, VOID * v)
     // instrument libc for malloc, free etc
     if ( imgname.find("libc") != string::npos )
     {
-        ECHO("Instrumenting "<<imgname<<" for malloc, free etc ");
+        D1ECHO("Instrumenting "<<imgname<<" for malloc, free etc ");
 
         //  Find the malloc() function.
         RTN mallocRtn = RTN_FindByName(img, MALLOC.c_str() );
@@ -348,7 +345,6 @@ VOID Image_cb(IMG img, VOID * v)
         return;
     }
 
-    
     // For simplicity, instrument only the main image.
     // This can be extended to any other image of course.
     if (IMG_IsMainExecutable(img) == false &&
@@ -426,12 +422,10 @@ VOID Image_cb(IMG img, VOID * v)
 
                         if (KnobSelectObjects.Value() )
                         {
-//                             Object* objectPtr = nullptr;
                             int index=-1;
-//                             if ( objTable.Find(filename, line, objectPtr) )
                             if ( objTable.Find(filename, line, index) )
                             {
-                                ECHO("Instrumenting object (re)alloc/free call at "
+                                D1ECHO("Instrumenting object (re)alloc/free call at "
                                     << filename <<":"<< line << " available in table");
 
                                 INS_InsertCall
@@ -440,14 +434,13 @@ VOID Image_cb(IMG img, VOID * v)
                                     IPOINT_BEFORE,
                                     AFUNPTR(selectObject),
                                     IARG_UINT32, index,
-//                                     IARG_PTR, objectPtr,
                                     IARG_END
                                 );
                             }
                         }
                         else
                         {
-                            ECHO("Instrumenting object (re)alloc/free call at " 
+                            D1ECHO("Instrumenting object (re)alloc/free call at " 
                                 << filename <<":"<< line);
                             INS_InsertCall
                             (
@@ -514,8 +507,8 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
-    objTable.Print();
 #if (DEBUG>0)
+    objTable.Print();
     PrintCommunication(cout, 7);
 #endif
     PrintMatrix(mout, GlobalFunctionNo);
@@ -539,7 +532,7 @@ void SetupPin(int argc, char *argv[])
     if( PIN_Init(argc,argv) )
     {
         Usage();
-        return;
+        Die();
     }
 
     string dfName = KnobDotFile.Value();
@@ -549,13 +542,13 @@ void SetupPin(int argc, char *argv[])
         if(dotout.fail())
         {
             ECHO("Error Opening dot file");
-            return;
+            Die();
         }
     }
     else
     {
         ECHO("Specify a non empty dot file name");
-        return;
+        Die();
     }
 
     string mfName = KnobMatrixFile.Value();
@@ -565,13 +558,13 @@ void SetupPin(int argc, char *argv[])
         if(mout.fail())
         {
             ECHO("Error Opening matrix file");
-            return;
+            Die();
         }
     }
     else
     {
         ECHO("Specify a non empty matrix file name");
-        return;
+        Die();
     }
 
     // Push the first ftn as UNKNOWN
