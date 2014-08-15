@@ -12,6 +12,7 @@
 #include "shadow.h"
 #include "objects.h"
 #include "mode1.h"
+#include "mode2.h"
 #include <iostream>
 #include <fstream>
 #include <stack>
@@ -27,10 +28,8 @@
 std::ofstream dotout;
 std::ofstream mout;
 stack <string> CallStack;
-map <string,UINT16> NametoADD;
-map <UINT16,string> ADDtoName;
-UINT16 GlobalFunctionNo=0;
-string UnKnownFtn("UNKNOWN");
+map <string,UINT16> Name2ID;
+map <UINT16,string> ID2Name;
 FtnList SeenFnames;
 Objects objTable;
 Object newObj;
@@ -84,13 +83,15 @@ VOID Usage()
 // Record a memory read
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    RecordRead( NametoADD[CallStack.top()], (uptr)addr, refSize);
+//     RecordReadMode1( Name2ID[CallStack.top()], (uptr)addr, refSize);
+    RecordReadMode2( Name2ID[CallStack.top()], (uptr)addr, refSize);
 }
 
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-    RecordWrite(NametoADD[CallStack.top()], (uptr)addr, refSize);
+//     RecordWriteMode1(Name2ID[CallStack.top()], (uptr)addr, refSize);
+    RecordWriteMode2(Name2ID[CallStack.top()], (uptr)addr, refSize);
 }
 
 /* ===================================================================== */
@@ -194,7 +195,7 @@ VOID RecordRoutineEntry(VOID *ip)
     SeenFnames.AddIfNotFound(rname);
 #endif
 
-    D1ECHO ("Entring Routine : " << rname << VAR(GlobalFunctionNo));
+    D1ECHO ("Entring Routine : " << rname << VAR(GlobalID));
     CallStack.push(rname);
 }
 
@@ -301,7 +302,7 @@ VOID FreeBefore(ADDRINT addr)
     if(addr != 0)
     {
         D2ECHO("removing object with start address " << ADDR(addr) );
-        objTable.Remove(addr);
+//         objTable.Remove(addr);
     }
 }
 
@@ -412,7 +413,7 @@ VOID Image_cb(IMG img, VOID * v)
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
-                    D1ECHO( "Calling " << tname );
+                    D2ECHO( "Calling " << tname );
 
                     if(tname == ".plt")
                     {
@@ -511,9 +512,9 @@ VOID TheEnd(INT32 code, VOID *v)
     objTable.Print();
     PrintCommunication(cout, 7);
 #endif
-    PrintMatrix(mout, GlobalFunctionNo);
+    PrintMatrix(mout, GlobalID);
     mout.close();
-    PrintCommunicationDot(dotout, GlobalFunctionNo);
+    PrintCommunicationDot(dotout, GlobalID);
     dotout.close();
 }
 
@@ -569,7 +570,7 @@ void SetupPin(int argc, char *argv[])
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
-    CallStack.push(UnKnownFtn);
+    CallStack.push(UnknownFtn);
     if(KnobSelectFunctions.Value())
     {
         SeenFnames.InitFromFile();

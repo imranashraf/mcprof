@@ -110,7 +110,8 @@ mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
 # This section contains the build rules for all binaries that have special build rules.
 # See makefile.default.rules for the default build rules.
 
-CPPSRCS = globals.cpp utility.cpp shadow.cpp commatrix.cpp mode1.cpp \
+CPPSRCS = globals.cpp utility.cpp shadow.cpp commatrix.cpp \
+        mode1.cpp mode2.cpp \
 		functions.cpp objects.cpp\
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
@@ -134,7 +135,7 @@ open:
 	kate makefile.rules globals.h globals.cpp utility.h utility.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	functions.h functions.cpp objects.h objects.cpp \
-	mode1.h mode1.cpp \
+	mode1.h mode1.cpp mode2.h mode2.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 

@@ -74,13 +74,13 @@ public:
         fout << setw(25) << " ";
         for (u16 c=0; c<TotalFtns; c++)
         {
-            fout << setw(25) << ADDtoName[c];
+            fout << setw(25) << ID2Name[c];
         }
         fout << endl;
 
         for (u16 p=0; p<TotalFtns; p++)
         {
-            fout << setw(25) << ADDtoName[p];
+            fout << setw(25) << ID2Name[p];
             for (u16 c=0; c<TotalFtns; c++)
             {
                 fout << setw(25) << Matrix[p][c];
@@ -100,7 +100,7 @@ public:
 
         for (u16 c=0; c<TotalFtns; c++)
         {
-            dotout << "\"" << c << "\"" << " [label=\"" << ADDtoName[c] << "\"];" << endl;
+            dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"];" << endl;
         }
 
         int color;

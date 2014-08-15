@@ -37,7 +37,7 @@ void PrintShadowMap()
 #if (MODE==MEMMAP)
 void SetProducer(FtnNo prod, uptr addr)
 {
-    D2ECHO("Setting" << FUNC(prod) << " as producer of " << ADDR(addr));
+    D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
     u8* shadowAddr = (u8*) MEM2SHADOW(addr);
     D3ECHO(ADDR(addr) << ADDR(MEM2SHADOW(addr)));
     //TODO check these size loops for 1,2,4,8 and 16 sizes
@@ -51,7 +51,7 @@ void SetProducer(FtnNo prod, uptr addr)
 #if (MODE==TABLES)
 void SetProducer(FtnNo prod, uptr addr)
 {
-    D2ECHO("Setting" << FUNC(prod) << " as producer of " << ADDR(addr));
+    D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
     ShadowTable.setProducer(addr, prod);
 }
 #endif
@@ -59,7 +59,7 @@ void SetProducer(FtnNo prod, uptr addr)
 #if (MODE==HYBRID)
 void SetProducer(FtnNo prod, uptr addr)
 {
-    D2ECHO("Setting" << FUNC(prod) << " as producer of " << ADDR(addr));
+    D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
     D3ECHO(  ADDR(addr) << " -> " << ADDR(shadowAddr));
     if (shadowAddr)

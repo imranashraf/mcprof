@@ -31,16 +31,16 @@ private:
 public:
     FtnList()
     {
-        Add(UnKnownFtn);
+        Add(UnknownFtn);
     }
     void Add(string fname)
     {
 //             fNames.push_back(fname);
         fNames.insert(fname);
-        NametoADD[fname]=GlobalFunctionNo;   // create the string -> Number binding
-        ADDtoName[GlobalFunctionNo]=fname;   // create the Number -> String binding
-        D1ECHO("Adding " << VAR(fname) << "(" << GlobalFunctionNo << ") " << "to SeenFname list");
-        GlobalFunctionNo++;      // create a Function Number for this function
+        Name2ID[fname]=GlobalID;   // create the string -> Number binding
+        ID2Name[GlobalID]=fname;   // create the Number -> String binding
+        D1ECHO("Adding " << VAR(fname) << "(" << GlobalID << ") " << "to Map");
+        GlobalID++;      // Increment the Global ID for the next function/object
     }
 
     bool Find(string fname)

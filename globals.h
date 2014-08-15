@@ -10,7 +10,7 @@
 //Set the debugging level (0-3)
 // 0   -> No Debug
 // 1-3 -> Debug mode, while 3 is the most verbose
-#define DEBUG 2
+#define DEBUG 1
 
 #if defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
@@ -60,10 +60,11 @@ typedef u8  FtnNo;
 # endif
 #endif  // _MSC_VER
 
-extern std::map <std::string,u16> NametoADD;
-extern std::map <u16,std::string> ADDtoName;
-extern u16 GlobalFunctionNo;
-extern std::string UnKnownFtn;
+extern std::map <std::string,u16> Name2ID;
+extern std::map <u16,std::string> ID2Name;
+extern u16 GlobalID;
+extern std::string UnknownFtn;
+extern std::string UnknownObj;
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 #define VAR(v) " `" #v "': " << v << " "
@@ -72,7 +73,7 @@ extern std::string UnKnownFtn;
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
-#define FUNC(v)  ADDtoName[(int)v] << "(" << (int)v << ")"
+#define FUNC(v)  ID2Name[(int)v] << "(" << (int)v << ")"
 
 #if (DEBUG>0)
 #define DECHO(content)                          ECHO(content)

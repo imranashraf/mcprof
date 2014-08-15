@@ -7,11 +7,13 @@ typedef int uint32_t;
 // unsigned int srcArr1[SIZE];
 // unsigned int srcArr2[SIZE];
 // unsigned int sqrArr[SIZE];
+// unsigned int sumArr[SIZE];
+// unsigned int diffArr[SIZE];
 unsigned int *srcArr1;
 unsigned int *srcArr2;
 unsigned int *sqrArr;
-unsigned int sumArr[SIZE];
-unsigned int diffArr[SIZE];
+unsigned int *sumArr;
+unsigned int *diffArr;
 
 unsigned int coeff = 2;
 
@@ -89,26 +91,34 @@ int main()
     char *dummy = malloc(1);
     printf("Dummy malloc addr : 0x%x\n", dummy);
 
-    sqrArr = malloc(SIZE * sizeof(uint32_t));
-    printf("sqrArr addr : 0x%x\n",sqrArr);
-    
     srcArr1 = malloc(SIZE * sizeof(uint32_t));
     printf("srcArr1 addr : 0x%x\n",srcArr1);
-    
+
     srcArr2 = malloc(SIZE * sizeof(uint32_t));
     printf("srcArr2 addr : 0x%x\n",srcArr2);
-    
+
+    sumArr = malloc(SIZE * sizeof(uint32_t));
+    printf("sumArr addr : 0x%x\n",sumArr);
+
+    diffArr = malloc(SIZE * sizeof(uint32_t));
+    printf("diffArr addr : 0x%x\n",diffArr);
+
+    sqrArr = malloc(SIZE * sizeof(uint32_t));
+    printf("sqrArr addr : 0x%x\n",sqrArr);
+
     initVecs();
     sumVecs();
     diffVecs();
-//     sqrootVecs();
+    sqrootVecs();
 
 //     printf("output : %d\n",sumArr[1]+diffArr[1]);
-    printf("output : %d\n",sumArr[1]+diffArr[1]);
+    printf("output : %d\n",sumArr[1]+diffArr[1]+sqrArr[1]);
 
     free(dummy);
     free(srcArr1);
     free(srcArr2);
+    free(sumArr);
+    free(diffArr);
     free(sqrArr);
 
     return 0;
