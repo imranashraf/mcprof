@@ -89,22 +89,22 @@ int main()
 {
     printf("Vector Operations Test.\n");
     char *dummy = malloc(1);
-    printf("Dummy malloc addr : 0x%x\n", dummy);
+    printf("Dummy malloc addr : %p\n", (void *)dummy );
 
     srcArr1 = malloc(SIZE * sizeof(uint32_t));
-    printf("srcArr1 addr : 0x%x\n",srcArr1);
+    printf("srcArr1 addr : %p\n",srcArr1);
 
     srcArr2 = malloc(SIZE * sizeof(uint32_t));
-    printf("srcArr2 addr : 0x%x\n",srcArr2);
+    printf("srcArr2 addr : %p\n",srcArr2);
 
     sumArr = malloc(SIZE * sizeof(uint32_t));
-    printf("sumArr addr : 0x%x\n",sumArr);
+    printf("sumArr addr : %p\n",sumArr);
 
     diffArr = malloc(SIZE * sizeof(uint32_t));
-    printf("diffArr addr : 0x%x\n",diffArr);
+    printf("diffArr addr : %p\n",diffArr);
 
     sqrArr = malloc(SIZE * sizeof(uint32_t));
-    printf("sqrArr addr : 0x%x\n",sqrArr);
+    printf("sqrArr addr : %p\n",sqrArr);
 
     initVecs();
     sumVecs();

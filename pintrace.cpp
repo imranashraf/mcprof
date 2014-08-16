@@ -13,6 +13,7 @@
 #include "objects.h"
 #include "mode1.h"
 #include "mode2.h"
+#include "mode3.h"
 #include <iostream>
 #include <fstream>
 #include <stack>
@@ -39,10 +40,10 @@ Object* currObj = &newObj;
 // Command line switches
 /* ===================================================================== */
 KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
-                            "m", "matrix.out", "specify file name for matrix output");
+                            "MatFile", "matrix.out", "specify file name for matrix output");
 
 KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
-                         "d", "communication.dot",
+                         "DotFile", "communication.dot",
                          "specify file name for output in dot");
 
 KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
@@ -51,7 +52,7 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                           executable image");
 
 KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
-                           "s","0", "Include Stack Accesses");
+                           "RecordStack","0", "Include Stack Accesses");
 
 KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                           "SelectFunctions", "0",
@@ -84,14 +85,16 @@ VOID Usage()
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
 //     RecordReadMode1( Name2ID[CallStack.top()], (uptr)addr, refSize);
-    RecordReadMode2( Name2ID[CallStack.top()], (uptr)addr, refSize);
+//     RecordReadMode2( Name2ID[CallStack.top()], (uptr)addr, refSize);
+    RecordReadMode3( Name2ID[CallStack.top()], (uptr)addr, refSize);
 }
 
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
 //     RecordWriteMode1(Name2ID[CallStack.top()], (uptr)addr, refSize);
-    RecordWriteMode2(Name2ID[CallStack.top()], (uptr)addr, refSize);
+//     RecordWriteMode2(Name2ID[CallStack.top()], (uptr)addr, refSize);
+    RecordWriteMode3(Name2ID[CallStack.top()], (uptr)addr, refSize);
 }
 
 /* ===================================================================== */
@@ -183,6 +186,7 @@ BOOL ValidFtnName(string name)
 #endif
         );
 }
+
 #define RTNOPT 1
 VOID RecordRoutineEntry(VOID *ip)
 {
@@ -195,8 +199,11 @@ VOID RecordRoutineEntry(VOID *ip)
     SeenFnames.AddIfNotFound(rname);
 #endif
 
-    D1ECHO ("Entring Routine : " << rname << VAR(GlobalID));
+    D1ECHO ("Entring Routine : " << rname );
     CallStack.push(rname);
+    
+    // following is required in mode 3
+    SetCurrCall(rname);
 }
 
 
@@ -516,6 +523,8 @@ VOID TheEnd(INT32 code, VOID *v)
     mout.close();
     PrintCommunicationDot(dotout, GlobalID);
     dotout.close();
+    
+    PrintAllCalls(); // in mode3 only
 }
 
 /*!

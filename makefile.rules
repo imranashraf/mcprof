@@ -70,15 +70,6 @@ endif
 # Linux
 ifeq ($(TARGET_OS),linux)
 	TOOL_CXXFLAGS+= -MD -std=c++11
-# 	TOOL_CXXFLAGS=-Wall -Werror -Wno-unknown-pragmas -fno-stack-protector\
-# 	-DTARGET_IA32E -DHOST_IA32E -fPIC -DTARGET_LINUX \
-# 	-I/home/imran/pin-2.13-65163/source/include/pin \
-# 	-I/home/imran/pin-2.13-65163/source/include/pin/gen \
-# 	-I/home/imran/pin-2.13-65163/extras/components/include \
-# 	-I/home/imran/pin-2.13-65163/extras/xed2-intel64/include \
-# 	-I/home/imran/pin-2.13-65163/source/tools/InstLib \
-# 	-O3 -fomit-frame-pointer -fno-strict-aliasing  \
-# 	-MD -g -pg
 # 	TOOL_LDFLAGS+= -pg
 # 	TOOL_LIBS+= -pg
 	APP_CXXFLAGS+= -fno-inline -g
@@ -99,7 +90,7 @@ endif
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
 mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -s 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
 # 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -- $(OBJDIR)simple2$(EXE_SUFFIX)
 
 ##############################################################
@@ -111,7 +102,7 @@ mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
 # See makefile.default.rules for the default build rules.
 
 CPPSRCS = globals.cpp utility.cpp shadow.cpp commatrix.cpp \
-        mode1.cpp mode2.cpp \
+        mode1.cpp mode2.cpp mode3.cpp \
 		functions.cpp objects.cpp\
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
@@ -135,7 +126,7 @@ open:
 	kate makefile.rules globals.h globals.cpp utility.h utility.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	functions.h functions.cpp objects.h objects.cpp \
-	mode1.h mode1.cpp mode2.h mode2.cpp \
+	mode1.h mode1.cpp mode2.h mode2.cpp mode3.h mode3.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 
