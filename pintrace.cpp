@@ -302,7 +302,8 @@ VOID FreeBefore(ADDRINT addr)
     if(addr != 0)
     {
         D2ECHO("removing object with start address " << ADDR(addr) );
-//         objTable.Remove(addr);
+//         objTable.Remove(addr);   // comment it to keep the object table
+                                    // useful for debugging
     }
 }
 
@@ -366,12 +367,11 @@ VOID Image_cb(IMG img, VOID * v)
         // For each section, process all RTNs.
         for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn))
         {
-
             /*
             * The following function recording can be done at the instrumentation time as below
-            * instead of doing at analysis time in RecordRoutineEntry(). This will simply result
-            * in more functions in SeenFnames which may not be even involved in communication,
-            * which is not as such a problem as it will simply clutter the output.
+            * instead of doing at analysis time in RecordRoutineEntry(). This will result
+            * in more functions in SeenFnames which may not be even involved in communication.
+            * This, however, is not as such a problem as it will simply clutter the output.
             */
 #if (RTNOPT==1)
             string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);

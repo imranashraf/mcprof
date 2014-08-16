@@ -12,8 +12,6 @@
 
 using namespace std;
 
-static int localObjId=0;
-
 class Object
 {
 private:
@@ -67,8 +65,7 @@ public:
     Objects(){}
     void Insert(Object o)
     {
-        o.SetID(localObjId);
-        localObjId++;
+        o.SetID(GlobalID);
         string oname = o.GetName();
 
         // update global name to id map
@@ -119,6 +116,7 @@ public:
         }
 
         // while there are objects in file
+        // TODO what if name is not specified? do we need to check!
         while( (sifin >> ofile) && (sifin >> oline) && (sifin >> oname))
         {
             Insert(Object(oline, ofile, oname));
@@ -137,6 +135,16 @@ public:
         for ( auto& o : objs )
         {
             if ( (o.isSameLine(l)) && (o.isSameFile(f)) )
+                return true;
+        }
+        return false;
+    }
+
+    bool Find(int objid)
+    {
+        for ( auto& o : objs )
+        {
+            if ( o.GetID() == objid )
                 return true;
         }
         return false;
@@ -191,7 +199,7 @@ public:
             if ( (addr >= saddr) && (addr < saddr+size) )
                 return o.GetID();
         }
-        return 0; // TODO: 0 or id of unknown object 
+        return UnknownID;
     }
 
     Object* GetObjectPtr(int index)

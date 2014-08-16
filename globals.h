@@ -10,7 +10,7 @@
 //Set the debugging level (0-3)
 // 0   -> No Debug
 // 1-3 -> Debug mode, while 3 is the most verbose
-#define DEBUG 1
+#define DEBUG 0
 
 #if defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
@@ -65,6 +65,7 @@ extern std::map <u16,std::string> ID2Name;
 extern u16 GlobalID;
 extern std::string UnknownFtn;
 extern std::string UnknownObj;
+extern u16 UnknownID;
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 #define VAR(v) " `" #v "': " << v << " "

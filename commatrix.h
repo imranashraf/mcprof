@@ -2,6 +2,8 @@
 #define COMMATRIX_H
 
 #include "globals.h"
+#include "objects.h"
+
 #include <vector>
 #include <iostream>
 #include <map>
@@ -11,6 +13,7 @@
 
 using namespace std;
 
+extern Objects objTable;
 
 class Matrix2D
 {
@@ -92,15 +95,20 @@ public:
     void PrintDot(ostream &dotout, u16 TotalFtns)
     {
         dotout << "digraph {\ngraph [];"
-               << "\nnode [fontcolor=black, style=filled, fontsize=20];"
+//                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
                << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
                << endl;
 
         CHECK_LT(TotalFtns, Matrix.size());
 
+        string objNodeStyle("fontcolor=black, shape=box, fontsize=20");
+        string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
         for (u16 c=0; c<TotalFtns; c++)
         {
-            dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"];" << endl;
+            if ( objTable.Find(c) )
+                dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << objNodeStyle << "];" << endl;
+            else
+                dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << ftnNodeStyle << "];" << endl;            
         }
 
         int color;

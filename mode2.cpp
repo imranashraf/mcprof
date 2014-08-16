@@ -20,11 +20,23 @@ void RecordReadMode2(FtnNo cons, uptr addr, int size)
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     FtnNo prod;
     int objid = objTable.GetID(addr);
+    D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
-    for(int i=0; i<size; i++)
+    if(objid != UnknownID)
     {
-        prod = GetProducer(addr+i);
-        RecordCommunication(prod, objid, 1);
-        RecordCommunication(objid, cons, 1);
+        for(int i=0; i<size; i++)
+        {
+            prod = GetProducer(addr+i);
+            RecordCommunication(prod, objid, 1);
+            RecordCommunication(objid, cons, 1);
+        }
+    }
+    else
+    {
+        for(int i=0; i<size; i++)
+        {
+            prod = GetProducer(addr+i);
+            RecordCommunication(prod, cons, 1);
+        }
     }
 }
