@@ -35,7 +35,8 @@ public:
 
     void Print()
     {
-        ECHO(id << " " << name << " " << ADDR(startAddr) << " " << VAR(size) << " at " << file << ":" << line);
+        ECHO(id << " " << name << " " << ADDR(startAddr) 
+                << " " << VAR(size) << " at " << file << ":" << line);
     }
 
     void SetLineFile(int l, string f)
@@ -48,8 +49,8 @@ public:
     int GetSize() { return size; }
     void SetAddr(int a) {startAddr = a;}
     ADDRINT GetStartAddr() { return startAddr; }
-    bool isSameLine( int l) { return line == l;}
-    bool isSameFile(string f) { return file == f;}
+    bool isSameLine( int l) { return (line == l);}
+    bool isSameFile(string f) { return (file == f);}
     string GetName() {return name; }
     void SetID(int id0) {id = id0;}
     int GetID() {return id; }
@@ -166,15 +167,18 @@ public:
     bool Find(string f, int l, int& index)
     {
         int i=0;
+        D2ECHO("Finding "<< f << ":" <<l << " in objTable");
         for ( auto& o : objs )
         {
             if ( (o.isSameLine(l)) && (o.isSameFile(f)) )
             {
+                D2ECHO("Found");
                 index = i;
                 return true;
             }
             i++;
         }
+        D2ECHO("Not Found");
         return false;
     }
 

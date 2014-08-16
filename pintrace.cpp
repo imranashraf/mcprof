@@ -296,6 +296,7 @@ VOID MallocAfter(ADDRINT addr)
     D2ECHO("setting malloc start address " << ADDR(addr) );
     currObj->SetAddr(addr);
 
+    // If Selected Objects are not supplied, then insert objects to table
     if( !KnobSelectObjects.Value() )
     {
         D2ECHO("Inserting following object in object table");
@@ -433,7 +434,7 @@ VOID Image_cb(IMG img, VOID * v)
                             int index=-1;
                             if ( objTable.Find(filename, line, index) )
                             {
-                                D1ECHO("Instrumenting object (re)alloc/free call at "
+                                D2ECHO("Instrumenting object (re)alloc/free call at "
                                     << filename <<":"<< line << " available in table");
 
                                 INS_InsertCall

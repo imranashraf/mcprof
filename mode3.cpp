@@ -24,9 +24,8 @@ on read/write access
 
 void SetCurrCall(string& fname)
 {
-    ECHO("Setting currCall for " << fname);
     int funcid = Name2ID[fname];
-    ECHO(VAR(funcid));
+    D2ECHO("Setting currCall for " << FUNC(funcid) );
     
     auto it = AllCalls.find(funcid);
     if( it == AllCalls.end() )
@@ -37,7 +36,6 @@ void SetCurrCall(string& fname)
     Call newCall;
     AllCalls[funcid].push_back(newCall); // add a new call
     currCall = &( AllCalls[funcid].back() );
-    ECHO(VAR(currCall));
 }
 
 void RecordWriteMode3(FtnNo prod, uptr addr, int size)
@@ -71,27 +69,43 @@ void RecordReadMode3(FtnNo cons, uptr addr, int size)
     // as separate entities ?
 }
 
-
-// print all calls to a function
-void PrintCalls(int funcid)
+void PrintCall(Call& call)
 {
-    int totalCalls = AllCalls[funcid].size();
-    ECHO("Total Calls to " << ID2Name[funcid] << totalCalls);
+    for ( auto& readPair : call.Reads)
+    {
+        u16 oid = readPair.first;
+        ECHO("Reads from " << ID2Name[oid] << " : " << readPair.second );
+    }
+    
+    for ( auto& writePair : call.Writes)
+    {
+        u16 oid = writePair.first;
+        ECHO("Writes to " << ID2Name[oid] << " : " << writePair.second );
+    }
+    
+}
+
+// print all calls to a single function
+void PrintCalls(AllCalls2OneFtnType& calls)
+{
+    int totalCalls = calls.size();   
+    ECHO("Total Calls : " << totalCalls);
+    int cno=0;
+    for ( auto& call : calls)
+    {
+        ECHO("Call No : " << cno);
+        PrintCall(call);
+        cno++;
+    }
 }
 
 void PrintAllCalls()
 {
-    u16 f=0;
-    for ( auto calls :AllCalls)
+    ECHO("Printing All Calls");
+    for ( auto& callpair :AllCalls)
     {
-        {
-            
-            ECHO("Total Calls to " << ID2Name[f] << " : " <<  (calls.second).size() );
-//         for ( auto& calls : callsOneFtn )
-//         {
-//             
-//         }
-        }
-        f++;
+        u16 fid = callpair.first;
+        ECHO("Printing Calls to " << ID2Name[fid]);
+        PrintCalls(callpair.second);
     }
 }
