@@ -11,9 +11,11 @@
 #include "commatrix.h"
 #include "shadow.h"
 #include "objects.h"
-#include "mode1.h"
-#include "mode2.h"
-#include "mode3.h"
+#include "callstack.h"
+#include "engine2.h"
+#include "engine3.h"
+#include "engine4.h"
+
 #include <iostream>
 #include <fstream>
 #include <stack>
@@ -28,11 +30,16 @@
 /* ================================================================== */
 std::ofstream dotout;
 std::ofstream mout;
-stack <string> CallStack;
+CallStackType CallStack;
 map <string,UINT16> Name2ID;
 map <UINT16,string> ID2Name;
 FtnList SeenFnames;
 Objects objTable;
+
+void (*RecordWrite)(FtnNo, uptr, int);
+void (*RecordRead)(FtnNo, uptr, int);
+// void (*RecordWrite)(FtnNo prod, uptr addr, int size);
+// void (*RecordRead)(FtnNo cons, uptr addr, int size);
 
 /* ===================================================================== */
 // Command line switches
@@ -62,6 +69,10 @@ KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
                                "Instrument only the selected objects. \
                                User provides objects in <SelectObjects.txt> file");
 
+KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
+                         "Engine", "4",
+                         "specify engine to be used");
+
 /* ===================================================================== */
 // Utilities
 /* ===================================================================== */
@@ -82,17 +93,13 @@ VOID Usage()
 // Record a memory read
 VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
 {
-//     RecordReadMode1( Name2ID[CallStack.top()], (uptr)addr, refSize);
-//     RecordReadMode2( Name2ID[CallStack.top()], (uptr)addr, refSize);
-    RecordReadMode3( Name2ID[CallStack.top()], (uptr)addr, refSize);
+    RecordRead( CallStack.top(), (uptr)addr, refSize);
 }
 
 // Record a memory write
 VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
 {
-//     RecordWriteMode1(Name2ID[CallStack.top()], (uptr)addr, refSize);
-//     RecordWriteMode2(Name2ID[CallStack.top()], (uptr)addr, refSize);
-    RecordWriteMode3(Name2ID[CallStack.top()], (uptr)addr, refSize);
+    RecordWrite(CallStack.top(), (uptr)addr, refSize);
 }
 
 /* ===================================================================== */
@@ -198,10 +205,10 @@ VOID RecordRoutineEntry(VOID *ip)
 #endif
 
     D1ECHO ("Entring Routine : " << rname );
-    CallStack.push(rname);
+    CallStack.push(Name2ID[rname]);
     
-    // following is required in mode 3
-    SetCurrCall(rname);
+    if (KnobEngine.Value() == 4)
+        SetCurrCall(rname);
 }
 
 
@@ -210,7 +217,7 @@ VOID RecordRoutineExit(VOID *ip)
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
-    if(!(CallStack.empty()) && (CallStack.top() == rname))
+    if(!(CallStack.empty()) && ( CallStack.top() == Name2ID[rname] ) )
     {
         D1ECHO("Leaving Routine : " << rname);
         CallStack.pop();
@@ -233,42 +240,6 @@ VOID RecordRoutineExit(VOID *ip)
 // Names of malloc and free
 string MALLOC("malloc");
 string FREE("free");
-string invalid("invalid_rtn");
-
-const string *Target2String(ADDRINT target)
-{
-    string name = RTN_FindNameByAddress(target);
-    if (name == "")
-        return &invalid;
-    else
-        return new string(name);
-}
-
-const string& Target2RtnName(ADDRINT target)
-{
-    const string& name = RTN_FindNameByAddress(target);
-
-    if (name == "")
-        return *new string("[Unknown routine]");
-    else
-        return *new string(name);
-}
-
-const string& Target2LibName(ADDRINT target)
-{
-    PIN_LockClient();
-    const RTN rtn = RTN_FindByAddress(target);
-    static const string _invalid_rtn("[Unknown image]");
-    string name;
-
-    if( RTN_Valid(rtn) )
-        name = IMG_Name(SEC_Img(RTN_Sec(rtn)));
-    else
-        name = _invalid_rtn;
-
-    PIN_UnlockClient();
-    return *new string(name);
-}
 
 void selectObject(int index)
 {
@@ -523,9 +494,32 @@ VOID TheEnd(INT32 code, VOID *v)
     PrintCommunicationDot(dotout, GlobalID);
     dotout.close();
     
-    PrintAllCalls(); // in mode3 only
+    if (KnobEngine.Value() == 4)
+        PrintAllCalls(); // in engine 4 only
 }
 
+void SelectEngine()
+{
+    switch( KnobEngine.Value() )
+    {
+        case 2:
+            RecordRead = RecordReadEngine2;
+            RecordWrite = RecordWriteEngine2;
+            break;
+        case 3:
+            RecordRead = RecordReadEngine3;
+            RecordWrite = RecordWriteEngine3;
+            break;
+        case 4:
+            RecordRead = RecordReadEngine4;
+            RecordWrite = RecordWriteEngine4;
+            break;
+        default:
+            ECHO("Specify a valid Engine number to be used");
+            Die();
+            break;
+    }
+}
 /*!
  * The main procedure of the tool.
  * This function is called when the application image is loaded but not yet started.
@@ -578,7 +572,7 @@ void SetupPin(int argc, char *argv[])
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
-    CallStack.push(UnknownFtn);
+    CallStack.push(Name2ID[UnknownFtn]);
     if(KnobSelectFunctions.Value())
     {
         SeenFnames.InitFromFile();
@@ -589,7 +583,9 @@ void SetupPin(int argc, char *argv[])
         objTable.InitFromFile();
         objTable.Print();
     }
-
+    
+    SelectEngine();
+    
     //TRACE_AddInstrumentFunction(Trace_cb, 0);
     //RTN_AddInstrumentFunction(RecordRoutineEntry,0);
     IMG_AddInstrumentFunction(Image_cb, 0);

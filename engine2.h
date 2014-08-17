@@ -1,5 +1,5 @@
-#ifndef MODE1_H
-#define MODE1_H
+#ifndef ENGINE2_H
+#define ENGINE2_H
 
 #include "globals.h"
 
@@ -11,7 +11,7 @@
 // if BYTELEVEL is defined than the granularity is Byte
 // #define BYTELEVEL
 
-void RecordWriteMode1(FtnNo prod, uptr addr, int size);
-void RecordReadMode1(FtnNo cons, uptr addr, int size);
+void RecordWriteEngine2(FtnNo prod, uptr addr, int size);
+void RecordReadEngine2(FtnNo cons, uptr addr, int size);
 
 #endif

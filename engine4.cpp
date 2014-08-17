@@ -1,10 +1,11 @@
 #include "globals.h"
 #include "shadow.h"
-#include "mode3.h"
+#include "engine4.h"
 #include "commatrix.h"
 #include "objects.h"
 
-extern Objects objTable;
+extern Objects objTable;        // main object table
+extern CallStackType CallStack; // main call stack
 
 // all calls to a single func, index is call no
 typedef vector<Call> AllCalls2OneFtnType;
@@ -22,6 +23,8 @@ it is not required to determine the right Call
 on read/write access
 */
 
+static u64 GlobalCallSeqNo=0;
+
 void SetCurrCall(string& fname)
 {
     int funcid = Name2ID[fname];
@@ -36,9 +39,14 @@ void SetCurrCall(string& fname)
     Call newCall;
     AllCalls[funcid].push_back(newCall); // add a new call
     currCall = &( AllCalls[funcid].back() );
+    
+    //set callpath of currCall by traversing call stack
+    currCall->CallPath = CallStack;
+    currCall->SeqNo = GlobalCallSeqNo++;
+    
 }
 
-void RecordWriteMode3(FtnNo prod, uptr addr, int size)
+void RecordWriteEngine4(FtnNo prod, uptr addr, int size)
 {
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     int objid = objTable.GetID(addr);
@@ -57,7 +65,7 @@ void RecordWriteMode3(FtnNo prod, uptr addr, int size)
     }
 }
 
-void RecordReadMode3(FtnNo cons, uptr addr, int size)
+void RecordReadEngine4(FtnNo cons, uptr addr, int size)
 {
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
 //     FtnNo prod;
@@ -71,6 +79,8 @@ void RecordReadMode3(FtnNo cons, uptr addr, int size)
 
 void PrintCall(Call& call)
 {
+    ECHO("Call Seq No : " << call.SeqNo);
+    call.CallPath.print();
     for ( auto& readPair : call.Reads)
     {
         u16 oid = readPair.first;

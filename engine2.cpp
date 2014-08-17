@@ -1,9 +1,9 @@
 #include "globals.h"
 #include "shadow.h"
-#include "mode1.h"
+#include "engine2.h"
 #include "commatrix.h"
 
-void RecordWriteMode1(FtnNo prod, uptr addr, int size)
+void RecordWriteEngine2(FtnNo prod, uptr addr, int size)
 {
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     for(int i=0; i<size; i++)
@@ -12,7 +12,7 @@ void RecordWriteMode1(FtnNo prod, uptr addr, int size)
     }
 }
 
-void RecordReadMode1(FtnNo cons, uptr addr, int size)
+void RecordReadEngine2(FtnNo cons, uptr addr, int size)
 {
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     FtnNo prod;

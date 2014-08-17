@@ -1,5 +1,5 @@
-#ifndef MODE3_H
-#define MODE3_H
+#ifndef ENGINE4_H
+#define ENGINE4_H
 
 #include "globals.h"
 
@@ -9,15 +9,14 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include "callstack.h"
 
 using namespace std;
 
 // a single call to a single func
 struct Call
 {
-    string CallPath;    // main to this ftn, call path
-                        // better to be an int representing func id !!!
-                        // should also be update on func entry
+    CallStackType CallPath; // call path to this ftn, recorded once on func entry
     map<u8,double> Reads;     // all the  read accesses in this call, updated per access
     map<u8,double> Writes;    // all the write accesses in this call, updated per access
     u64 SeqNo; // TODO use it later for temporal aspect of a call
@@ -26,8 +25,9 @@ struct Call
 };
 
 void SetCurrCall(string& fname);
-void RecordWriteMode3(FtnNo prod, uptr addr, int size);
-void RecordReadMode3(FtnNo cons, uptr addr, int size);
+
+void RecordWriteEngine4(FtnNo prod, uptr addr, int size);
+void RecordReadEngine4(FtnNo cons, uptr addr, int size);
 
 void PrintAllCalls();
 
