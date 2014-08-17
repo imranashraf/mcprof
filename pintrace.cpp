@@ -33,8 +33,6 @@ map <string,UINT16> Name2ID;
 map <UINT16,string> ID2Name;
 FtnList SeenFnames;
 Objects objTable;
-Object newObj;
-Object* currObj = &newObj;
 
 /* ===================================================================== */
 // Command line switches
@@ -275,33 +273,33 @@ const string& Target2LibName(ADDRINT target)
 void selectObject(int index)
 {
     D2ECHO("selecting currObj as already available in table");
-    currObj = objTable.GetObjectPtr(index);
+    objTable.SetExistingObj(index);
 }
 
 void setLoc(int l, string* f)
 {
     D2ECHO("setting last function call location as " << *f << ":" << l);
-    newObj.SetLineFile(l, *f);
-    currObj = &newObj;
+    objTable.SetNewObj();
+    objTable.SetCurrLineFile(l, *f);
 }
 
 VOID MallocBefore(ADDRINT size)
 {
     D2ECHO(" setting malloc size " << size );
-    currObj->SetSize(size);
+    objTable.SetCurrSize(size);
 }
 
 VOID MallocAfter(ADDRINT addr)
 {
     D2ECHO("setting malloc start address " << ADDR(addr) );
-    currObj->SetAddr(addr);
+    objTable.SetCurrAddr(addr);
 
     // If Selected Objects are not supplied, then insert objects to table
     if( !KnobSelectObjects.Value() )
     {
         D2ECHO("Inserting following object in object table");
-        currObj->Print();
-        objTable.Insert(*currObj);
+        objTable.PrintCurr();
+        objTable.InsertCurr();
     }
 }
 
