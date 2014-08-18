@@ -11,7 +11,7 @@
 // if BYTELEVEL is defined than the granularity is Byte
 // #define BYTELEVEL
 
-void RecordWriteEngine2(FtnNo prod, uptr addr, int size);
-void RecordReadEngine2(FtnNo cons, uptr addr, int size);
+void RecordWriteEngine2(uptr addr, int size);
+void RecordReadEngine2(uptr addr, int size);
 
 #endif

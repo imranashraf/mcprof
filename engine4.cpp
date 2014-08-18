@@ -29,33 +29,34 @@ void SetCurrCall(string& fname)
 {
     int funcid = Name2ID[fname];
     D2ECHO("Setting currCall for " << FUNC(funcid) );
-    
+
     auto it = AllCalls.find(funcid);
     if( it == AllCalls.end() )
     {
         AllCalls[funcid] = AllCalls2OneFtnType();
     }
-    
+
     Call newCall;
     AllCalls[funcid].push_back(newCall); // add a new call
     currCall = &( AllCalls[funcid].back() );
-    
+
     //set callpath of currCall by traversing call stack
     currCall->CallPath = CallStack;
     currCall->SeqNo = GlobalCallSeqNo++;
     
 }
 
-void RecordWriteEngine4(FtnNo prod, uptr addr, int size)
+void RecordWriteEngine4(uptr addr, int size)
 {
+    FtnNo prod = CallStack.top();
+
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     int objid = objTable.GetID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
-    
+
     // TODO check weather we need to some thing special for unknown objects
 //     if(objid != UnknownID)
 //     {
-//         
 //     }
 
     currCall->Writes[objid]+=size;
@@ -65,18 +66,21 @@ void RecordWriteEngine4(FtnNo prod, uptr addr, int size)
     }
 }
 
-void RecordReadEngine4(FtnNo cons, uptr addr, int size)
+void RecordReadEngine4(uptr addr, int size)
 {
+//     FtnNo cons = CallStack.top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-//     FtnNo prod;
+
     int objid = objTable.GetID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
     currCall->Reads[objid]+=size;
-    
+
+    //     FtnNo prod;
     //TODO do we need to record the prod to obj, and obj to cons
     // as separate entities ?
 }
 
+// print a single call to a single function
 void PrintCall(Call& call)
 {
     ECHO("Call Seq No : " << call.SeqNo);
@@ -86,13 +90,12 @@ void PrintCall(Call& call)
         u16 oid = readPair.first;
         ECHO("Reads from " << ID2Name[oid] << " : " << readPair.second );
     }
-    
+
     for ( auto& writePair : call.Writes)
     {
         u16 oid = writePair.first;
         ECHO("Writes to " << ID2Name[oid] << " : " << writePair.second );
     }
-    
 }
 
 // print all calls to a single function
@@ -109,6 +112,7 @@ void PrintCalls(AllCalls2OneFtnType& calls)
     }
 }
 
+// print all call to all functions
 void PrintAllCalls()
 {
     ECHO("Printing All Calls");

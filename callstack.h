@@ -14,7 +14,7 @@ class CallStackType
 {
 private:
     vector<u16> stack;  // vector containing func ids of functions on call stack
-    
+
 public:
     CallStackType(){}
     u16 top(){return stack.back();}

@@ -24,28 +24,26 @@
 #include <deque>
 #include <algorithm>
 
-
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
 std::ofstream dotout;
 std::ofstream mout;
-CallStackType CallStack;
 map <string,UINT16> Name2ID;
 map <UINT16,string> ID2Name;
 FtnList SeenFnames;
 Objects objTable;
+CallStackType CallStack;
 
-void (*RecordWrite)(FtnNo, uptr, int);
-void (*RecordRead)(FtnNo, uptr, int);
-// void (*RecordWrite)(FtnNo prod, uptr addr, int size);
-// void (*RecordRead)(FtnNo cons, uptr addr, int size);
+void (*WriteRecorder)(uptr, int);
+void (*ReadRecorder)(uptr, int);
 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
 KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
-                            "MatFile", "matrix.out", "specify file name for matrix output");
+                            "MatFile", "matrix.out",
+                            "specify file name for matrix output");
 
 KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
                          "DotFile", "communication.dot",
@@ -60,18 +58,18 @@ KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
                            "RecordStack","0", "Include Stack Accesses");
 
 KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
-                          "SelectFunctions", "0",
-                          "Instrument only the selected functions. \
-                          User provides functions in <SelectFunctions.txt> file");
+                               "SelectFunctions", "0",
+                               "Instrument only the selected functions. \
+                                User provides functions in <SelectFunctions.txt> file");
 
 KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
                              "SelectObjects", "1",
-                               "Instrument only the selected objects. \
-                               User provides objects in <SelectObjects.txt> file");
+                             "Instrument only the selected objects. \
+                              User provides objects in <SelectObjects.txt> file");
 
 KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
-                         "Engine", "4",
-                         "specify engine to be used");
+                        "Engine", "4",
+                        "specify engine to be used");
 
 /* ===================================================================== */
 // Utilities
@@ -90,70 +88,32 @@ VOID Usage()
 // Analysis routines
 /* ===================================================================== */
 
-// Record a memory read
-VOID RecordMemRead(VOID * ip, VOID * addr, UINT32 refSize)
+void SelectAnalysisEngine()
 {
-    RecordRead( CallStack.top(), (uptr)addr, refSize);
-}
-
-// Record a memory write
-VOID RecordMemWrite(VOID * ip, VOID * addr, UINT32 refSize)
-{
-    RecordWrite(CallStack.top(), (uptr)addr, refSize);
+    switch( KnobEngine.Value() )
+    {
+    case 2:
+        ReadRecorder = RecordReadEngine2;
+        WriteRecorder = RecordWriteEngine2;
+        break;
+    case 3:
+        ReadRecorder = RecordReadEngine3;
+        WriteRecorder = RecordWriteEngine3;
+        break;
+    case 4:
+        ReadRecorder = RecordReadEngine4;
+        WriteRecorder = RecordWriteEngine4;
+        break;
+    default:
+        ECHO("Specify a valid Engine number to be used");
+        Die();
+        break;
+    }
 }
 
 /* ===================================================================== */
 // Instrumentation callbacks
 /* ===================================================================== */
-
-/*!
- * Insert call to RecordMemRead/RecordMemWrite analysis routine before
- * every basic block of the trace.
- * This function is called every time a new trace is encountered.
- * @param[in]   trace    trace to be instrumented
- * @param[in]   v        value specified by the tool in the TRACE_AddInstrumentFunction
- *                       function call
- */
-void Trace_cb(TRACE trace, void *v)
-{
-    RTN rtn = TRACE_Rtn(trace);
-    if (!RTN_Valid(rtn)) return;
-//     string rtn_name = RTN_Name(rtn);
-
-    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
-    {
-        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins))
-        {
-            UINT32 memOperands = INS_MemoryOperandCount(ins);
-            for (UINT32 memOp = 0; memOp < memOperands; memOp++)
-            {
-                size_t refSize = INS_MemoryOperandSize(ins, memOp);
-//                 bool isStack = INS_IsStackRead(ins);
-//                 if(!isStack) return;
-
-                if (INS_MemoryOperandIsRead(ins, memOp))
-                {
-                    INS_InsertPredicatedCall(
-                        ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
-                        IARG_INST_PTR,
-                        IARG_MEMORYOP_EA, memOp,
-                        IARG_UINT32, refSize,
-                        IARG_END);
-                }
-
-                if (INS_MemoryOperandIsWritten(ins, memOp))
-                {
-                    INS_InsertPredicatedCall(
-                        ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
-                        IARG_INST_PTR,
-                        IARG_MEMORYOP_EA, memOp,
-                        IARG_UINT32, refSize,
-                        IARG_END);
-                }
-            }
-        }
-    }
-}
 
 BOOL ValidFtnName(string name)
 {
@@ -206,7 +166,7 @@ VOID RecordRoutineEntry(VOID *ip)
 
     D1ECHO ("Entring Routine : " << rname );
     CallStack.push(Name2ID[rname]);
-    
+
     if (KnobEngine.Value() == 4)
         SetCurrCall(rname);
 }
@@ -280,7 +240,7 @@ VOID FreeBefore(ADDRINT addr)
     {
         D2ECHO("removing object with start address " << ADDR(addr) );
 //         objTable.Remove(addr);   // comment it to keep the object table
-                                    // useful for debugging
+        // useful for debugging
     }
 }
 
@@ -302,9 +262,9 @@ VOID Image_cb(IMG img, VOID * v)
 
             // Instrument malloc() to print the input argument value and the return value.
             RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
-                        IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
+                           IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
 
             RTN_Close(mallocRtn);
         }
@@ -316,7 +276,7 @@ VOID Image_cb(IMG img, VOID * v)
             RTN_Open(freeRtn);
             // Instrument free() to print the input argument value.
             RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)FreeBefore,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_Close(freeRtn);
         }
 
@@ -404,7 +364,7 @@ VOID Image_cb(IMG img, VOID * v)
                             if ( objTable.Find(filename, line, index) )
                             {
                                 D2ECHO("Instrumenting object (re)alloc/free call at "
-                                    << filename <<":"<< line << " available in table");
+                                       << filename <<":"<< line << " available in table");
 
                                 INS_InsertCall
                                 (
@@ -418,8 +378,8 @@ VOID Image_cb(IMG img, VOID * v)
                         }
                         else
                         {
-                            D1ECHO("Instrumenting object (re)alloc/free call at " 
-                                << filename <<":"<< line);
+                            D1ECHO("Instrumenting object (re)alloc/free call at "
+                                   << filename <<":"<< line);
                             INS_InsertCall
                             (
                                 ins,
@@ -443,8 +403,7 @@ VOID Image_cb(IMG img, VOID * v)
                         if (INS_MemoryOperandIsRead(ins, memOp))
                         {
                             INS_InsertPredicatedCall(
-                                ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead,
-                                IARG_INST_PTR,
+                                ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
                                 IARG_MEMORYOP_EA, memOp,
                                 IARG_UINT32, refSize,
                                 IARG_END);
@@ -453,8 +412,7 @@ VOID Image_cb(IMG img, VOID * v)
                         if (INS_MemoryOperandIsWritten(ins, memOp))
                         {
                             INS_InsertPredicatedCall(
-                                ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite,
-                                IARG_INST_PTR,
+                                ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
                                 IARG_MEMORYOP_EA, memOp,
                                 IARG_UINT32, refSize,
                                 IARG_END);
@@ -493,33 +451,12 @@ VOID TheEnd(INT32 code, VOID *v)
     mout.close();
     PrintCommunicationDot(dotout, GlobalID);
     dotout.close();
-    
-    if (KnobEngine.Value() == 4)
-        PrintAllCalls(); // in engine 4 only
+
+//     if (KnobEngine.Value() == 4)
+//         PrintAllCalls(); // in engine 4 only
+
 }
 
-void SelectEngine()
-{
-    switch( KnobEngine.Value() )
-    {
-        case 2:
-            RecordRead = RecordReadEngine2;
-            RecordWrite = RecordWriteEngine2;
-            break;
-        case 3:
-            RecordRead = RecordReadEngine3;
-            RecordWrite = RecordWriteEngine3;
-            break;
-        case 4:
-            RecordRead = RecordReadEngine4;
-            RecordWrite = RecordWriteEngine4;
-            break;
-        default:
-            ECHO("Specify a valid Engine number to be used");
-            Die();
-            break;
-    }
-}
 /*!
  * The main procedure of the tool.
  * This function is called when the application image is loaded but not yet started.
@@ -583,10 +520,9 @@ void SetupPin(int argc, char *argv[])
         objTable.InitFromFile();
         objTable.Print();
     }
-    
-    SelectEngine();
-    
-    //TRACE_AddInstrumentFunction(Trace_cb, 0);
+
+    SelectAnalysisEngine();
+
     //RTN_AddInstrumentFunction(RecordRoutineEntry,0);
     IMG_AddInstrumentFunction(Image_cb, 0);
 

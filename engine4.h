@@ -26,8 +26,8 @@ struct Call
 
 void SetCurrCall(string& fname);
 
-void RecordWriteEngine4(FtnNo prod, uptr addr, int size);
-void RecordReadEngine4(FtnNo cons, uptr addr, int size);
+void RecordWriteEngine4(uptr addr, int size);
+void RecordReadEngine4(uptr addr, int size);
 
 void PrintAllCalls();
 
