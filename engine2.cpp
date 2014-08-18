@@ -6,22 +6,22 @@
 
 extern CallStackType CallStack;
 
-void RecordWriteEngine2(uptr addr, int size)
+void RecordWriteEngine2(uptr addr, u32 size)
 {
-    FtnNo prod = CallStack.top();
+    IDNoType prod = CallStack.top();
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    for(int i=0; i<size; i++)
+    for(u32 i=0; i<size; i++)
     {
         SetProducer(prod, addr+i);
     }
 }
 
-void RecordReadEngine2(uptr addr, int size)
+void RecordReadEngine2(uptr addr, u32 size)
 {
-    FtnNo cons = CallStack.top();
+    IDNoType cons = CallStack.top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-    FtnNo prod;
-    for(int i=0; i<size; i++)
+    IDNoType prod;
+    for(u32 i=0; i<size; i++)
     {
         prod = GetProducer(addr+i);
         RecordCommunication(prod, cons, 1);

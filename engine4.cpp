@@ -27,7 +27,7 @@ static u64 GlobalCallSeqNo=0;
 
 void SetCurrCall(string& fname)
 {
-    int funcid = Name2ID[fname];
+    IDNoType funcid = Name2ID[fname];
     D2ECHO("Setting currCall for " << FUNC(funcid) );
 
     auto it = AllCalls.find(funcid);
@@ -46,12 +46,12 @@ void SetCurrCall(string& fname)
     
 }
 
-void RecordWriteEngine4(uptr addr, int size)
+void RecordWriteEngine4(uptr addr, u32 size)
 {
-    FtnNo prod = CallStack.top();
+    IDNoType prod = CallStack.top();
 
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    int objid = objTable.GetID(addr);
+    IDNoType objid = objTable.GetID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
     // TODO check weather we need to some thing special for unknown objects
@@ -60,22 +60,22 @@ void RecordWriteEngine4(uptr addr, int size)
 //     }
 
     currCall->Writes[objid]+=size;
-    for(int i=0; i<size; i++)
+    for(u32 i=0; i<size; i++)
     {
         SetProducer(prod, addr+i);
     }
 }
 
-void RecordReadEngine4(uptr addr, int size)
+void RecordReadEngine4(uptr addr, u32 size)
 {
-//     FtnNo cons = CallStack.top();
+//     IDNoType cons = CallStack.top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
 
-    int objid = objTable.GetID(addr);
+    IDNoType objid = objTable.GetID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
     currCall->Reads[objid]+=size;
 
-    //     FtnNo prod;
+    //     IDNoType prod;
     //TODO do we need to record the prod to obj, and obj to cons
     // as separate entities ?
 }
@@ -87,13 +87,13 @@ void PrintCall(Call& call)
     call.CallPath.print();
     for ( auto& readPair : call.Reads)
     {
-        u16 oid = readPair.first;
+        IDNoType oid = readPair.first;
         ECHO("Reads from " << ID2Name[oid] << " : " << readPair.second );
     }
 
     for ( auto& writePair : call.Writes)
     {
-        u16 oid = writePair.first;
+        IDNoType oid = writePair.first;
         ECHO("Writes to " << ID2Name[oid] << " : " << writePair.second );
     }
 }
@@ -101,9 +101,9 @@ void PrintCall(Call& call)
 // print all calls to a single function
 void PrintCalls(AllCalls2OneFtnType& calls)
 {
-    int totalCalls = calls.size();   
+    u32 totalCalls = calls.size();
     ECHO("Total Calls : " << totalCalls);
-    int cno=0;
+    u32 cno=0;
     for ( auto& call : calls)
     {
         ECHO("Call No : " << cno);
@@ -118,7 +118,7 @@ void PrintAllCalls()
     ECHO("Printing All Calls");
     for ( auto& callpair :AllCalls)
     {
-        u16 fid = callpair.first;
+        IDNoType fid = callpair.first;
         ECHO("Printing Calls to " << ID2Name[fid]);
         PrintCalls(callpair.second);
     }

@@ -2,7 +2,6 @@
 #define FUNCTIONS_H
 
 #include "globals.h"
-#include "utility.h"
 #include <vector>
 #include <iostream>
 #include <string>

@@ -1,8 +1,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "definitions.h"
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <map>
 #include <string>
@@ -31,7 +31,8 @@ typedef signed   short      s16;
 typedef signed   int        s32;
 typedef signed   long long  s64;
 
-typedef u8  FtnNo;
+// used for ftn and object numbers
+typedef u16 IDNoType;
 
 // Common defs.
 #define INLINE inline
@@ -61,12 +62,12 @@ typedef u8  FtnNo;
 # endif
 #endif  // _MSC_VER
 
+extern u16 UnknownID;
+extern u16 GlobalID;
 extern std::map <std::string,u16> Name2ID;
 extern std::map <u16,std::string> ID2Name;
-extern u16 GlobalID;
 extern std::string UnknownFtn;
 extern std::string UnknownObj;
-extern u16 UnknownID;
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 #define VAR(v) " `" #v "': " << v << " "
@@ -145,25 +146,12 @@ do { \
 #define DCHECK_GE(a, b)
 #endif
 
-inline bool IsPowerOfTwo(uptr x)
-{
-    return (x & (x - 1)) == 0;
-}
-
-inline uptr RoundUpTo(uptr size, uptr boundary)
-{
-    CHECK(IsPowerOfTwo(boundary));
-    return (size + boundary - 1) & ~(boundary - 1);
-}
-
-inline uptr RoundDownTo(uptr x, uptr boundary)
-{
-    return x & ~(boundary - 1);
-}
-
-inline bool IsAligned(uptr a, uptr alignment)
-{
-    return (a & (alignment - 1)) == 0;
-}
+bool isEmpty(std::ifstream& fin);
+bool IsPowerOfTwo(uptr x);
+uptr RoundUpTo(uptr size, uptr boundary);
+uptr RoundDownTo(uptr x, uptr boundary);
+bool IsAligned(uptr a, uptr alignment);
+const std::string& Target2RtnName(uptr target);
+const std::string& Target2LibName(uptr target);
 
 #endif

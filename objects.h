@@ -3,7 +3,6 @@
 
 #include "pin.H"
 #include "globals.h"
-#include "utility.h"
 
 #include <vector>
 #include <string>
@@ -19,7 +18,7 @@ private:
     int size;
     int line;
     string file;
-    int id;
+    IDNoType id;
     string name;
 
 public:
@@ -53,8 +52,8 @@ public:
     bool isSameFile(string f) { return (file == f);}
     void SetName(string n) {name = n;}
     string GetName() {return name; }
-    void SetID(int id0) {id = id0;}
-    int GetID() {return id; }
+    void SetID(IDNoType id0) {id = id0;}
+    IDNoType GetID() {return id; }
 };
 
 class Objects
@@ -179,7 +178,7 @@ public:
                 index = i;
                 return true;
             }
-            i++;
+            ++i;
         }
         D2ECHO("Not Found");
         return false;
@@ -218,17 +217,17 @@ public:
     {
         currObj = &(objs.at(index) );
     }
-    
+
     void SetNewObj()
     {
         currObj = &newObj;
     }
-    
+
     void SetCurrLineFile(int l, string f)
     {
         newObj.SetLineFile(l, f);
     }
-    
+
     void SetCurrSize(int size)
     {
         currObj->SetSize(size);
@@ -238,12 +237,12 @@ public:
     {
         currObj->SetAddr(addr);
     }
-    
+
     void PrintCurr()
     {
         currObj->Print();
     }
-    
+
     void InsertCurr()
     {
         // This method is required when object file is not provided.

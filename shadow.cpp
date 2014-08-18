@@ -35,7 +35,7 @@ void PrintShadowMap()
 }
 
 #if (MODE==MEMMAP)
-void SetProducer(FtnNo prod, uptr addr)
+void SetProducer(IDNoType prod, uptr addr)
 {
     D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
     u8* shadowAddr = (u8*) MEM2SHADOW(addr);
@@ -49,7 +49,7 @@ void SetProducer(FtnNo prod, uptr addr)
 #endif
 
 #if (MODE==TABLES)
-void SetProducer(FtnNo prod, uptr addr)
+void SetProducer(IDNoType prod, uptr addr)
 {
     D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
     ShadowTable.setProducer(addr, prod);
@@ -57,7 +57,7 @@ void SetProducer(FtnNo prod, uptr addr)
 #endif
 
 #if (MODE==HYBRID)
-void SetProducer(FtnNo prod, uptr addr)
+void SetProducer(IDNoType prod, uptr addr)
 {
     D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
@@ -75,9 +75,9 @@ void SetProducer(FtnNo prod, uptr addr)
 
 
 #if (MODE==MEMMAP)
-FtnNo GetProducer(uptr addr)
+IDNoType GetProducer(uptr addr)
 {
-    FtnNo prod;
+    IDNoType prod;
     u8* shadowAddr = (u8*) MEM2SHADOW(addr);
     D3ECHO(ADDR(addr) << ADDR(MEM2SHADOW(addr)));
     prod = *(shadowAddr);
@@ -88,9 +88,9 @@ FtnNo GetProducer(uptr addr)
 #endif
 
 #if (MODE==TABLES)
-FtnNo GetProducer(uptr addr)
+IDNoType GetProducer(uptr addr)
 {
-    FtnNo prod;
+    IDNoType prod;
     prod = ShadowTable.getProducer(addr);
     D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(prod));
 
@@ -99,9 +99,9 @@ FtnNo GetProducer(uptr addr)
 #endif
 
 #if (MODE==HYBRID)
-FtnNo GetProducer(uptr addr)
+IDNoType GetProducer(uptr addr)
 {
-    FtnNo prod;
+    IDNoType prod;
     uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
     D3ECHO(  ADDR(addr) << " -> " << ADDR(shadowAddr));
 

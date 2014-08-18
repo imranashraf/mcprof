@@ -22,13 +22,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
-//     RecordWrite(2,4,4);
-//     RecordRead(3,4,4);
-//     PrintCommunication(cout, 5);
-
-//     Objects table;
-//     table.Insert(Object(800, 4, 35, "testing.cpp"));
-//     table.Insert(Object(800, 4, 36, "testing.cpp"));
-//     table.Insert(Object(800, 4, 37, "testing.cpp"));
-//     table.Print();

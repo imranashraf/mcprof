@@ -8,28 +8,28 @@
 extern Objects objTable;
 extern CallStackType CallStack;
 
-void RecordWriteEngine3(uptr addr, int size)
+void RecordWriteEngine3(uptr addr, u32 size)
 {
-    FtnNo prod = CallStack.top();
+    IDNoType prod = CallStack.top();
     
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    for(int i=0; i<size; i++)
+    for(u32 i=0; i<size; i++)
     {
         SetProducer(prod, addr+i);
     }
 }
 
-void RecordReadEngine3(uptr addr, int size)
+void RecordReadEngine3(uptr addr, u32 size)
 {
-    FtnNo cons = CallStack.top();
+    IDNoType cons = CallStack.top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-    FtnNo prod;
-    int objid = objTable.GetID(addr);
+    IDNoType prod;
+    IDNoType objid = objTable.GetID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
     if(objid != UnknownID)
     {
-        for(int i=0; i<size; i++)
+        for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
             RecordCommunication(prod, objid, 1);
@@ -38,7 +38,7 @@ void RecordReadEngine3(uptr addr, int size)
     }
     else
     {
-        for(int i=0; i<size; i++)
+        for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
             RecordCommunication(prod, cons, 1);

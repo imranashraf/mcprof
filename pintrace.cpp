@@ -35,8 +35,8 @@ FtnList SeenFnames;
 Objects objTable;
 CallStackType CallStack;
 
-void (*WriteRecorder)(uptr, int);
-void (*ReadRecorder)(uptr, int);
+void (*WriteRecorder)(uptr, u32);
+void (*ReadRecorder)(uptr, u32);
 
 /* ===================================================================== */
 // Command line switches

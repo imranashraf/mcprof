@@ -18,41 +18,41 @@ extern Objects objTable;
 class Matrix2D
 {
 private:
-    vector< vector<double> > Matrix;
+    vector< vector<float> > Matrix;
     static const int DEFAULT_SIZE=255; //most of the applications have functions less than 256
 
 public:
     Matrix2D()
     {
-        u16 cols=DEFAULT_SIZE;
-        u16 rows=DEFAULT_SIZE;
-        double value=0.0;
+        IDNoType cols=DEFAULT_SIZE;
+        IDNoType rows=DEFAULT_SIZE;
+        float value=0.0f;
 
-        Matrix.resize( cols , vector<double>( rows , value) );
+        Matrix.resize( cols , vector<float>( rows , value) );
     }
 
-    Matrix2D(u16 size)
+    Matrix2D(IDNoType size)
     {
-        u16 cols=size;
-        u16 rows=size;
-        double value=0.0;
+        IDNoType cols=size;
+        IDNoType rows=size;
+        float value=0.0;
 
-        Matrix.resize( cols , vector<double>( rows , value) );
+        Matrix.resize( cols , vector<float>( rows , value) );
     }
 
-    void Increment(u16 prod, u16 cons, u16 size)
+    void Increment(IDNoType prod, IDNoType cons, u32 size)
     {
         if( prod<Matrix.size() && cons < Matrix.size() )
             Matrix[prod][cons] += size;
     }
 
-    double MaxCommunication()
+    float MaxCommunication()
     {
-        double currmax=0;
+        float currmax=0;
         // Following iterations can be optimized to TotalFtns instead of size
-        for (u16 p=0; p<Matrix.size(); p++)
+        for (IDNoType p=0; p<Matrix.size(); p++)
         {
-            for (u16 c=0; c<Matrix.size(); c++)
+            for (IDNoType c=0; c<Matrix.size(); c++)
             {
                 currmax = std::max(currmax, Matrix[p][c]);
             }
@@ -60,11 +60,11 @@ public:
         return currmax;
     }
 
-    void Print(ostream &fout, u16 TotalFtns)
+    void Print(ostream &fout, IDNoType TotalFtns)
     {
-        for (u16 p=0; p<TotalFtns; p++)
+        for (IDNoType p=0; p<TotalFtns; p++)
         {
-            for (u16 c=0; c<TotalFtns; c++)
+            for (IDNoType c=0; c<TotalFtns; c++)
             {
                 fout << setw(12) << Matrix[p][c] <<" ";
             }
@@ -72,19 +72,19 @@ public:
         }
     }
 
-    void PrintMatrix(ostream &fout, u16 TotalFtns)
+    void PrintMatrix(ostream &fout, IDNoType TotalFtns)
     {
         fout << setw(25) << " ";
-        for (u16 c=0; c<TotalFtns; c++)
+        for (IDNoType c=0; c<TotalFtns; c++)
         {
             fout << setw(25) << ID2Name[c];
         }
         fout << endl;
 
-        for (u16 p=0; p<TotalFtns; p++)
+        for (IDNoType p=0; p<TotalFtns; p++)
         {
             fout << setw(25) << ID2Name[p];
-            for (u16 c=0; c<TotalFtns; c++)
+            for (IDNoType c=0; c<TotalFtns; c++)
             {
                 fout << setw(25) << Matrix[p][c];
             }
@@ -92,7 +92,7 @@ public:
         }
     }
 
-    void PrintDot(ostream &dotout, u16 TotalFtns)
+    void PrintDot(ostream &dotout, IDNoType TotalFtns)
     {
         dotout << "digraph {\ngraph [];"
 //                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
@@ -103,7 +103,7 @@ public:
 
         string objNodeStyle("fontcolor=black, shape=box, fontsize=20");
         string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
-        for (u16 c=0; c<TotalFtns; c++)
+        for (IDNoType c=0; c<TotalFtns; c++)
         {
             if ( objTable.Find(c) )
                 dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << objNodeStyle << "];" << endl;
@@ -112,16 +112,16 @@ public:
         }
 
         int color;
-        double maxComm = MaxCommunication();
+        float maxComm = MaxCommunication();
 
-        for (u16 p=0; p<TotalFtns; p++)
+        for (IDNoType p=0; p<TotalFtns; p++)
         {
-            for (u16 c=0; c<TotalFtns; c++)
+            for (IDNoType c=0; c<TotalFtns; c++)
             {
-                double comm = Matrix[p][c];
+                float comm = Matrix[p][c];
                 if(comm > 0 )
                 {
-                    color = (int) (  1023 *  log((double)(comm)) / log((double)maxComm)  );
+                    color = (int) (  1023 *  log((float)(comm)) / log((float)maxComm)  );
                     dotout << dec
                            << "\"" << p << "\""
                            << "->"
@@ -144,9 +144,9 @@ public:
     }
 };
 
-void RecordCommunication(FtnNo prod, FtnNo cons, int size);
-void PrintCommunication(ostream &fout, u16 TotalFtns);
-void PrintMatrix(ostream &fout, u16 TotalFtns);
-void PrintCommunicationDot(ostream &dotout, u16 TotalFtns);
+void RecordCommunication(IDNoType prod, IDNoType cons, u32 size);
+void PrintCommunication(ostream &fout, IDNoType TotalFtns);
+void PrintMatrix(ostream &fout, IDNoType TotalFtns);
+void PrintCommunicationDot(ostream &dotout, IDNoType TotalFtns);
 
 #endif
