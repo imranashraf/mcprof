@@ -2,9 +2,8 @@
 #include "shadow.h"
 #include "engine4.h"
 #include "commatrix.h"
-#include "objects.h"
+#include "symbols.h"
 
-extern Objects objTable;        // main object table
 extern CallStackType CallStack; // main call stack
 
 // all calls to a single func, index is call no
@@ -25,6 +24,7 @@ on read/write access
 
 static u64 GlobalCallSeqNo=0;
 
+// TODO optimize fname to funcid
 void SetCurrCall(string& fname)
 {
     IDNoType funcid = Name2ID[fname];
@@ -51,7 +51,7 @@ void RecordWriteEngine4(uptr addr, u32 size)
     IDNoType prod = CallStack.top();
 
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    IDNoType objid = objTable.GetID(addr);
+    IDNoType objid = symTable.GetSymID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
     // TODO check weather we need to some thing special for unknown objects
@@ -68,10 +68,11 @@ void RecordWriteEngine4(uptr addr, u32 size)
 
 void RecordReadEngine4(uptr addr, u32 size)
 {
-//     IDNoType cons = CallStack.top();
-    D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
+//     IDNoType cons = CallStack.top(); // TODO remove it if not needed
+//     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
+    D2ECHO("Recording Read " << VAR(size) << " at " << ADDR(addr) << dec);
 
-    IDNoType objid = objTable.GetID(addr);
+    IDNoType objid = symTable.GetSymID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
     currCall->Reads[objid]+=size;
 

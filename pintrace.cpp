@@ -6,11 +6,10 @@
 
 #include "pin.H"
 #include "globals.h"
-#include "functions.h"
+#include "symbols.h"
 #include "pintrace.h"
 #include "commatrix.h"
 #include "shadow.h"
-#include "objects.h"
 #include "callstack.h"
 #include "engine2.h"
 #include "engine3.h"
@@ -27,12 +26,12 @@
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
+extern map <string,IDNoType> Name2ID;
+extern map <IDNoType,string> ID2Name;
+extern Symbols symTable;
+
 std::ofstream dotout;
 std::ofstream mout;
-map <string,UINT16> Name2ID;
-map <UINT16,string> ID2Name;
-FtnList SeenFnames;
-Objects objTable;
 CallStackType CallStack;
 
 void (*WriteRecorder)(uptr, u32);
@@ -68,7 +67,7 @@ KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
                               User provides objects in <SelectObjects.txt> file");
 
 KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
-                        "Engine", "4",
+                        "Engine", "2",
                         "specify engine to be used");
 
 /* ===================================================================== */
@@ -152,17 +151,10 @@ BOOL ValidFtnName(string name)
         );
 }
 
-#define RTNOPT 1
 VOID RecordRoutineEntry(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-#if (RTNOPT==0)
-    if( !ValidFtnName(rname) )
-        return;
-
-    SeenFnames.AddIfNotFound(rname);
-#endif
 
     D1ECHO ("Entring Routine : " << rname );
     CallStack.push(Name2ID[rname]);
@@ -197,40 +189,38 @@ VOID RecordRoutineExit(VOID *ip)
 
 }
 
-// Names of malloc and free
-string MALLOC("malloc");
-string FREE("free");
+Symbol newSymbol;
+Symbol* currSymbol = &newSymbol; // TODO setting it to nullptr crashes
 
-void selectObject(int index)
+void SelectExistingSym(IDNoType id)
 {
-    D2ECHO("selecting currObj as already available in table");
-    objTable.SetExistingObj(index);
+    D2ECHO("setting location index to an already available sym location");
+    currSymbol = symTable.GetSymbolPtr(id); // pointing to an existing symbol
 }
 
-void setLoc(int l, string* f)
+void SelectNewSym(u32 locidx)
 {
-    D2ECHO("setting last function call location as " << *f << ":" << l);
-    objTable.SetNewObj();
-    objTable.SetCurrLineFile(l, *f);
+    D2ECHO("setting last function call location to new sym location ");
+    currSymbol = &newSymbol;    // pointing to new symbol
+    currSymbol->SetLocIndex(locidx);    // so update location as well
 }
 
-VOID MallocBefore(ADDRINT size)
+VOID MallocBefore(u32 size)
 {
     D2ECHO(" setting malloc size " << size );
-    objTable.SetCurrSize(size);
+    currSymbol->SetSize(size);
 }
 
-VOID MallocAfter(ADDRINT addr)
+VOID MallocAfter(uptr addr)
 {
     D2ECHO("setting malloc start address " << ADDR(addr) );
-    objTable.SetCurrAddr(addr);
+    currSymbol->SetStartAddr(addr);
 
     // If Selected Objects are not supplied, then insert objects to table
+    // TODO try to optimize it away at instrumentation time
     if( !KnobSelectObjects.Value() )
     {
-        D2ECHO("Inserting following object in object table");
-        objTable.PrintCurr();
-        objTable.InsertCurr();
+        symTable.InsertObject(*currSymbol);
     }
 }
 
@@ -239,7 +229,7 @@ VOID FreeBefore(ADDRINT addr)
     if(addr != 0)
     {
         D2ECHO("removing object with start address " << ADDR(addr) );
-//         objTable.Remove(addr);   // comment it to keep the object table
+//         symTable.Remove(addr);   // comment it to keep the object table
         // useful for debugging
     }
 }
@@ -310,31 +300,34 @@ VOID Image_cb(IMG img, VOID * v)
             * in more functions in SeenFnames which may not be even involved in communication.
             * This, however, is not as such a problem as it will simply clutter the output.
             */
-#if (RTNOPT==1)
+
             string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
+
+            if (!ValidFtnName(rname))
+            {
+                D1ECHO ("Skipping Instrumentation of Invalid Routine : " << rname);
+                continue;
+            }
 
             if( KnobSelectFunctions.Value() )
             {
-                // If this valid function name is not in the selected instr. list
-                if(!SeenFnames.Find(rname))
+                // In Select Function mode, functions are added a priori from
+                // the list file to symbol table. So, if a function is not
+                // found in symbol table, it means it is not in select ftn list
+                // so it should be skiped
+                if( ! symTable.IsSeenFunctionName(rname) )
                 {
-                    D1ECHO ("Skipping Instrumentation of Routine : " << rname);
-                    continue; // skip it
+                    D1ECHO ("Skipping Instrumentation of un-selected Routine : " << rname);
+                    continue;
                 }
             }
             else
             {
-                if (!ValidFtnName(rname))
-                {
-                    D1ECHO ("Skipping Instrumentation of Routine : " << rname);
-                    continue;
-                }
-
                 // First time seeing this valid function name, save it in the list
-                SeenFnames.Add(rname);
+                symTable.InsertFunction(rname);
             }
+
             D1ECHO ("Instrumenting Routine : " << rname);
-#endif
 
             // Many RTN APIs require that the RTN be opened first.
             RTN_Open(rtn);
@@ -360,8 +353,8 @@ VOID Image_cb(IMG img, VOID * v)
 
                         if (KnobSelectObjects.Value() )
                         {
-                            int index=-1;
-                            if ( objTable.Find(filename, line, index) )
+                            u32 symid = symTable.GetID(filename, line);
+                            if ( symid != UnknownID )
                             {
                                 D2ECHO("Instrumenting object (re)alloc/free call at "
                                        << filename <<":"<< line << " available in table");
@@ -370,23 +363,23 @@ VOID Image_cb(IMG img, VOID * v)
                                 (
                                     ins,
                                     IPOINT_BEFORE,
-                                    AFUNPTR(selectObject),
-                                    IARG_UINT32, index,
+                                    AFUNPTR(SelectExistingSym),
+                                    IARG_UINT32, symid,
                                     IARG_END
                                 );
                             }
                         }
                         else
                         {
+                            u32 locIndex = Locations.Insert( Location(line, filename) );
                             D1ECHO("Instrumenting object (re)alloc/free call at "
                                    << filename <<":"<< line);
                             INS_InsertCall
                             (
                                 ins,
                                 IPOINT_BEFORE,
-                                AFUNPTR(setLoc),
-                                IARG_UINT32, line,
-                                IARG_PTR, new string( filename.c_str() ),
+                                AFUNPTR(SelectNewSym),
+                                IARG_UINT32, locIndex,
                                 IARG_END
                             );
                         }
@@ -443,8 +436,10 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
+    // Generate symbol names for un-named symbols
+
 #if (DEBUG>0)
-    objTable.Print();
+    symTable.Print();
     PrintCommunication(cout, 7);
 #endif
     PrintMatrix(mout, GlobalID);
@@ -507,19 +502,26 @@ void SetupPin(int argc, char *argv[])
         Die();
     }
 
+    // TODO may be this can be pushed in constructor of symTable
+    // furthermore, unknownObj can also be pushed!!!
+    // Insert Unknown Ftn as first symbol
+    symTable.InsertFunction(UnknownFtn);
+
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
     CallStack.push(Name2ID[UnknownFtn]);
+
     if(KnobSelectFunctions.Value())
     {
-        SeenFnames.InitFromFile();
+        symTable.InitFromFtnFile();
     }
 
     if(KnobSelectObjects.Value() )
     {
-        objTable.InitFromFile();
-        objTable.Print();
+        symTable.InitFromObjFile();
     }
+
+    symTable.Print();
 
     SelectAnalysisEngine();
 

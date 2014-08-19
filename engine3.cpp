@@ -2,16 +2,15 @@
 #include "shadow.h"
 #include "engine3.h"
 #include "commatrix.h"
-#include "objects.h"
+#include "symbols.h"
 #include "callstack.h"
 
-extern Objects objTable;
 extern CallStackType CallStack;
 
 void RecordWriteEngine3(uptr addr, u32 size)
 {
     IDNoType prod = CallStack.top();
-    
+
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     for(u32 i=0; i<size; i++)
     {
@@ -24,7 +23,7 @@ void RecordReadEngine3(uptr addr, u32 size)
     IDNoType cons = CallStack.top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     IDNoType prod;
-    IDNoType objid = objTable.GetID(addr);
+    IDNoType objid = symTable.GetSymID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
     if(objid != UnknownID)

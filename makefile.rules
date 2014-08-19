@@ -103,7 +103,7 @@ mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
 
 CPPSRCS = globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
         engine2.cpp engine3.cpp engine4.cpp \
-		functions.cpp objects.cpp\
+		symbols.cpp\
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
 
@@ -125,7 +125,7 @@ format:
 open:
 	kate makefile.rules globals.h globals.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
-	functions.h functions.cpp objects.h objects.cpp \
+	symbols.h symbols.cpp \
 	callstack.h callstack.cpp \
 	engine2.h engine2.cpp engine3.h engine3.cpp engine4.h engine4.cpp \
 	pintrace.h pintrace.cpp \

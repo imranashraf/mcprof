@@ -2,7 +2,7 @@
 #define COMMATRIX_H
 
 #include "globals.h"
-#include "objects.h"
+#include "symbols.h"
 
 #include <vector>
 #include <iostream>
@@ -11,9 +11,9 @@
 #include <cmath>
 #include <iomanip>
 
-using namespace std;
+extern Symbols symTable;
 
-extern Objects objTable;
+using namespace std;
 
 class Matrix2D
 {
@@ -105,10 +105,10 @@ public:
         string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
         for (IDNoType c=0; c<TotalFtns; c++)
         {
-            if ( objTable.Find(c) )
+            if ( symTable.SymIsObj(c) )
                 dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << objNodeStyle << "];" << endl;
             else
-                dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << ftnNodeStyle << "];" << endl;            
+                dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << ftnNodeStyle << "];" << endl;
         }
 
         int color;
