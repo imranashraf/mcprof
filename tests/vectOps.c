@@ -108,8 +108,8 @@ int main()
 
     initVecs();
     sumVecs();
-    diffVecs();
-    diffVecs();
+//     diffVecs();
+//     diffVecs();
     diffVecs();
     sqrootVecs();
 

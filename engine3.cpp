@@ -6,6 +6,7 @@
 #include "callstack.h"
 
 extern CallStackType CallStack;
+extern Matrix2D ComMatrix;
 
 void RecordWriteEngine3(uptr addr, u32 size)
 {
@@ -31,8 +32,8 @@ void RecordReadEngine3(uptr addr, u32 size)
         for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
-            RecordCommunication(prod, objid, 1);
-            RecordCommunication(objid, cons, 1);
+            ComMatrix.RecordCommunication(prod, objid, 1);
+            ComMatrix.RecordCommunication(objid, cons, 1);
         }
     }
     else
@@ -40,7 +41,7 @@ void RecordReadEngine3(uptr addr, u32 size)
         for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
-            RecordCommunication(prod, cons, 1);
+            ComMatrix.RecordCommunication(prod, cons, 1);
         }
     }
 }

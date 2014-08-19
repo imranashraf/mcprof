@@ -15,8 +15,12 @@ using namespace std;
 
 // List of all locations of symbols
 LocationList Locations;
+
 // Main Symbol Table
 Symbols symTable;
+
+// Matrix to hold communication
+Matrix2D ComMatrix;
 
 // some mappings for faster access
 map <string,IDNoType> Name2ID;  // updated on the fly only for functions

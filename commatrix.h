@@ -40,15 +40,18 @@ public:
         Matrix.resize( cols , vector<float>( rows , value) );
     }
 
-    void Increment(IDNoType prod, IDNoType cons, u32 size)
+    void RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
     {
-        if( prod<Matrix.size() && cons < Matrix.size() )
+        D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
+            << FUNC(cons) << " of size: " << size );
+        
+        if( prod < Matrix.size() && cons < Matrix.size() )
             Matrix[prod][cons] += size;
     }
 
     float MaxCommunication()
     {
-        float currmax=0;
+        float currmax=0.0f;
         // Following iterations can be optimized to TotalFtns instead of size
         for (IDNoType p=0; p<Matrix.size(); p++)
         {
@@ -60,8 +63,9 @@ public:
         return currmax;
     }
 
-    void Print(ostream &fout, IDNoType TotalFtns)
+    void Print(ostream &fout)
     {
+        IDNoType TotalFtns = symTable.TotalSymbolCount();
         for (IDNoType p=0; p<TotalFtns; p++)
         {
             for (IDNoType c=0; c<TotalFtns; c++)
@@ -72,28 +76,36 @@ public:
         }
     }
 
-    void PrintMatrix(ostream &fout, IDNoType TotalFtns)
+    void PrintMatrix(ostream &fout)
     {
+        IDNoType TotalFtns = symTable.TotalSymbolCount();
         fout << setw(25) << " ";
         for (IDNoType c=0; c<TotalFtns; c++)
         {
-            fout << setw(25) << ID2Name[c];
+            if ( symTable.SymIsFunc(c) )
+                fout << setw(25) << symTable.GetSymName(c);
         }
         fout << endl;
 
         for (IDNoType p=0; p<TotalFtns; p++)
         {
-            fout << setw(25) << ID2Name[p];
-            for (IDNoType c=0; c<TotalFtns; c++)
+            if ( symTable.SymIsFunc(p) )
             {
-                fout << setw(25) << Matrix[p][c];
+                fout << setw(25) << symTable.GetSymName(p);
+            
+                for (IDNoType c=0; c<TotalFtns; c++)
+                {
+                    if ( symTable.SymIsFunc(c) )
+                        fout << setw(25) << Matrix[p][c];
+                }
+                fout<<endl;
             }
-            fout<<endl;
         }
     }
 
-    void PrintDot(ostream &dotout, IDNoType TotalFtns)
+    void PrintDot(ostream &dotout)
     {
+        IDNoType TotalFtns = symTable.TotalSymbolCount();
         dotout << "digraph {\ngraph [];"
 //                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
                << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
@@ -106,9 +118,9 @@ public:
         for (IDNoType c=0; c<TotalFtns; c++)
         {
             if ( symTable.SymIsObj(c) )
-                dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << objNodeStyle << "];" << endl;
+                dotout << "\"" << c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << objNodeStyle << "];" << endl;
             else
-                dotout << "\"" << c << "\"" << " [label=\"" << ID2Name[c] << "\"" << ftnNodeStyle << "];" << endl;
+                dotout << "\"" << c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << ftnNodeStyle << "];" << endl;
         }
 
         int color;
@@ -143,10 +155,5 @@ public:
         dotout << "}" << endl;
     }
 };
-
-void RecordCommunication(IDNoType prod, IDNoType cons, u32 size);
-void PrintCommunication(ostream &fout, IDNoType TotalFtns);
-void PrintMatrix(ostream &fout, IDNoType TotalFtns);
-void PrintCommunicationDot(ostream &dotout, IDNoType TotalFtns);
 
 #endif

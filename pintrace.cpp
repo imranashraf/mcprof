@@ -29,6 +29,7 @@
 extern map <string,IDNoType> Name2ID;
 extern map <IDNoType,string> ID2Name;
 extern Symbols symTable;
+extern Matrix2D ComMatrix;
 
 std::ofstream dotout;
 std::ofstream mout;
@@ -440,11 +441,11 @@ VOID TheEnd(INT32 code, VOID *v)
 
 #if (DEBUG>0)
     symTable.Print();
-    PrintCommunication(cout, 7);
+    ComMatrix.Print(cout);
 #endif
-    PrintMatrix(mout, GlobalID);
+    ComMatrix.PrintMatrix(mout);
     mout.close();
-    PrintCommunicationDot(dotout, GlobalID);
+    ComMatrix.PrintDot(dotout);
     dotout.close();
 
 //     if (KnobEngine.Value() == 4)

@@ -39,8 +39,7 @@ class LocationList
 {
 private:
     vector<Location> locations;
-    // NOTE location index 0 is for unknown ftn
-    // TODO Do we also need for unknown obj?
+    // NOTE location index 0 is for unknown location
 public:
     LocationList() { locations.push_back( Location() ); }
 
@@ -137,7 +136,34 @@ public:
         }
         return UnknownID;
     }
-
+    
+    string& GetSymName(IDNoType idno)
+    {
+        return ( syms.at(idno).GetName() );
+    }
+    
+    Symbol* GetSymbolPtr(IDNoType id)
+    {
+        return &( syms[id] );
+    }
+    
+    IDNoType GetID(string& f, u32 l)
+    {
+        IDNoType index=0;   // id is index
+        D2ECHO("Finding "<< f << ":" << l << " in Symbol Table");
+        for ( auto& sym : syms )
+        {
+            if ( (sym.isSameLine(l)) && (sym.isSameFile(f)) && (sym.GetType() == SymType::OBJ) )
+            {
+                D2ECHO("Found");
+                return index;
+            }
+            ++index;
+        }
+        D2ECHO("Not Found");
+        return UnknownID;
+    }
+    
     void InsertObject(Symbol sym)
     {
         IDNoType idno = syms.size();
@@ -162,6 +188,19 @@ public:
             return true;
     }
 
+    IDNoType TotalSymbolCount()
+    {
+        return syms.size();
+    }
+
+    // only the function count
+    // NOTE only function symbols are also added in Name2ID map
+    // so size of this map gives total function count
+    IDNoType TotalFunctionCount()
+    {
+        return Name2ID.size();
+    }
+    
     void Remove(uptr saddr)
     {
         syms.erase(std::remove_if(syms.begin(), syms.end(),
@@ -177,28 +216,6 @@ public:
     bool SymIsFunc(IDNoType idno)
     {
         return ( syms.at(idno).GetType() == SymType::FUNC );
-    }
-
-    Symbol* GetSymbolPtr(IDNoType id)
-    {
-        return &( syms[id] );
-    }
-
-    IDNoType GetID(string& f, u32 l)
-    {
-        IDNoType index=0;   // id is index
-        D2ECHO("Finding "<< f << ":" << l << " in Symbol Table");
-        for ( auto& sym : syms )
-        {
-            if ( (sym.isSameLine(l)) && (sym.isSameFile(f)) && (sym.GetType() == SymType::OBJ) )
-            {
-                D2ECHO("Found");
-                return index;
-            }
-            ++index;
-        }
-        D2ECHO("Not Found");
-        return UnknownID;
     }
 
     void Print()
