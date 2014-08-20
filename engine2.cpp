@@ -9,7 +9,7 @@ extern Matrix2D ComMatrix;
 
 void RecordWriteEngine2(uptr addr, u32 size)
 {
-    IDNoType prod = CallStack.top();
+    IDNoType prod = CallStack.Top();
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     for(u32 i=0; i<size; i++)
     {
@@ -19,7 +19,7 @@ void RecordWriteEngine2(uptr addr, u32 size)
 
 void RecordReadEngine2(uptr addr, u32 size)
 {
-    IDNoType cons = CallStack.top();
+    IDNoType cons = CallStack.Top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     IDNoType prod;
     for(u32 i=0; i<size; i++)

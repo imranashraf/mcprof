@@ -13,9 +13,6 @@ using namespace std;
 // Global variables
 /* ================================================================== */
 
-// List of all locations of symbols
-LocationList Locations;
-
 // Main Symbol Table
 Symbols symTable;
 

@@ -17,18 +17,11 @@ private:
 
 public:
     CallStackType(){}
-    u16 top(){return stack.back();}
-    bool empty(){return stack.empty();}
-    void push(u16 f) { stack.push_back(f); }
-    void pop() { stack.pop_back(); }
-    void print()
-    {
-        string stackftns("");
-        if( !stack.empty()) stackftns += ID2Name[ stack[0] ];
-        for ( u16 ftn=1; ftn < stack.size(); ftn++)
-            stackftns += " -> " + ID2Name[ stack[ftn] ] ;
-        ECHO("Call Stack : " << stackftns);
-    }
+    u16 Top(){return stack.back();}
+    bool Empty(){return stack.empty();}
+    void Push(u16 f) { stack.push_back(f); }
+    void Pop() { stack.pop_back(); }
+    void Print(ofstream& fout);
 };
 
 #endif

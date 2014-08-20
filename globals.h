@@ -62,12 +62,13 @@ typedef u16 IDNoType;
 # endif
 #endif  // _MSC_VER
 
-extern u16 UnknownID;
-extern u16 GlobalID;
-extern std::map <std::string,u16> Name2ID;
-extern std::map <u16,std::string> ID2Name;
-extern std::string UnknownFtn;
-extern std::string UnknownObj;
+static const u16 UnknownID=0;
+static const u16 GlobalID=UnknownID;
+static const std::string UnknownFtn("UnknownFtn");
+static const std::string UnknownObj("UnknownObj");
+// Names of malloc and free
+static const std::string MALLOC("malloc");
+static const std::string FREE("free");
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 #define VAR(v) " `" #v "': " << v << " "
@@ -147,6 +148,8 @@ do { \
 #endif
 
 bool isEmpty(std::ifstream& fin);
+void OpenInFile(const std::string& fileName, std::ifstream& fin);
+void OpenOutFile(const std::string& fileName, std::ofstream& fout);
 bool IsPowerOfTwo(uptr x);
 uptr RoundUpTo(uptr size, uptr boundary);
 uptr RoundDownTo(uptr x, uptr boundary);

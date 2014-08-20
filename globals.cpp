@@ -3,14 +3,51 @@
 
 using namespace std;
 
-u16 UnknownID=0;
-u16 GlobalID=UnknownID;
-string UnknownFtn("UnknownFtn");
-string UnknownObj("UnknownObj");
-
 bool isEmpty(ifstream& fin)
 {
     return fin.peek() == ifstream::traits_type::eof();
+}
+
+void OpenInFile(const string& fileName, ifstream& fin)
+{
+    if (!fileName.empty())
+    {
+        fin.open(fileName.c_str());
+        if ( fin.fail() )
+        {
+            ECHO("Can not open input file (" <<fileName.c_str() << "). Aborting...");
+            Die();
+        }
+    }
+    else
+    {
+        ECHO("Specify a non empty file name. Aborting ...");
+        Die();
+    }
+
+    if(isEmpty(fin))
+    {
+        ECHO("Input file (" <<fileName.c_str()<<") is empty. Aborting...");
+        Die();
+    }
+}
+
+void OpenOutFile(const string& fileName, ofstream& fout)
+{
+    if (!fileName.empty())
+    {
+        fout.open(fileName.c_str());
+        if ( fout.fail() )
+        {
+            ECHO("Can not open output file (" <<fileName.c_str() << "). Aborting ...");
+            Die();
+        }
+    }
+    else
+    {
+        ECHO("Specify a non empty file name. Aborting ...");
+        Die();
+    }
 }
 
 const string& Target2RtnName(uptr target)

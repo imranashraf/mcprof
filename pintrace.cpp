@@ -63,7 +63,7 @@ KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                                 User provides functions in <SelectFunctions.txt> file");
 
 KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
-                             "SelectObjects", "1",
+                             "SelectObjects", "0",
                              "Instrument only the selected objects. \
                               User provides objects in <SelectObjects.txt> file");
 
@@ -158,7 +158,7 @@ VOID RecordRoutineEntry(VOID *ip)
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
     D1ECHO ("Entring Routine : " << rname );
-    CallStack.push(Name2ID[rname]);
+    CallStack.Push(Name2ID[rname]);
 
     if (KnobEngine.Value() == 4)
         SetCurrCall(rname);
@@ -170,16 +170,16 @@ VOID RecordRoutineExit(VOID *ip)
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
-    if(!(CallStack.empty()) && ( CallStack.top() == Name2ID[rname] ) )
+    if(!(CallStack.Empty()) && ( CallStack.Top() == Name2ID[rname] ) )
     {
         D1ECHO("Leaving Routine : " << rname);
-        CallStack.pop();
+        CallStack.Top();
 #if (DEBUG>0)
     }
-    else if (!(CallStack.empty()) )
+    else if (!(CallStack.Empty()) )
     {
         D1ECHO("Not Leaving Routine : "<< VAR(rname)
-               << VAR(CallStack.top()));
+               << VAR(CallStack.Top()));
     }
     else
     {
@@ -240,6 +240,7 @@ VOID Image_cb(IMG img, VOID * v)
 {
     string imgname = IMG_Name(img);
 
+    // we should instrument malloc/free only when tracking objects !
     // instrument libc for malloc, free etc
     if ( imgname.find("libc") != string::npos )
     {
@@ -340,7 +341,9 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                if( INS_IsCall(ins) ) // or should it be procedure call?
+                // objects are tracked in engine 3 and engine 4
+                bool trackObjects = (KnobEngine.Value() == 3) || (KnobEngine.Value() == 4 );
+                if( trackObjects && INS_IsCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
@@ -437,7 +440,17 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
-    // Generate symbol names for un-named symbols
+    // update ID2Name mapping for function symbols.
+    // NOTE Name2ID is updated for functions on the fly, but ID2Name is not. Hence,
+    // it is being done here before generating output files, plot etc.
+    symTable.UpdateID2NameForFtnSymbols();
+
+    // Update ID2Name mapping for object symbols.
+    // NOTE In Select Object mode, names of selected objects are specified in a text file.
+    // When selected objects are not specified, we dont know their names. Hence some
+    // arbitrary names are given to these objects and ID2NAme is updated accordingly.
+    if (KnobEngine.Value() != 4)    // i.e. symbols are not specified
+        symTable.UpdateID2NameForObjSymbols();
 
 #if (DEBUG>0)
     symTable.Print();
@@ -448,8 +461,8 @@ VOID TheEnd(INT32 code, VOID *v)
     ComMatrix.PrintDot(dotout);
     dotout.close();
 
-//     if (KnobEngine.Value() == 4)
-//         PrintAllCalls(); // in engine 4 only
+    if (KnobEngine.Value() == 4)
+        PrintAllCalls(); // in engine 4 only
 
 }
 
@@ -471,37 +484,8 @@ void SetupPin(int argc, char *argv[])
         Die();
     }
 
-    string dfName = KnobDotFile.Value();
-    if (!dfName.empty())
-    {
-        dotout.open(dfName.c_str(), std::ios::out);
-        if(dotout.fail())
-        {
-            ECHO("Error Opening dot file");
-            Die();
-        }
-    }
-    else
-    {
-        ECHO("Specify a non empty dot file name");
-        Die();
-    }
-
-    string mfName = KnobMatrixFile.Value();
-    if (!mfName.empty())
-    {
-        mout.open(mfName.c_str(), std::ios::out);
-        if(mout.fail())
-        {
-            ECHO("Error Opening matrix file");
-            Die();
-        }
-    }
-    else
-    {
-        ECHO("Specify a non empty matrix file name");
-        Die();
-    }
+    OpenOutFile(KnobDotFile.Value(), dotout);
+    OpenOutFile(KnobMatrixFile.Value(), mout);
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
@@ -510,7 +494,7 @@ void SetupPin(int argc, char *argv[])
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
-    CallStack.push(Name2ID[UnknownFtn]);
+    CallStack.Push(Name2ID[UnknownFtn]);
 
     if(KnobSelectFunctions.Value())
     {
@@ -519,14 +503,19 @@ void SetupPin(int argc, char *argv[])
 
     if(KnobSelectObjects.Value() )
     {
+        D1ECHO("Initialize objects from Selected Objects file ...");
         symTable.InitFromObjFile();
     }
 
+#if (DEBUG>0)
+    ECHO("Printing Initial Symbol Table ...")
     symTable.Print();
+#endif
 
+    D1ECHO("Selecting Analysis Engine ...");
     SelectAnalysisEngine();
 
-    //RTN_AddInstrumentFunction(RecordRoutineEntry,0);
+    // Register function for Image level instrumentation
     IMG_AddInstrumentFunction(Image_cb, 0);
 
     // Register function to be called when the application exits

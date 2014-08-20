@@ -31,16 +31,14 @@ static const u64 L3ENTRIES = (1ULL << L3BITS);
 void SetProducer(IDNoType prod, uptr addr);
 IDNoType GetProducer(uptr addr);
 
-// should be greater than max(L1ENTRIES,L2ENTRIES,L3ENTRIES)
 #define UNACCESSED nullptr
-#define UNKNOWN_PRODUCER (0)
 
 class Entry
 {
 private:
     IDNoType producer;
 public:
-    Entry() : producer(UNKNOWN_PRODUCER) {}
+    Entry() : producer(UnknownID) {}
     void setProducer(IDNoType p)
     {
         producer=p;
