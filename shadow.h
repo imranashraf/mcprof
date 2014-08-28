@@ -19,9 +19,9 @@ static const uptr GB   = (1ULL << 30);
 static const uptr TB   = (1ULL << 40);
 
 // No of bits required to address table entries
-static const u64 L1BITS = (18);
+static const u64 L1BITS = (16);
 static const u64 L2BITS = (16);
-static const u64 L3BITS = (14);
+static const u64 L3BITS = (16);
 
 // Sizes of tables
 static const u64 L1ENTRIES = (1ULL << L1BITS);
@@ -36,7 +36,9 @@ IDNoType GetProducer(uptr addr);
 class Entry
 {
 private:
-    IDNoType producer;
+//     IDNoType producer;
+    u8 producer;
+
 public:
     Entry() : producer(UnknownID) {}
     void setProducer(IDNoType p)

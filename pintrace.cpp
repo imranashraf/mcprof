@@ -35,6 +35,8 @@ std::ofstream dotout;
 std::ofstream mout;
 CallStackType CallStack;
 
+bool trackObjects;
+
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 
@@ -173,7 +175,7 @@ VOID RecordRoutineExit(VOID *ip)
     if(!(CallStack.Empty()) && ( CallStack.Top() == Name2ID[rname] ) )
     {
         D1ECHO("Leaving Routine : " << rname);
-        CallStack.Top();
+        CallStack.Pop();
 #if (DEBUG>0)
     }
     else if (!(CallStack.Empty()) )
@@ -241,9 +243,10 @@ VOID Image_cb(IMG img, VOID * v)
     string imgname = IMG_Name(img);
 
     // we should instrument malloc/free only when tracking objects !
-    // instrument libc for malloc, free etc
-    if ( imgname.find("libc") != string::npos )
+    bool isLibC = imgname.find("libc") != string::npos;
+    if ( trackObjects && isLibC )
     {
+        // instrument libc for malloc, free etc
         D1ECHO("Instrumenting "<<imgname<<" for malloc, free etc ");
 
         //  Find the malloc() function.
@@ -341,8 +344,6 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                // objects are tracked in engine 3 and engine 4
-                bool trackObjects = (KnobEngine.Value() == 3) || (KnobEngine.Value() == 4 );
                 if( trackObjects && INS_IsCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
@@ -486,6 +487,10 @@ void SetupPin(int argc, char *argv[])
 
     OpenOutFile(KnobDotFile.Value(), dotout);
     OpenOutFile(KnobMatrixFile.Value(), mout);
+
+    // objects are tracked in engine 3 and engine 4
+    trackObjects = (KnobEngine.Value() == 3) || (KnobEngine.Value() == 4 );
+
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
