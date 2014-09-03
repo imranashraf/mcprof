@@ -11,12 +11,13 @@ set output 'matrix.eps'
 
 unset key
 
-set xlabel "Consumers"
-set ylabel "Producers"
-set zlabel "Communication in Bytes"
-
 set xlabel font "Times-Roman, 14" offset 0,-2
 set ylabel font "Times-Roman, 14" offset 0,-1
+
+set title "Communication Matrix (Consumers on X-Axis)"
+#set xlabel "Consumers"
+#set ylabel "Producers"
+#set zlabel "Communication in Bytes"
 
 set key samplen 2 spacing .5 font ",8"
 
@@ -30,7 +31,6 @@ set key samplen 2 spacing .5 font ",8"
 #set ticslevel 0
 
 #set boxwidth 0.25
-set title "Communication Matrix"
 
 set logscale zcb
 

@@ -11,6 +11,7 @@
 #include "commatrix.h"
 #include "shadow.h"
 #include "callstack.h"
+#include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
 #include "engine4.h"
@@ -70,7 +71,7 @@ KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
                               User provides objects in <SelectObjects.txt> file");
 
 KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
-                        "Engine", "2",
+                        "Engine", "1",
                         "specify engine to be used");
 
 /* ===================================================================== */
@@ -94,6 +95,10 @@ void SelectAnalysisEngine()
 {
     switch( KnobEngine.Value() )
     {
+    case 1:
+        ReadRecorder = RecordReadEngine1;
+        WriteRecorder = RecordWriteEngine1;
+        break;
     case 2:
         ReadRecorder = RecordReadEngine2;
         WriteRecorder = RecordWriteEngine2;
@@ -457,14 +462,29 @@ VOID TheEnd(INT32 code, VOID *v)
     symTable.Print();
     ComMatrix.Print(cout);
 #endif
-    ComMatrix.PrintMatrix(mout);
+
+    switch( KnobEngine.Value() )
+    {
+    case 1:
+        PrintAccesses();
+        break;
+    case 2:
+        ComMatrix.PrintMatrix(mout);
+        ComMatrix.PrintDot(dotout);
+        break;
+    case 3:
+        break;
+    case 4:
+        PrintAllCalls();
+        break;
+    default:
+        ECHO("Specify a valid Engine number to be used");
+        Die();
+        break;
+    }
+
     mout.close();
-    ComMatrix.PrintDot(dotout);
     dotout.close();
-
-    if (KnobEngine.Value() == 4)
-        PrintAllCalls(); // in engine 4 only
-
 }
 
 /*!

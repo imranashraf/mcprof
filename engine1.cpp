@@ -1,0 +1,109 @@
+#include "globals.h"
+#include "shadow.h"
+#include "engine1.h"
+#include "commatrix.h"
+#include "callstack.h"
+
+#include <algorithm>
+#include <iomanip>
+
+extern std::map <u16,std::string> ID2Name;
+
+extern CallStackType CallStack;
+// extern Matrix2D ComMatrix;   // not needed in this engine
+
+struct Access
+{
+    float Reads;
+    float Writes;
+    float Total;
+};
+
+bool _sortByReads (const Access &lhs, const Access &rhs) { return lhs.Reads > rhs.Reads; }
+bool _sortByWrites(const Access &lhs, const Access &rhs) { return lhs.Writes > rhs.Writes; }
+bool _sortByTotal (const Access &lhs, const Access &rhs) { return lhs.Total > rhs.Total; }
+
+class Accesses
+{
+private:
+    vector<Access> _Accesses;
+
+public:
+    Accesses() {}
+    void UpdateWrites(IDNoType prod, u32 size)
+    {
+        if( prod < _Accesses.size() )
+            _Accesses[prod].Writes += size;   // on later accesses, increment the writes by size
+        else
+        {
+            Access acc;
+            acc.Reads  = 0;
+            acc.Writes = size;
+            acc.Total  = 0;
+            _Accesses.push_back(acc);
+        }
+    }
+    void UpdateReads(IDNoType cons, u32 size)
+    {
+        if( cons < _Accesses.size() )
+            _Accesses[cons].Reads += size;   // on later accesses, increment the writes by size
+        else
+        {
+            Access acc;
+            acc.Reads  = size;
+            acc.Writes = 0;
+            acc.Total  = 0;
+            _Accesses.push_back(acc);
+        }
+    }
+    void UpdateTotal()
+    {
+        for(auto& elem : _Accesses)
+        {
+            elem.Total = elem.Reads + elem.Writes;
+        }
+    }
+    void SortByTotal()
+    {
+        sort(_Accesses.begin(), _Accesses.end(), _sortByTotal);
+    }
+
+    void Print(ofstream& fout)
+    {
+        fout << setw(35) << "Function" << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes"<<endl;
+        IDNoType id = 0;
+        for(auto& elem : _Accesses)
+        {
+            fout << setw(35) << ID2Name[id] << setw(14) << elem.Total << setw(14) << elem.Reads << setw(14) <<  elem.Writes << endl;
+            id++;
+        }
+    }
+};
+
+// This will hold all the reads and writes for all functions
+Accesses ftnAccesses;
+
+void RecordWriteEngine1(uptr addr, u32 size)
+{
+    IDNoType prod = CallStack.Top();
+    D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
+    ftnAccesses.UpdateWrites(prod, size);
+}
+
+void RecordReadEngine1(uptr addr, u32 size)
+{
+    IDNoType cons = CallStack.Top();
+    D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
+    ftnAccesses.UpdateReads(cons, size);
+}
+
+void PrintAccesses()
+{
+    ofstream fout;
+    OpenOutFile("Accesses.out", fout);
+    ftnAccesses.UpdateTotal();
+    ftnAccesses.SortByTotal();
+    ftnAccesses.Print(fout);
+    fout.close();
+}
+
