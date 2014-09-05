@@ -120,12 +120,13 @@ private:
 
 public:
     Symbols(){}
+    void InsertObject(Symbol sym);
+    void InsertFunction(const string& ftnname);
+    IDNoType GetID(string& f, u32 l);
     IDNoType GetSymID(uptr addr);
     string& GetSymName(IDNoType idno);
     Symbol* GetSymbolPtr(IDNoType id);
-    IDNoType GetID(string& f, u32 l);
-    void InsertObject(Symbol sym);
-    void InsertFunction(const string& ftnname);
+    Symbol* GetSymbolPtrWithStartAddr(uptr saddr1);
     bool IsSeenFunctionName(string& ftnName);
     IDNoType TotalSymbolCount();
     IDNoType TotalFunctionCount(); // count of function symbols only

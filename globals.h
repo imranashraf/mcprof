@@ -68,6 +68,8 @@ static const std::string UnknownFtn("UnknownFtn");
 static const std::string UnknownObj("UnknownObj");
 // Names of malloc and free
 static const std::string MALLOC("malloc");
+static const std::string CALLOC("calloc");
+static const std::string REALLOC("realloc");
 static const std::string FREE("free");
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl

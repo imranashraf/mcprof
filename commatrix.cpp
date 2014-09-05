@@ -6,7 +6,7 @@ Matrix2D::Matrix2D()
     IDNoType cols=DEFAULT_SIZE;
     IDNoType rows=DEFAULT_SIZE;
     float value=0.0f;
-
+    D1ECHO("Default Comm Matrix Size = " << DEFAULT_SIZE);
     Matrix.resize( cols , vector<float>( rows , value) );
 }
 

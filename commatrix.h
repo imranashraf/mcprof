@@ -19,7 +19,8 @@ class Matrix2D
 {
 private:
     vector< vector<float> > Matrix;
-    static const int DEFAULT_SIZE=255; //most of the applications have functions less than 256
+    //most of the applications have functions less than 256
+    static const u32 DEFAULT_SIZE = 255;
 
 public:
     Matrix2D();

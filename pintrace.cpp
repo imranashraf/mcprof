@@ -36,8 +36,6 @@ std::ofstream dotout;
 std::ofstream mout;
 CallStackType CallStack;
 
-bool trackObjects;
-
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 
@@ -60,6 +58,13 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
                            "RecordStack","0", "Include Stack Accesses");
 
+KNOB<BOOL> KnobTrackObjects(KNOB_MODE_WRITEONCE, "pintool",
+                             "TrackObjects", "0", "Track the objects");
+
+KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
+                        "Engine", "1",
+                        "specify engine to be used");
+
 KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                                "SelectFunctions", "0",
                                "Instrument only the selected functions. \
@@ -69,10 +74,6 @@ KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
                              "SelectObjects", "0",
                              "Instrument only the selected objects. \
                               User provides objects in <SelectObjects.txt> file");
-
-KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
-                        "Engine", "1",
-                        "specify engine to be used");
 
 /* ===================================================================== */
 // Utilities
@@ -167,6 +168,8 @@ VOID RecordRoutineEntry(VOID *ip)
     D1ECHO ("Entring Routine : " << rname );
     CallStack.Push(Name2ID[rname]);
 
+    // In engine 4, to save time, the curr call is selected only at func entry,
+    // so that it does not need to be determined on each access
     if (KnobEngine.Value() == 4)
         SetCurrCall(rname);
 }
@@ -213,15 +216,50 @@ void SelectNewSym(u32 locidx)
     currSymbol->SetLocIndex(locidx);    // so update location as well
 }
 
+// This is used both for malloc and calloc
 VOID MallocBefore(u32 size)
 {
-    D2ECHO(" setting malloc size " << size );
+    D2ECHO("setting malloc/calloc size " << size );
     currSymbol->SetSize(size);
 }
 
+// This is used both for malloc and calloc
 VOID MallocAfter(uptr addr)
 {
-    D2ECHO("setting malloc start address " << ADDR(addr) );
+    D2ECHO("setting malloc/calloc start address " << ADDR(addr) );
+    currSymbol->SetStartAddr(addr);
+
+    // If Selected Objects are not supplied, then insert objects to table
+    // TODO try to optimize it away at instrumentation time
+    if( !KnobSelectObjects.Value() )
+    {
+        symTable.InsertObject(*currSymbol);
+    }
+}
+
+VOID ReallocBefore(uptr addr, u32 size)
+{
+    D1ECHO(" setting realloc size " << size );
+
+    // if addr not null, then existing object will be resized
+    if( addr )
+    {
+        // find that symbol first
+        currSymbol = symTable.GetSymbolPtrWithStartAddr(addr);
+        if( !currSymbol) // in case not found, use newSymbol then WHY?
+            currSymbol = &newSymbol;
+    }
+    else //if null, realloc behaves like malloc, no need to do any thing else then
+    {
+        currSymbol = &newSymbol;
+    }
+
+    currSymbol->SetSize(size);
+}
+
+VOID ReallocAfter(uptr addr)
+{
+    D1ECHO("setting realloc start address " << ADDR(addr) );
     currSymbol->SetStartAddr(addr);
 
     // If Selected Objects are not supplied, then insert objects to table
@@ -237,8 +275,8 @@ VOID FreeBefore(ADDRINT addr)
     if(addr != 0)
     {
         D2ECHO("removing object with start address " << ADDR(addr) );
-//         symTable.Remove(addr);   // comment it to keep the object table
-        // useful for debugging
+        // comment it to keep the objects in the table, useful for debugging
+        symTable.Remove(addr);
     }
 }
 
@@ -249,7 +287,7 @@ VOID Image_cb(IMG img, VOID * v)
 
     // we should instrument malloc/free only when tracking objects !
     bool isLibC = imgname.find("libc") != string::npos;
-    if ( trackObjects && isLibC )
+    if ( KnobTrackObjects.Value() && isLibC )
     {
         // instrument libc for malloc, free etc
         D1ECHO("Instrumenting "<<imgname<<" for malloc, free etc ");
@@ -267,6 +305,38 @@ VOID Image_cb(IMG img, VOID * v)
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
 
             RTN_Close(mallocRtn);
+        }
+
+        RTN callocRtn = RTN_FindByName(img, CALLOC.c_str() );
+        if (RTN_Valid(callocRtn))
+        {
+            RTN_Open(callocRtn);
+
+            // Instrument calloc() to print the input argument value and the return value.
+            // for now  using same callback ftns as for malloc
+            RTN_InsertCall(callocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
+            RTN_InsertCall(callocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
+                           IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
+
+            RTN_Close(callocRtn);
+        }
+
+        RTN reallocRtn = RTN_FindByName(img, REALLOC.c_str() );
+        if (RTN_Valid(reallocRtn))
+        {
+            RTN_Open(reallocRtn);
+
+            // Instrument calloc() to print the input argument value and the return value.
+            // for now  using same callback ftns as for malloc
+            RTN_InsertCall(reallocRtn, IPOINT_BEFORE, (AFUNPTR)ReallocBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                           IARG_END);
+            RTN_InsertCall(reallocRtn, IPOINT_AFTER, (AFUNPTR)ReallocAfter,
+                           IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
+
+            RTN_Close(reallocRtn);
         }
 
         // Find the free() function.
@@ -349,7 +419,7 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                if( trackObjects && INS_IsCall(ins) ) // or should it be procedure call?
+                if( KnobTrackObjects.Value() && INS_IsCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
@@ -361,12 +431,13 @@ VOID Image_cb(IMG img, VOID * v)
                         INT32 line = 0;     // This will hold the line number within the file.
                         PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
 
+                        // think about it later
                         if (KnobSelectObjects.Value() )
                         {
                             u32 symid = symTable.GetID(filename, line);
                             if ( symid != UnknownID )
                             {
-                                D2ECHO("Instrumenting object (re)alloc/free call at "
+                                D2ECHO("Instrumenting object (re)(c)(m)alloc/free call at "
                                        << filename <<":"<< line << " available in table");
 
                                 INS_InsertCall
@@ -382,7 +453,7 @@ VOID Image_cb(IMG img, VOID * v)
                         else
                         {
                             u32 locIndex = Locations.Insert( Location(line, filename) );
-                            D1ECHO("Instrumenting object (re)alloc/free call at "
+                            D1ECHO("Instrumenting object (re)(c)(m)alloc/free call at "
                                    << filename <<":"<< line);
                             INS_InsertCall
                             (
@@ -458,6 +529,7 @@ VOID TheEnd(INT32 code, VOID *v)
     if (KnobEngine.Value() != 4)    // i.e. symbols are not specified
         symTable.UpdateID2NameForObjSymbols();
 
+    symTable.Print();
 #if (DEBUG>0)
     symTable.Print();
     ComMatrix.Print(cout);
@@ -473,6 +545,8 @@ VOID TheEnd(INT32 code, VOID *v)
         ComMatrix.PrintDot(dotout);
         break;
     case 3:
+        ComMatrix.PrintMatrix(mout);
+        ComMatrix.PrintDot(dotout);
         break;
     case 4:
         PrintAllCalls();
@@ -508,10 +582,6 @@ void SetupPin(int argc, char *argv[])
     OpenOutFile(KnobDotFile.Value(), dotout);
     OpenOutFile(KnobMatrixFile.Value(), mout);
 
-    // objects are tracked in engine 3 and engine 4
-    trackObjects = (KnobEngine.Value() == 3) || (KnobEngine.Value() == 4 );
-
-
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
     // Insert Unknown Ftn as first symbol
@@ -533,7 +603,7 @@ void SetupPin(int argc, char *argv[])
     }
 
 #if (DEBUG>0)
-    ECHO("Printing Initial Symbol Table ...")
+    ECHO("Printing Initial Symbol Table ...");
     symTable.Print();
 #endif
 

@@ -16,6 +16,18 @@ Symbol* Symbols::GetSymbolPtr(IDNoType id)
     return &( syms[id] );
 }
 
+// returns the symbol ptr with start address as input
+Symbol* Symbols::GetSymbolPtrWithStartAddr(uptr saddr1)
+{
+    for ( auto& sym : syms )
+    {
+        uptr saddr = sym.GetStartAddr();
+        if ( saddr == saddr1 )
+            return &( syms[ sym.GetID() ] );
+    }
+    return nullptr;
+}
+
 IDNoType Symbols::GetSymID(uptr addr)
 {
     for ( auto& sym : syms )

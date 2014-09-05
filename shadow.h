@@ -36,8 +36,8 @@ IDNoType GetProducer(uptr addr);
 class Entry
 {
 private:
-//     IDNoType producer;
-    u8 producer;
+    IDNoType producer;
+//     u8 producer;
 
 public:
     Entry() : producer(UnknownID) {}

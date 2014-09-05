@@ -49,8 +49,8 @@ TOOL_ROOTS :=
 SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
-# APP_ROOTS := simple1 simple2 fibonacci vectOps
-APP_ROOTS := vectOps
+# APP_ROOTS := simple1 simple2 fibonacci vectOps memAllocFree
+APP_ROOTS := memAllocFree
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -89,9 +89,11 @@ endif
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
-mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
-# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -- $(OBJDIR)simple2$(EXE_SUFFIX)
+mcprof.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX) $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+
+# mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
+# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
 
 ##############################################################
 #
@@ -140,4 +142,7 @@ $(OBJDIR)simple2$(EXE_SUFFIX): $(TESTDIR)simple2.cpp
 	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)vectOps$(EXE_SUFFIX): $(TESTDIR)vectOps.c
+	$(APP_CC) -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
+$(OBJDIR)memAllocFree$(EXE_SUFFIX): $(TESTDIR)memAllocFree.c
 	$(APP_CC) -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
