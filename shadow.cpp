@@ -49,10 +49,25 @@ void SetProducer(IDNoType prod, uptr addr)
 #endif
 
 #if (MODE==TABLES)
-void SetProducer(IDNoType prod, uptr addr)
+void InitObjectIDs(uptr saddr, u32 size, IDNoType id)
 {
-    D2ECHO("Setting " << FUNC(prod) << " as producer of " << ADDR(addr));
-    ShadowTable.setProducer(addr, prod);
+    //TODO we need to use memset, secondly we need to take care if
+    // addr does not lie in this table (in current non-optimal way its not a problem)
+    for(uptr addr = saddr; addr < saddr+size; addr++)
+    {
+        Entry* entry = ShadowTable.getEntry(addr);
+        entry->objID = id;
+    }
+}
+#endif
+
+#if (MODE==TABLES)
+void SetProducer(IDNoType fid, uptr addr)
+{
+    D2ECHO("Setting " << FUNC(fid) << " as producer of " << ADDR(addr));
+    Entry* entry = ShadowTable.getEntry(addr);
+    entry->funcID = fid;
+    //entry->threadID = tid;
 }
 #endif
 
@@ -90,13 +105,25 @@ IDNoType GetProducer(uptr addr)
 #if (MODE==TABLES)
 IDNoType GetProducer(uptr addr)
 {
-    IDNoType prod;
-    prod = ShadowTable.getProducer(addr);
-    D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(prod));
-
-    return prod;
+    IDNoType id;
+    Entry* entry = ShadowTable.getEntry(addr);
+    id = entry->funcID;
+    D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(id));
+    return id;
 }
 #endif
+
+#if (MODE==TABLES)
+IDNoType GetObjectID(uptr addr)
+{
+    IDNoType oid;
+    Entry* entry = ShadowTable.getEntry(addr);
+    oid = entry->objID;
+    D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(oid));
+    return oid;
+}
+#endif
+
 
 #if (MODE==HYBRID)
 IDNoType GetProducer(uptr addr)

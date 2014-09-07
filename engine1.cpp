@@ -74,36 +74,45 @@ public:
         IDNoType id = 0;
         for(auto& elem : _Accesses)
         {
-            fout << setw(35) << ID2Name[id] << setw(14) << elem.Total << setw(14) << elem.Reads << setw(14) <<  elem.Writes << endl;
+            fout << setw(35) << ID2Name[id] 
+                 << setw(14) << elem.Total 
+                 << setw(14) << elem.Reads 
+                 << setw(14) << elem.Writes << endl;
             id++;
         }
     }
 };
 
 // This will hold all the reads and writes for all functions
-Accesses ftnAccesses;
+Accesses TotalAccesses;
 
 void RecordWriteEngine1(uptr addr, u32 size)
 {
     IDNoType prod = CallStack.Top();
+    IDNoType oid = GetObjectID(addr);
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    ftnAccesses.UpdateWrites(prod, size);
+    D2ECHO("Recording Write:  " << VAR(size) << FUNC(oid) << ADDR(addr));
+    TotalAccesses.UpdateWrites(prod, size);
+    TotalAccesses.UpdateWrites(oid, size);
 }
 
 void RecordReadEngine1(uptr addr, u32 size)
 {
     IDNoType cons = CallStack.Top();
+    IDNoType oid = GetObjectID(addr);
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-    ftnAccesses.UpdateReads(cons, size);
+    D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
+    TotalAccesses.UpdateReads(cons, size);
+    TotalAccesses.UpdateReads(oid, size);
 }
 
 void PrintAccesses()
 {
     ofstream fout;
     OpenOutFile("Accesses.out", fout);
-    ftnAccesses.UpdateTotal();
-    ftnAccesses.SortByTotal();
-    ftnAccesses.Print(fout);
+    TotalAccesses.UpdateTotal();
+    TotalAccesses.SortByTotal();
+    TotalAccesses.Print(fout);
     fout.close();
 }
 

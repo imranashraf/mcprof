@@ -14,8 +14,7 @@ Matrix2D::Matrix2D(IDNoType size)
 {
     IDNoType cols=size;
     IDNoType rows=size;
-    float value=0.0;
-
+    float value=0.0f;
     Matrix.resize( cols , vector<float>( rows , value) );
 }
 
@@ -101,9 +100,9 @@ void Matrix2D::PrintDot(ostream &dotout)
     for (IDNoType c=0; c<TotalFtns; c++)
     {
         if ( symTable.SymIsObj(c) )
-            dotout << "\"" << c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << objNodeStyle << "];" << endl;
+            dotout << "\"" << (u16)c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << objNodeStyle << "];" << endl;
         else
-            dotout << "\"" << c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << ftnNodeStyle << "];" << endl;
+            dotout << "\"" << (u16)c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << ftnNodeStyle << "];" << endl;
     }
 
     int color;
@@ -118,9 +117,9 @@ void Matrix2D::PrintDot(ostream &dotout)
             {
                 color = (int) (  1023 *  log((float)(comm)) / log((float)maxComm)  );
                 dotout << dec
-                        << "\"" << p << "\""
+                        << "\"" << (u16)p << "\""
                         << "->"
-                        << "\"" << c << "\""
+                        << "\"" << (u16)c << "\""
                         << "[label=\""
                         << comm <<" Bytes\""
                         << "color = \"#"

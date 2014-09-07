@@ -200,19 +200,13 @@ VOID RecordRoutineExit(VOID *ip)
 
 }
 
-Symbol newSymbol;
+Symbol newSymbol; // TODO may be create it as object sym
 Symbol* currSymbol = &newSymbol; // TODO setting it to nullptr crashes
 
-void SelectExistingSym(IDNoType id)
+void SetCurrCallLocIdx(u32 locidx)
 {
-    D2ECHO("setting location index to an already available sym location");
-    currSymbol = symTable.GetSymbolPtr(id); // pointing to an existing symbol
-}
-
-void SelectNewSym(u32 locidx)
-{
-    D2ECHO("setting last function call location to new sym location ");
-    currSymbol = &newSymbol;    // pointing to new symbol
+    D2ECHO("setting last function call location");
+    currSymbol = &newSymbol;
     currSymbol->SetLocIndex(locidx);    // so update location as well
 }
 
@@ -228,56 +222,28 @@ VOID MallocAfter(uptr addr)
 {
     D2ECHO("setting malloc/calloc start address " << ADDR(addr) );
     currSymbol->SetStartAddr(addr);
-
-    // If Selected Objects are not supplied, then insert objects to table
-    // TODO try to optimize it away at instrumentation time
-    if( !KnobSelectObjects.Value() )
-    {
-        symTable.InsertObject(*currSymbol);
-    }
+    currSymbol = symTable.InsertAndGetObjectPtr(*currSymbol);
 }
 
 VOID ReallocBefore(uptr addr, u32 size)
 {
     D1ECHO(" setting realloc size " << size );
-
-    // if addr not null, then existing object will be resized
-    if( addr )
-    {
-        // find that symbol first
-        currSymbol = symTable.GetSymbolPtrWithStartAddr(addr);
-        if( !currSymbol) // in case not found, use newSymbol then WHY?
-            currSymbol = &newSymbol;
-    }
-    else //if null, realloc behaves like malloc, no need to do any thing else then
-    {
-        currSymbol = &newSymbol;
-    }
-
     currSymbol->SetSize(size);
+    currSymbol->SetStartAddr(addr);
+    currSymbol = symTable.InsertAndGetObjectPtr(*currSymbol);
 }
 
 VOID ReallocAfter(uptr addr)
 {
     D1ECHO("setting realloc start address " << ADDR(addr) );
     currSymbol->SetStartAddr(addr);
-
-    // If Selected Objects are not supplied, then insert objects to table
-    // TODO try to optimize it away at instrumentation time
-    if( !KnobSelectObjects.Value() )
-    {
-        symTable.InsertObject(*currSymbol);
-    }
 }
 
 VOID FreeBefore(ADDRINT addr)
 {
-    if(addr != 0)
-    {
-        D2ECHO("removing object with start address " << ADDR(addr) );
-        // comment it to keep the objects in the table, useful for debugging
-        symTable.Remove(addr);
-    }
+    D2ECHO("removing object with start address " << ADDR(addr) );
+    // comment it to keep the objects in the table, useful for debugging
+    //symTable.Remove(addr);
 }
 
 // IMG instrumentation routine - called once per image upon image load
@@ -432,38 +398,18 @@ VOID Image_cb(IMG img, VOID * v)
                         PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
 
                         // think about it later
-                        if (KnobSelectObjects.Value() )
-                        {
-                            u32 symid = symTable.GetID(filename, line);
-                            if ( symid != UnknownID )
-                            {
-                                D2ECHO("Instrumenting object (re)(c)(m)alloc/free call at "
-                                       << filename <<":"<< line << " available in table");
-
-                                INS_InsertCall
-                                (
-                                    ins,
-                                    IPOINT_BEFORE,
-                                    AFUNPTR(SelectExistingSym),
-                                    IARG_UINT32, symid,
-                                    IARG_END
-                                );
-                            }
-                        }
-                        else
-                        {
-                            u32 locIndex = Locations.Insert( Location(line, filename) );
-                            D1ECHO("Instrumenting object (re)(c)(m)alloc/free call at "
-                                   << filename <<":"<< line);
-                            INS_InsertCall
-                            (
-                                ins,
-                                IPOINT_BEFORE,
-                                AFUNPTR(SelectNewSym),
-                                IARG_UINT32, locIndex,
-                                IARG_END
-                            );
-                        }
+                        // TODO may be rename locations to callsites
+                        u32 locIndex = Locations.Insert( Location(line, filename) );
+                        D1ECHO("Instrumenting object (re)(c)(m)alloc/free call at "
+                                << filename <<":"<< line);
+                        INS_InsertCall
+                        (
+                            ins,
+                            IPOINT_BEFORE,
+                            AFUNPTR(SetCurrCallLocIdx),
+                            IARG_UINT32, locIndex,
+                            IARG_END
+                        );
                     }
                 }
 
@@ -517,17 +463,17 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
-    // update ID2Name mapping for function symbols.
-    // NOTE Name2ID is updated for functions on the fly, but ID2Name is not. Hence,
-    // it is being done here before generating output files, plot etc.
-    symTable.UpdateID2NameForFtnSymbols();
-
     // Update ID2Name mapping for object symbols.
     // NOTE In Select Object mode, names of selected objects are specified in a text file.
     // When selected objects are not specified, we dont know their names. Hence some
     // arbitrary names are given to these objects and ID2NAme is updated accordingly.
-    if (KnobEngine.Value() != 4)    // i.e. symbols are not specified
+    if (KnobTrackObjects.Value() )    // i.e. symbols are not specified
         symTable.UpdateID2NameForObjSymbols();
+    else
+        // update ID2Name mapping for function symbols.
+        // NOTE Name2ID is updated for functions on the fly, but ID2Name is not. Hence,
+        // it is being done here before generating output files, plot etc.
+        symTable.UpdateID2NameForFtnSymbols();
 
     symTable.Print();
 #if (DEBUG>0)

@@ -1,77 +1,69 @@
+#include "shadow.h"
 #include "symbols.h"
 
 extern map <string,IDNoType> Name2ID;
 extern map <IDNoType,string> ID2Name;
 
+map <u32,IDNoType> LocIndex2ID;
+
 // List of all locations of symbols
 LocationList Locations;
 
-string& Symbols::GetSymName(IDNoType idno)
+// TODO may be used ID2Name for this
+string& Symbols::GetSymName(IDNoType id)
 {
-    return ( syms.at(idno).GetName() );
-}
-
-Symbol* Symbols::GetSymbolPtr(IDNoType id)
-{
-    return &( syms[id] );
+    auto& sym = _Symbols[id];
+    return ( sym.GetName() );
 }
 
 // returns the symbol ptr with start address as input
-Symbol* Symbols::GetSymbolPtrWithStartAddr(uptr saddr1)
+Symbol* Symbols::GetSymbolPtr(uptr saddr)
 {
-    for ( auto& sym : syms )
-    {
-        uptr saddr = sym.GetStartAddr();
-        if ( saddr == saddr1 )
-            return &( syms[ sym.GetID() ] );
-    }
-    return nullptr;
+    IDNoType id = GetObjectID(saddr);
+    if(id != UnknownID)
+        return &(_Symbols[id]);
+    else
+        return nullptr;
 }
 
-IDNoType Symbols::GetSymID(uptr addr)
+Symbol* Symbols::InsertAndGetObjectPtr(Symbol& newsym)
 {
-    for ( auto& sym : syms )
+    uptr saddr = newsym.GetStartAddr();
+    IDNoType id = GetObjectID(saddr);
+    if(id == UnknownID) // insert
     {
-        uptr saddr = sym.GetStartAddr();
-        int size = sym.GetSize();
-        if ( (addr >= saddr) && (addr < saddr+size) )
-            return sym.GetID();
-    }
-    return UnknownID;
-}
+        IDNoType id=GlobalID++;
+        newsym.SetID(id);
 
-IDNoType Symbols::GetID(string& f, u32 l)
-{
-    IDNoType index=0;   // id is index
-    D2ECHO("Finding "<< f << ":" << l << " in Symbol Table");
-    for ( auto& sym : syms )
-    {
-        if ( (sym.isSameLine(l)) && (sym.isSameFile(f)) && (sym.GetType() == SymType::OBJ) )
-        {
-            D2ECHO("Found");
-            return index;
-        }
-        ++index;
-    }
-    D2ECHO("Not Found");
-    return UnknownID;
-}
+        //u32 locidx = sym.symLocIndex;
+        //LocIndex2ID[locidx] = id;
+        
+        // Assign some name to this object symbol
+        // TODO following can be done later at the end when names are really needed
+        newsym.SetName( "Object" + to_string(id) );
 
-void Symbols::InsertObject(Symbol sym)
-{
-    IDNoType idno = syms.size();
-    D1ECHO("Adding Object Symbol " << VAR(idno) << " to Symbol Table");
-    sym.SetID(idno);   // id no of symbols is the index in syms vector
-    sym.SetName( "Object" + to_string(idno) );   // Assign some name to this object symbol
-    syms.push_back(sym);
+        //TODO this can be done at the initialization of new obj in pintrace
+        newsym.SetType(SymType::OBJ);
+
+        D1ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");    
+        _Symbols[id] = newsym;
+        
+        // we also need to set the object ids in the shadow table/mem for this object
+        InitObjectIDs(saddr, newsym.GetSize(), id);
+    }
+   
+    Symbol* symptr = &(_Symbols[id]);
+    return symptr;
 }
 
 void Symbols::InsertFunction(const string& ftnname)
 {
     D1ECHO("Adding Function Symbol " << ftnname << " to Symbol Table");
-    IDNoType idno = syms.size();
-    Name2ID[ftnname] = idno;
-    syms.push_back( Symbol(idno, ftnname, SymType::FUNC) );
+    IDNoType id = GlobalID++;
+    Name2ID[ftnname] = id;
+    // ID2Name is populated at the end, as it is needed for output only
+    
+    _Symbols[id] = Symbol(id, ftnname, SymType::FUNC); //TODO emplace
 }
 
 // TODO is searching in this map fast enough or do we need different/separate
@@ -84,34 +76,39 @@ bool Symbols::IsSeenFunctionName(string& ftnName)
         return true;
 }
 
-IDNoType Symbols::TotalSymbolCount()
+u16 Symbols::TotalSymbolCount()
 {
-    return syms.size();
+    return _Symbols.size();
 }
 
 // only the function count
 // NOTE only function symbols are also added in Name2ID map
 // so size of this map gives total function count
-IDNoType Symbols::TotalFunctionCount()
+u16 Symbols::TotalFunctionCount()
 {
     return Name2ID.size();
 }
 
 void Symbols::Remove(uptr saddr)
 {
-    syms.erase(std::remove_if(syms.begin(), syms.end(),
-            [saddr](Symbol& sym) { return sym.GetStartAddr() == saddr; }),
-            syms.end());
+    IDNoType id = GetObjectID(saddr);
+    auto it = _Symbols.find(id);
+    if(it != _Symbols.end() )
+    {
+        _Symbols.erase(it);
+    }
+
+    // TODO we also need to clear the obj ids for this object
 }
 
-bool Symbols::SymIsObj(IDNoType idno)
+bool Symbols::SymIsObj(IDNoType id)
 {
-    return ( syms.at(idno).GetType() == SymType::OBJ );
+    return ( _Symbols[id].GetType() == SymType::OBJ );
 }
 
-bool Symbols::SymIsFunc(IDNoType idno)
+bool Symbols::SymIsFunc(IDNoType id)
 {
-    return ( syms.at(idno).GetType() == SymType::FUNC );
+    return ( _Symbols[id].GetType() == SymType::FUNC );
 }
 
 // TODO May be the following two init methods may be combined together to read from
@@ -125,10 +122,10 @@ void Symbols::InitFromFtnFile()
     u32 i=0;
     while(sifin >> symname)   // while there are function names in file
     {
-        IDNoType idno = syms.size();
-        Name2ID[symname] = idno;
+        IDNoType id = GlobalID++;
+        Name2ID[symname] = id;
         D1ECHO("Adding Function Symbol " << symname << "("<< idno << ") to symbol table");
-        syms.push_back( Symbol(idno, symname, SymType::FUNC) );
+        _Symbols[id] = Symbol(id, symname, SymType::FUNC);
         i++;
     }
     sifin.close();
@@ -157,9 +154,9 @@ void Symbols::InitFromObjFile()
     while( (sifin >> symfile) && (sifin >> symline) && (sifin >> symname))
     {
         u16 locindex = Locations.Insert( Location(symline, symfile) );
-        IDNoType idno = syms.size();
-        D1ECHO("Adding Object Symbol " << symname << "("<< idno << ") to symbol table");
-        syms.push_back( Symbol(idno, symname, SymType::OBJ, locindex ) );
+        IDNoType id = GlobalID++;
+        D1ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
+        _Symbols[id] = Symbol(id, symname, SymType::OBJ, locindex );
         ++i;
     }
     sifin.close();
@@ -174,10 +171,14 @@ void Symbols::InitFromObjFile()
 void Symbols::Print()
 {
     ECHO("Printing Symbol Table");
-    if(syms.empty() )
+    if(_Symbols.empty() )
         ECHO("Symbol Table Empty");
     else
-        for ( auto& sym : syms ) { sym.Print(); }
+        for ( auto& entry : _Symbols)
+        { 
+            auto& sym = entry.second;
+            sym.Print();
+        }
 }
 
 // This functions generates the reverse binding of Name2ID, i.e. ID2Name.
@@ -188,19 +189,18 @@ void Symbols::UpdateID2NameForFtnSymbols()
     for ( auto& entry : Name2ID )
     {
         const string& ftnname = entry.first;
-        const IDNoType& ftnid = entry.second;
-        ID2Name[ftnid] = ftnname;
+        const IDNoType& id = entry.second;
+        ID2Name[id] = ftnname;
     }
 }
 
 void Symbols::UpdateID2NameForObjSymbols()
 {
-    for ( auto& sym : syms )
+    for ( auto& entry : _Symbols )
     {
+        auto& sym = entry.second;
         const string& objname = sym.GetName();
-        const IDNoType& objid = sym.GetID();
-        ID2Name[objid] = objname;
-        // TODO Do we also need Name2ID mapping for object symbols?
-        // Name2ID[objname] = objid;
+        const IDNoType& id = sym.GetID();
+        ID2Name[id] = objname;
     }
 }

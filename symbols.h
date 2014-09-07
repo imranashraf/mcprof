@@ -5,6 +5,7 @@
 #include "globals.h"
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <fstream>
 #include <algorithm>
@@ -72,6 +73,10 @@ public:
         id(0), startAddr(0), size(0), name(""),
         symType(SymType::NA), symLocIndex(0) {}
 
+    Symbol(SymType typ) :
+        id(0), startAddr(0), size(0), name(""),
+        symType(typ), symLocIndex(0) {}
+    
     Symbol(string n, SymType typ) :
         id(0), startAddr(0), size(0), name(n),
         symType(typ), symLocIndex(0) {}
@@ -90,7 +95,7 @@ public:
 
     void Print()
     {
-        ECHO(VAR(id) << " " << SymTypeName[symType] << " " << name << " " << ADDR(startAddr) << " " << VAR(size)
+        ECHO( "ID: " << (int)id << " " << SymTypeName[symType] << " " << name << " " << ADDR(startAddr) << " " << VAR(size)
             << " at " << VAR(symLocIndex) << " " << Locations.GetLocation(symLocIndex).toString() );
     }
 
@@ -113,20 +118,14 @@ public:
 class Symbols
 {
 private:
-    vector<Symbol> syms;
-    // NOTE index in this vector will be the id of each symbol
-    // NOTE object symbols are inserted at call site to malloc
-    // NOTE function symbol are inserted at instrumentation time of a routine
+    unordered_map<IDNoType,Symbol> _Symbols;
 
 public:
     Symbols(){}
-    void InsertObject(Symbol sym);
+    Symbol* InsertAndGetObjectPtr(Symbol& newsym);
     void InsertFunction(const string& ftnname);
-    IDNoType GetID(string& f, u32 l);
-    IDNoType GetSymID(uptr addr);
     string& GetSymName(IDNoType idno);
-    Symbol* GetSymbolPtr(IDNoType id);
-    Symbol* GetSymbolPtrWithStartAddr(uptr saddr1);
+    Symbol* GetSymbolPtr(uptr saddr1);
     bool IsSeenFunctionName(string& ftnName);
     IDNoType TotalSymbolCount();
     IDNoType TotalFunctionCount(); // count of function symbols only

@@ -58,7 +58,7 @@ void RecordWriteEngine4(uptr addr, u32 size)
     IDNoType prod = CallStack.Top();
 
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    IDNoType objid = symTable.GetSymID(addr);
+    IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
     // TODO check weather we need to some thing special for unknown objects
@@ -79,7 +79,7 @@ void RecordReadEngine4(uptr addr, u32 size)
 //     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     D2ECHO("Recording Read " << VAR(size) << " at " << ADDR(addr) << dec);
 
-    IDNoType objid = symTable.GetSymID(addr);
+    IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
     currCall->Reads[objid]+=size;
 

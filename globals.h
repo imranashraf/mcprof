@@ -31,9 +31,6 @@ typedef signed   short      s16;
 typedef signed   int        s32;
 typedef signed   long long  s64;
 
-// used for ftn and object numbers
-typedef u16 IDNoType;
-
 // Common defs.
 #define INLINE inline
 // Platform-specific defs.
@@ -62,8 +59,12 @@ typedef u16 IDNoType;
 # endif
 #endif  // _MSC_VER
 
-static const u16 UnknownID=0;
-static const u16 GlobalID=UnknownID;
+// used for ftn and object numbers
+typedef u16 IDNoType;
+
+static const IDNoType UnknownID=0;
+static volatile IDNoType GlobalID=UnknownID;
+
 static const std::string UnknownFtn("UnknownFtn");
 static const std::string UnknownObj("UnknownObj");
 // Names of malloc and free

@@ -24,7 +24,7 @@ void RecordReadEngine3(uptr addr, u32 size)
     IDNoType cons = CallStack.Top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     IDNoType prod;
-    IDNoType objid = symTable.GetSymID(addr);
+    IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
 
     if(objid != UnknownID)

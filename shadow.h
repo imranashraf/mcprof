@@ -28,32 +28,19 @@ static const u64 L1ENTRIES = (1ULL << L1BITS);
 static const u64 L2ENTRIES = (1ULL << L2BITS);
 static const u64 L3ENTRIES = (1ULL << L3BITS);
 
-void SetProducer(IDNoType prod, uptr addr);
-IDNoType GetProducer(uptr addr);
-
 #define UNACCESSED nullptr
 
-class Entry
+void SetProducer(IDNoType fid, uptr addr);
+IDNoType GetProducer(uptr addr);
+IDNoType GetObjectID(uptr addr);
+void InitObjectIDs(uptr saddr, u32 size, IDNoType id);
+
+struct Entry
 {
-private:
-    IDNoType producer;
-//     u8 producer;
-
-public:
-    Entry() : producer(UnknownID) {}
-    void setProducer(IDNoType p)
-    {
-        producer=p;
-    }
-    IDNoType getProducer()
-    {
-        return producer;
-    }
+    IDNoType funcID;
+    IDNoType objID;
+    //IDNoType threadID;
 };
-
-// struct Entry {
-//     IDNoType producer;
-// };
 
 class L1Table
 {
@@ -61,23 +48,9 @@ private:
     Entry Table[L1ENTRIES];
 public:
     L1Table() { }
-    IDNoType getProducer(uptr L1Index)
+    Entry* getEntry(uptr L1Index)
     {
-//         return Table[L1Index].producer;
-        return Table[L1Index].getProducer();
-    }
-    void setProducer(uptr L1Index, IDNoType prod)
-    {
-//         Table[L1Index].producer = prod;
-        Table[L1Index].setProducer(prod);
-    }
-    void setProducerRange(uptr L1Index, IDNoType prod, u32 size)
-    {
-        for(u32 i=0; i<size; i++)
-        {
-//             Table[L1Index + i].producer = prod;
-            Table[L1Index+i].setProducer(prod);
-        }
+        return &Table[L1Index];
     }
 };
 
@@ -94,31 +67,15 @@ public:
             Table[i]=UNACCESSED;
         }
     }
-    IDNoType getProducer(uptr L1Index, uptr L2Index)
-    {
-        if(Table[L2Index] == UNACCESSED)
-        {
-            Table[L2Index] = new L1Table;
-        }
-        return Table[L2Index]->getProducer(L1Index);
-    }
-    void setProducer(uptr L1Index, uptr L2Index, IDNoType prod)
-    {
-        if(Table[L2Index] == UNACCESSED)
-        {
-            Table[L2Index] = new L1Table;
-        }
-        Table[L2Index]->setProducer(L1Index, prod);
-    }
-    void setProducerRange(uptr L1Index, uptr L2Index, IDNoType prod, int size)
-    {
-        if(Table[L2Index] == UNACCESSED)
-        {
-            Table[L2Index] = new L1Table;
-        }
-        Table[L2Index]->setProducerRange(L1Index, prod, size);
-    }
 
+    Entry* getEntry(uptr L1Index, uptr L2Index)
+    {
+        if(Table[L2Index] == UNACCESSED)
+        {
+            Table[L2Index] = new L1Table;
+        }
+        return Table[L2Index]->getEntry(L1Index);
+    }
 };
 
 class L3Table
@@ -135,22 +92,7 @@ public:
         }
     }
 
-    IDNoType getProducer(uptr addr)
-    {
-        IDNoType prod;
-
-        u64 L1Index=( (L1ENTRIES-1) & addr);
-        u64 L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
-        u64 L3Index=( (L3ENTRIES-1) & (addr>>(L1BITS+L2BITS)) );
-        if(Table[L3Index] == UNACCESSED)
-        {
-            Table[L3Index] = new L2Table;
-        }
-        prod = Table[L3Index]->getProducer(L1Index, L2Index);
-        return prod;
-    }
-
-    void setProducer(uptr addr, IDNoType prod)
+    Entry* getEntry(uptr addr)
     {
         u64 L1Index=( (L1ENTRIES-1) & addr);
         u64 L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
@@ -159,21 +101,8 @@ public:
         {
             Table[L3Index] = new L2Table;
         }
-        Table[L3Index]->setProducer(L1Index, L2Index, prod);
+        return Table[L3Index]->getEntry(L1Index, L2Index);
     }
-
-    void setProducerRange(uptr addr, IDNoType prod, int size)
-    {
-        u64 L1Index=( (L1ENTRIES-1) & addr);
-        u64 L2Index=( (L2ENTRIES-1) & (addr>>L1BITS) );
-        u64 L3Index=( (L3ENTRIES-1) & (addr>>(L1BITS+L2BITS)) );
-        if(Table[L3Index] == UNACCESSED)
-        {
-            Table[L3Index] = new L2Table;
-        }
-        Table[L3Index]->setProducerRange(L1Index, L2Index, prod, size);
-    }
-
 };
 
 
