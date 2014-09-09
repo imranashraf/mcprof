@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define SIZE 10
 typedef int uint32_t;
@@ -20,8 +21,8 @@ unsigned int coeff = 2;
 void initVecs()
 {
     int i;
-    for(i = 0; i < SIZE; i++)
-    {
+    /*memset(srcArr1, '0', SIZE*sizeof(unsigned int) ); //srcArr1[i]=i*5 + 7;*/
+    for(i = 0; i < SIZE; i++) {
         srcArr1[i]=i*5 + 7;
         srcArr2[i]=2*i - 3;
     }

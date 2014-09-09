@@ -27,8 +27,8 @@
 /* ================================================================== */
 // Global variables
 /* ================================================================== */
-extern map <string,IDNoType> Name2ID;
-extern map <IDNoType,string> ID2Name;
+extern map <string,IDNoType> FuncName2ID;
+
 extern Symbols symTable;
 extern Matrix2D ComMatrix;
 
@@ -166,7 +166,7 @@ VOID RecordRoutineEntry(VOID *ip)
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
     D1ECHO ("Entring Routine : " << rname );
-    CallStack.Push(Name2ID[rname]);
+    CallStack.Push(FuncName2ID[rname]);
 
     // In engine 4, to save time, the curr call is selected only at func entry,
     // so that it does not need to be determined on each access
@@ -180,7 +180,7 @@ VOID RecordRoutineExit(VOID *ip)
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
 
-    if(!(CallStack.Empty()) && ( CallStack.Top() == Name2ID[rname] ) )
+    if(!(CallStack.Empty()) && ( CallStack.Top() == FuncName2ID[rname] ) )
     {
         D1ECHO("Leaving Routine : " << rname);
         CallStack.Pop();
@@ -235,8 +235,21 @@ VOID ReallocBefore(uptr addr, u32 size)
 
 VOID ReallocAfter(uptr addr)
 {
-    D1ECHO("setting realloc start address " << ADDR(addr) );
-    currSymbol->SetStartAddr(addr);
+    uptr prevAddr = currSymbol->GetStartAddr();
+    if( addr != prevAddr )  // if relocation has moved the object to another address range
+    {
+        D2ECHO("reallocation moved the object");
+        D2ECHO("size changed to " << currSymbol->GetSize() );
+        IDNoType id = GetObjectID(prevAddr);
+
+        // TODO do we need to clear the object IDs from old address FIRST?
+
+        // we also need to set the object ids in the shadow table/mem for this object
+        InitObjectIDs(addr, currSymbol->GetSize(), id);
+    }
+
+    D1ECHO("setting realloc start address " << ADDR(addr) );    
+    currSymbol->SetStartAddr(addr);    
 }
 
 VOID FreeBefore(ADDRINT addr)
@@ -385,22 +398,24 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                if( KnobTrackObjects.Value() && INS_IsCall(ins) ) // or should it be procedure call?
+                if( KnobTrackObjects.Value() && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
-                    D2ECHO( "Calling " << tname );
-
                     if(tname == ".plt")
                     {
                         string filename("");    // This will hold the source file name.
                         INT32 line = 0;     // This will hold the line number within the file.
                         PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
+                        if(line)
+                        {
+                            ECHO(filename << ":" << line);
+                        }
 
                         // think about it later
                         // TODO may be rename locations to callsites
                         u32 locIndex = Locations.Insert( Location(line, filename) );
-                        D1ECHO("Instrumenting object (re)(c)(m)alloc/free call at "
+                        D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
                                 << filename <<":"<< line);
                         INS_InsertCall
                         (
@@ -411,6 +426,7 @@ VOID Image_cb(IMG img, VOID * v)
                             IARG_END
                         );
                     }
+                    //TODO may be we can continue here in this case to speed it up
                 }
 
                 UINT32 memOperands = INS_MemoryOperandCount(ins);
@@ -439,7 +455,6 @@ VOID Image_cb(IMG img, VOID * v)
                         }
                     }
                 }
-
                 if (INS_IsRet(ins))
                 {
                     INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
@@ -447,7 +462,6 @@ VOID Image_cb(IMG img, VOID * v)
                                              IARG_INST_PTR, IARG_END);
                 }
             }
-
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
         }
     }
@@ -463,23 +477,10 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
-    // Update ID2Name mapping for object symbols.
-    // NOTE In Select Object mode, names of selected objects are specified in a text file.
-    // When selected objects are not specified, we dont know their names. Hence some
-    // arbitrary names are given to these objects and ID2NAme is updated accordingly.
-    if (KnobTrackObjects.Value() )    // i.e. symbols are not specified
-        symTable.UpdateID2NameForObjSymbols();
-    else
-        // update ID2Name mapping for function symbols.
-        // NOTE Name2ID is updated for functions on the fly, but ID2Name is not. Hence,
-        // it is being done here before generating output files, plot etc.
-        symTable.UpdateID2NameForFtnSymbols();
 
+// #if (DEBUG>0)
     symTable.Print();
-#if (DEBUG>0)
-    symTable.Print();
-    ComMatrix.Print(cout);
-#endif
+// #endif
 
     switch( KnobEngine.Value() )
     {
@@ -487,12 +488,13 @@ VOID TheEnd(INT32 code, VOID *v)
         PrintAccesses();
         break;
     case 2:
-        ComMatrix.PrintMatrix(mout);
-        ComMatrix.PrintDot(dotout);
-        break;
     case 3:
+        OpenOutFile(KnobDotFile.Value(), dotout);
+        OpenOutFile(KnobMatrixFile.Value(), mout);
         ComMatrix.PrintMatrix(mout);
         ComMatrix.PrintDot(dotout);
+        mout.close();
+        dotout.close();
         break;
     case 4:
         PrintAllCalls();
@@ -503,8 +505,6 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
-    mout.close();
-    dotout.close();
 }
 
 /*!
@@ -525,9 +525,6 @@ void SetupPin(int argc, char *argv[])
         Die();
     }
 
-    OpenOutFile(KnobDotFile.Value(), dotout);
-    OpenOutFile(KnobMatrixFile.Value(), mout);
-
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
     // Insert Unknown Ftn as first symbol
@@ -535,7 +532,7 @@ void SetupPin(int argc, char *argv[])
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
-    CallStack.Push(Name2ID[UnknownFtn]);
+    CallStack.Push(FuncName2ID[UnknownFtn]);
 
     if(KnobSelectFunctions.Value())
     {

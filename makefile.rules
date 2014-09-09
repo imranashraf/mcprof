@@ -90,7 +90,9 @@ endif
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
 mcprof.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX) $(OBJDIR)memAllocFree$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 \
+        -SelectFunctions 0 -TrackObjects 1 -Engine 3 -SelectObjects 0 \
+        -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
 
 # mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
 # 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)

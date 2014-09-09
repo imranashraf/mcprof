@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <iomanip>
 
-extern std::map <u16,std::string> ID2Name;
-
 extern CallStackType CallStack;
 // extern Matrix2D ComMatrix;   // not needed in this engine
+
+extern Symbols symTable;
 
 struct Access
 {
@@ -74,9 +74,9 @@ public:
         IDNoType id = 0;
         for(auto& elem : _Accesses)
         {
-            fout << setw(35) << ID2Name[id] 
-                 << setw(14) << elem.Total 
-                 << setw(14) << elem.Reads 
+            fout << setw(35) << symTable.GetSymName(id)
+                 << setw(14) << elem.Total
+                 << setw(14) << elem.Reads
                  << setw(14) << elem.Writes << endl;
             id++;
         }
@@ -109,7 +109,7 @@ void RecordReadEngine1(uptr addr, u32 size)
 void PrintAccesses()
 {
     ofstream fout;
-    OpenOutFile("Accesses.out", fout);
+    OpenOutFile("accesses.out", fout);
     TotalAccesses.UpdateTotal();
     TotalAccesses.SortByTotal();
     TotalAccesses.Print(fout);

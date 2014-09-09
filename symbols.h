@@ -1,8 +1,8 @@
 #ifndef SYMBOLS_H
 #define SYMBOLS_H
 
-#include "pin.H"
 #include "globals.h"
+#include "pin.H"
 
 #include <vector>
 #include <unordered_map>
@@ -12,8 +12,8 @@
 
 using namespace std;
 
-static string selectFtnFileName("SelectFunctions.txt");
-static string selectObjFileName("SelectObjects.txt");
+static string selectFtnFileName("selectedfunctions.in");
+static string selectObjFileName("selectedobjects.in");
 
 class Location
 {
@@ -76,7 +76,7 @@ public:
     Symbol(SymType typ) :
         id(0), startAddr(0), size(0), name(""),
         symType(typ), symLocIndex(0) {}
-    
+
     Symbol(string n, SymType typ) :
         id(0), startAddr(0), size(0), name(n),
         symType(typ), symLocIndex(0) {}
@@ -93,11 +93,7 @@ public:
         id(id1), startAddr(0), size(0), name(n),
         symType(typ), symLocIndex(0) {}
 
-    void Print()
-    {
-        ECHO( "ID: " << (int)id << " " << SymTypeName[symType] << " " << name << " " << ADDR(startAddr) << " " << VAR(size)
-            << " at " << VAR(symLocIndex) << " " << Locations.GetLocation(symLocIndex).toString() );
-    }
+    void Print(ostream& fout=std::cout);
 
     void SetLocIndex(u32 idx) { symLocIndex = idx; }
     u32 GetLine() {return Locations.GetLocation(symLocIndex).GetLineNo();}
@@ -135,8 +131,6 @@ public:
     void Print();
     void InitFromObjFile();
     void InitFromFtnFile();
-    void UpdateID2NameForFtnSymbols();
-    void UpdateID2NameForObjSymbols();
 };
 
 #endif

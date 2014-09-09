@@ -8,6 +8,8 @@
 extern CallStackType CallStack;
 extern Matrix2D ComMatrix;
 
+extern Symbols symTable;
+
 void RecordWriteEngine3(uptr addr, u32 size)
 {
     IDNoType prod = CallStack.Top();
@@ -25,7 +27,7 @@ void RecordReadEngine3(uptr addr, u32 size)
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     IDNoType prod;
     IDNoType objid = GetObjectID(addr);
-    D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
+    D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
 
     if(objid != UnknownID)
     {

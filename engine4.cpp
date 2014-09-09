@@ -5,11 +5,12 @@
 #include "symbols.h"
 
 extern CallStackType CallStack; // main call stack
-extern std::map <std::string,u16> Name2ID;
-extern std::map <u16,std::string> ID2Name;
+extern std::map <std::string,u16> FuncName2ID;
+//extern std::map <u16,std::string> symTable.GetSymName;
+extern Symbols symTable;
 
 // all calls written to this file
-static string perCallFileName("PerCallAccesses.txt");
+static string perCallFileName("percallaccesses.out");
 
 // all calls to a single func, index is call no
 typedef vector<Call> AllCalls2OneFtnType;
@@ -35,7 +36,7 @@ static u64 GlobalCallSeqNo=0;
 // TODO optimize fname to funcid
 void SetCurrCall(string& fname)
 {
-    IDNoType funcid = Name2ID[fname];
+    IDNoType funcid = FuncName2ID[fname];
     D2ECHO("Setting currCall for " << FUNC(funcid) );
 
     auto it = AllCalls.find(funcid);
@@ -59,7 +60,7 @@ void RecordWriteEngine4(uptr addr, u32 size)
 
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     IDNoType objid = GetObjectID(addr);
-    D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
+    D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
 
     // TODO check weather we need to some thing special for unknown objects
 //     if(objid != UnknownID)
@@ -80,7 +81,7 @@ void RecordReadEngine4(uptr addr, u32 size)
     D2ECHO("Recording Read " << VAR(size) << " at " << ADDR(addr) << dec);
 
     IDNoType objid = GetObjectID(addr);
-    D2ECHO( ADDR(addr) << " " << ID2Name[objid] << "(" << objid << ")" );
+    D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
     currCall->Reads[objid]+=size;
 
     //     IDNoType prod;
@@ -96,13 +97,13 @@ void PrintCall(Call& call, ofstream& fout)
     for ( auto& readPair : call.Reads)
     {
         IDNoType oid = readPair.first;
-        fout << "Reads from " << ID2Name[oid] << " : " << readPair.second << "\n" ;
+        fout << "Reads from " << symTable.GetSymName(oid) << " : " << readPair.second << "\n" ;
     }
 
     for ( auto& writePair : call.Writes)
     {
         IDNoType oid = writePair.first;
-        fout << "Writes to " << ID2Name[oid] << " : " << writePair.second << "\n" ;
+        fout << "Writes to " << symTable.GetSymName(oid) << " : " << writePair.second << "\n" ;
     }
 }
 
@@ -130,7 +131,7 @@ void PrintAllCalls()
     for ( auto& callpair :AllCalls)
     {
         IDNoType fid = callpair.first;
-        fout << "Printing Calls to " << ID2Name[fid] << "\n";
+        fout << "Printing Calls to " << symTable.GetSymName(fid) << "\n";
         PrintCalls(callpair.second, fout);
     }
 

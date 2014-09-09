@@ -1,15 +1,13 @@
 #include "shadow.h"
 #include "symbols.h"
 
-extern map <string,IDNoType> Name2ID;
-extern map <IDNoType,string> ID2Name;
+extern map <string,IDNoType> FuncName2ID;
 
 map <u32,IDNoType> LocIndex2ID;
 
 // List of all locations of symbols
 LocationList Locations;
 
-// TODO may be used ID2Name for this
 string& Symbols::GetSymName(IDNoType id)
 {
     auto& sym = _Symbols[id];
@@ -37,7 +35,7 @@ Symbol* Symbols::InsertAndGetObjectPtr(Symbol& newsym)
 
         //u32 locidx = sym.symLocIndex;
         //LocIndex2ID[locidx] = id;
-        
+
         // Assign some name to this object symbol
         // TODO following can be done later at the end when names are really needed
         newsym.SetName( "Object" + to_string(id) );
@@ -47,11 +45,11 @@ Symbol* Symbols::InsertAndGetObjectPtr(Symbol& newsym)
 
         D1ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");    
         _Symbols[id] = newsym;
-        
+
         // we also need to set the object ids in the shadow table/mem for this object
         InitObjectIDs(saddr, newsym.GetSize(), id);
     }
-   
+
     Symbol* symptr = &(_Symbols[id]);
     return symptr;
 }
@@ -60,17 +58,17 @@ void Symbols::InsertFunction(const string& ftnname)
 {
     D1ECHO("Adding Function Symbol " << ftnname << " to Symbol Table");
     IDNoType id = GlobalID++;
-    Name2ID[ftnname] = id;
-    // ID2Name is populated at the end, as it is needed for output only
-    
-    _Symbols[id] = Symbol(id, ftnname, SymType::FUNC); //TODO emplace
+    FuncName2ID[ftnname] = id;
+    Symbol sym(id, ftnname, SymType::NA);
+
+    _Symbols[id] = sym;
 }
 
 // TODO is searching in this map fast enough or do we need different/separate
 // data structure for seen function names
 bool Symbols::IsSeenFunctionName(string& ftnName)
 {
-    if ( Name2ID.find(ftnName) == Name2ID.end() )
+    if ( FuncName2ID.find(ftnName) == FuncName2ID.end() )
         return false;
     else
         return true;
@@ -82,11 +80,11 @@ u16 Symbols::TotalSymbolCount()
 }
 
 // only the function count
-// NOTE only function symbols are also added in Name2ID map
+// NOTE only function symbols are also added in FuncName2ID map
 // so size of this map gives total function count
 u16 Symbols::TotalFunctionCount()
 {
-    return Name2ID.size();
+    return FuncName2ID.size();
 }
 
 void Symbols::Remove(uptr saddr)
@@ -123,8 +121,8 @@ void Symbols::InitFromFtnFile()
     while(sifin >> symname)   // while there are function names in file
     {
         IDNoType id = GlobalID++;
-        Name2ID[symname] = id;
-        D1ECHO("Adding Function Symbol " << symname << "("<< idno << ") to symbol table");
+        FuncName2ID[symname] = id;
+        D1ECHO("Adding Function Symbol " << symname << "("<< id << ") to symbol table");
         _Symbols[id] = Symbol(id, symname, SymType::FUNC);
         i++;
     }
@@ -168,39 +166,27 @@ void Symbols::InitFromObjFile()
     }
 }
 
+void Symbol::Print(ostream& fout)
+{
+    fout << "ID: " << (int)id << " " << SymTypeName[symType] << " " << name << " " << ADDR(startAddr) << " " << VAR(size)
+        << " at " << VAR(symLocIndex) << " " << Locations.GetLocation(symLocIndex).toString() << endl;
+}
+
 void Symbols::Print()
 {
-    ECHO("Printing Symbol Table");
     if(_Symbols.empty() )
         ECHO("Symbol Table Empty");
     else
+    {
+        string fname("symbols.out");
+        ofstream fout;
+        OpenOutFile(fname.c_str(), fout);
+        ECHO("Printing Symbol Table to " << fname );
         for ( auto& entry : _Symbols)
         { 
             auto& sym = entry.second;
-            sym.Print();
+            sym.Print(fout);
         }
-}
-
-// This functions generates the reverse binding of Name2ID, i.e. ID2Name.
-// NOTE Name2ID is update are runtime whenever a function is seen, but
-// the reverse mapping is not updated to save time
-void Symbols::UpdateID2NameForFtnSymbols()
-{
-    for ( auto& entry : Name2ID )
-    {
-        const string& ftnname = entry.first;
-        const IDNoType& id = entry.second;
-        ID2Name[id] = ftnname;
-    }
-}
-
-void Symbols::UpdateID2NameForObjSymbols()
-{
-    for ( auto& entry : _Symbols )
-    {
-        auto& sym = entry.second;
-        const string& objname = sym.GetName();
-        const IDNoType& id = sym.GetID();
-        ID2Name[id] = objname;
+        fout.close();
     }
 }

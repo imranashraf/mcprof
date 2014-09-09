@@ -73,14 +73,19 @@ static const std::string CALLOC("calloc");
 static const std::string REALLOC("realloc");
 static const std::string FREE("free");
 
+extern std::map <std::string,IDNoType> FuncName2ID;
+#include "symbols.h"
+extern Symbols symTable;
+
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
+
 #define VAR(v) " `" #v "': " << v << " "
 #define VARS2(first, second) VAR(first) << " - " << VAR(second)
 #define VARS3(first, second, third) VAR(first) << " - " << VARS2(second, third)
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
-#define FUNC(v)  ID2Name[(int)v] << "(" << (int)v << ")"
+#define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
 
 #if (DEBUG>0)
 #define DECHO(content)                          ECHO(content)

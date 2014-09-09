@@ -20,8 +20,7 @@ Symbols symTable;
 Matrix2D ComMatrix;
 
 // some mappings for faster access
-map <string,IDNoType> Name2ID;  // updated on the fly only for functions
-map <IDNoType,string> ID2Name;  // updated at the end both for functions and objects
+map <string,IDNoType> FuncName2ID;  // updated on the fly only for functions
 
 /* ================================================================== */
 // Main
