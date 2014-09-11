@@ -71,6 +71,19 @@ void SetProducer(IDNoType fid, uptr addr)
 }
 #endif
 
+#if (MODE==TABLES)
+void SetProducers(uptr saddr, u32 size, IDNoType fid)
+{
+    //TODO we need to use memset, secondly we need to take care if
+    // addr does not lie in this table (in current non-optimal way its not a problem)
+    for(uptr addr = saddr; addr < saddr+size; addr++)
+    {
+        Entry* entry = ShadowTable.getEntry(addr);
+        entry->funcID = fid;
+    }
+}
+#endif
+
 #if (MODE==HYBRID)
 void SetProducer(IDNoType prod, uptr addr)
 {

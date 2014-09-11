@@ -130,10 +130,12 @@ BOOL ValidFtnName(string name)
 //         name[0]=='_' ||
             name[0]=='?' ||
             !name.compare("atexit") ||
+            // following wrappers can be a single condition "wrap_"
             !name.compare("wrap_malloc") ||
             !name.compare("wrap_calloc") ||
             !name.compare("wrap_realloc") ||
             !name.compare("wrap_free") ||
+            !name.compare("wrap_memcpy") ||
             !name.compare("wrap_strdup") ||
 #ifdef WIN32
             !name.compare("GetPdbDll") ||
@@ -272,6 +274,14 @@ VOID FreeBefore(ADDRINT addr)
     //symTable.Remove(addr);
 }
 
+VOID MemcpyBefore(uptr dst, uptr src, u32 size)
+{
+    ECHO("Memcpy" << ADDR(dst) << " " << ADDR(src) << " " << VAR(size) );
+    // Effectively memcpy is Write recording, which records communication
+    // and also sets the producer accordingly
+    WriteRecorder(dst, size);
+}
+
 // IMG instrumentation routine - called once per image upon image load
 VOID Image_cb(IMG img, VOID * v)
 {
@@ -353,6 +363,22 @@ VOID Image_cb(IMG img, VOID * v)
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_Close(freeRtn);
         }
+
+        RTN memcpyRtn = RTN_FindByName(img, MEMCPY.c_str() );
+        if (RTN_Valid(memcpyRtn))
+        {
+            ECHO("detected memcpy");
+            RTN_Open(memcpyRtn);
+
+            // Instrument memcpy() to print the input arguments
+            RTN_InsertCall(memcpyRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+                           IARG_END);
+
+            RTN_Close(memcpyRtn);
+        }
     }
 
     // Traverse the sections of the image.
@@ -407,7 +433,7 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                D2ECHO("disassebled ins = " << INS_Disassemble(ins) );
+                D2ECHO("disassembeled ins = " << INS_Disassemble(ins) );
 
                 if( KnobTrackObjects.Value() && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
                 {
@@ -488,6 +514,7 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
+    symTable.Print();
 #if (DEBUG>0)
     // Print Symbol Table to output file
     symTable.Print();

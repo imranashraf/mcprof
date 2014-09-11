@@ -56,6 +56,20 @@ void wrap_free(void *ptr,
     free(ptr);
 }
 
+void* wrap_memcpy(void* dst, const void* src, size_t size,
+                    const char *file, unsigned int line, const char *func)
+{
+    void* dst2 = memcpy(dst,src,size);
+    if(dst != dst2)
+    {
+        fprintf(stderr,
+                "[%s] returned destination address is different, when copying %zd bytes at %s line %u: %s\n",
+                func, size, file, line, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return dst2;
+}
+
 char *wrap_strdup(const char *s,
 				  const char *file, unsigned int line, const char *func)
 {

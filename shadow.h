@@ -34,6 +34,7 @@ void SetProducer(IDNoType fid, uptr addr);
 IDNoType GetProducer(uptr addr);
 IDNoType GetObjectID(uptr addr);
 void InitObjectIDs(uptr saddr, u32 size, IDNoType id);
+void SetProducers(uptr saddr, u32 size, IDNoType fid);
 
 struct Entry
 {

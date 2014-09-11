@@ -73,6 +73,12 @@ static const std::string CALLOC("wrap_calloc");
 static const std::string REALLOC("wrap_realloc");
 static const std::string FREE("wrap_free");
 
+static const std::string MEMCPY("wrap_memcpy");
+static const std::string MEMMOVE("memmove");
+static const std::string MEMSET("memset");
+
+static const std::string STRDUP("wrap_strdup");
+
 extern std::map <std::string,IDNoType> FuncName2ID;
 #include "symbols.h"
 extern Symbols symTable;

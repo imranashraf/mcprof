@@ -30,8 +30,9 @@ void initVecs()
     //memset(srcArr1, '0', nbytes );
     for(i = 0; i < SIZE; i++) {
         srcArr1[i]=i*5 + 7;
-        srcArr2[i]=2*i - 3;
+        //srcArr2[i]=2*i - 3;
     }
+    memcpy(srcArr2, srcArr1, nbytes);
 }
 
 void sumVecs()

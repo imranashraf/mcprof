@@ -16,6 +16,8 @@ extern "C" {
 					   const char *file, unsigned int line, const char *func);
     void wrap_free(void *ptr,
                       const char *file, unsigned int line, const char *func);
+    void* wrap_memcpy(void* d, const void* s, size_t n,
+                      const char *file, unsigned int line, const char *func);
 	char *wrap_strdup(const char *s,
 					  const char *file, unsigned int line, const char *func);
 
@@ -24,6 +26,7 @@ extern "C" {
 #endif
 
 #ifdef USE_MALLOC_WRAPPERS
+
 #  ifdef calloc
 #    undef calloc
 #  endif
@@ -43,6 +46,11 @@ extern "C" {
 #    undef free
 #  endif
 #  define free(p)  wrap_free( (p), __FILE__, __LINE__, __func__)
+
+#  ifdef memcpy
+#    undef memcpy
+#  endif
+#  define memcpy(d,s,n)     wrap_memcpy( (d), (s), (n),  __FILE__, __LINE__, __func__)
 
 #  ifdef strdup
 #    undef strdup
