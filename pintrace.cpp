@@ -136,6 +136,8 @@ BOOL ValidFtnName(string name)
             !name.compare("wrap_realloc") ||
             !name.compare("wrap_free") ||
             !name.compare("wrap_memcpy") ||
+            !name.compare("wrap_memmove") ||
+            !name.compare("wrap_memset") ||
             !name.compare("wrap_strdup") ||
 #ifdef WIN32
             !name.compare("GetPdbDll") ||
@@ -274,10 +276,19 @@ VOID FreeBefore(ADDRINT addr)
     //symTable.Remove(addr);
 }
 
+// both for memcpy and memmove
 VOID MemcpyBefore(uptr dst, uptr src, u32 size)
 {
-    ECHO("Memcpy" << ADDR(dst) << " " << ADDR(src) << " " << VAR(size) );
-    // Effectively memcpy is Write recording, which records communication
+    D2ECHO("memcpy/memmove" << ADDR(dst) << " " << ADDR(src) << " " << VAR(size) );
+    // Effectively memcpy/memmove is write recording, which records communication
+    // and also sets the producer accordingly
+    WriteRecorder(dst, size);
+}
+
+VOID MemsetBefore(uptr dst, u8 val, u32 size)
+{
+    D2ECHO("memset" << ADDR(dst) << " " << VAR(val) << " " << VAR(size) );
+    // Effectively memset is write recording, which records communication
     // and also sets the producer accordingly
     WriteRecorder(dst, size);
 }
@@ -378,6 +389,38 @@ VOID Image_cb(IMG img, VOID * v)
                            IARG_END);
 
             RTN_Close(memcpyRtn);
+        }
+
+        RTN memmoveRtn = RTN_FindByName(img, MEMMOVE.c_str() );
+        if (RTN_Valid(memmoveRtn))
+        {
+            ECHO("detected memmove");
+            RTN_Open(memmoveRtn);
+
+            // Instrument memcpy() to print the input arguments
+            RTN_InsertCall(memmoveRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+                           IARG_END);
+
+            RTN_Close(memmoveRtn);
+        }
+
+        RTN memsetRtn = RTN_FindByName(img, MEMSET.c_str() );
+        if (RTN_Valid(memsetRtn))
+        {
+            ECHO("detected memset");
+            RTN_Open(memsetRtn);
+
+            // Instrument memcpy() to print the input arguments
+            RTN_InsertCall(memsetRtn, IPOINT_BEFORE, (AFUNPTR)MemsetBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+                           IARG_END);
+
+            RTN_Close(memsetRtn);
         }
     }
 

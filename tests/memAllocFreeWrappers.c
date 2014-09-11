@@ -27,12 +27,20 @@ int nbytes;
 void initVecs()
 {
     int i;
-    //memset(srcArr1, '0', nbytes );
+#   if 1
+    memset(srcArr1, 1, nbytes );
+#   else 
     for(i = 0; i < SIZE; i++) {
         srcArr1[i]=i*5 + 7;
-        //srcArr2[i]=2*i - 3;
+//         srcArr2[i]=2*i - 3;
     }
+#   endif
+
+#   if 1
     memcpy(srcArr2, srcArr1, nbytes);
+#   else
+    memmove(srcArr2, srcArr1, nbytes);
+#   endif
 }
 
 void sumVecs()

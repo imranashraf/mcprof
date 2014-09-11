@@ -74,8 +74,8 @@ static const std::string REALLOC("wrap_realloc");
 static const std::string FREE("wrap_free");
 
 static const std::string MEMCPY("wrap_memcpy");
-static const std::string MEMMOVE("memmove");
-static const std::string MEMSET("memset");
+static const std::string MEMMOVE("wrap_memmove");
+static const std::string MEMSET("wrap_memset");
 
 static const std::string STRDUP("wrap_strdup");
 
