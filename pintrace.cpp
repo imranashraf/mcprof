@@ -130,6 +130,11 @@ BOOL ValidFtnName(string name)
 //         name[0]=='_' ||
             name[0]=='?' ||
             !name.compare("atexit") ||
+            !name.compare("wrap_malloc") ||
+            !name.compare("wrap_calloc") ||
+            !name.compare("wrap_realloc") ||
+            !name.compare("wrap_free") ||
+            !name.compare("wrap_strdup") ||
 #ifdef WIN32
             !name.compare("GetPdbDll") ||
             !name.compare("DebuggerRuntime") ||
@@ -222,34 +227,42 @@ VOID MallocAfter(uptr addr)
 {
     D2ECHO("setting malloc/calloc start address " << ADDR(addr) );
     currSymbol->SetStartAddr(addr);
-    currSymbol = symTable.InsertAndGetObjectPtr(*currSymbol);
+    symTable.InsertMallocCalloc(*currSymbol);
 }
 
+// TODO can reallocation decrease size?
 VOID ReallocBefore(uptr addr, u32 size)
 {
-    D1ECHO(" setting realloc size " << size );
-    currSymbol->SetSize(size);
+    D2ECHO("reallocation at address : " << ADDR(addr) );
     currSymbol->SetStartAddr(addr);
-    currSymbol = symTable.InsertAndGetObjectPtr(*currSymbol);
+
+    D2ECHO("setting realloc size " << size );
+    currSymbol->SetSize(size);
 }
 
 VOID ReallocAfter(uptr addr)
 {
     uptr prevAddr = currSymbol->GetStartAddr();
-    if( addr != prevAddr )  // if relocation has moved the object to another address range
+    //TODO change "0" to nullptr
+    if(prevAddr == 0) //realloc behaves like malloc, supplied null address as argument
     {
-        D2ECHO("reallocation moved the object");
-        D2ECHO("size changed to " << currSymbol->GetSize() );
-        IDNoType id = GetObjectID(prevAddr);
-
-        // TODO do we need to clear the object IDs from old address FIRST?
-
-        // we also need to set the object ids in the shadow table/mem for this object
-        InitObjectIDs(addr, currSymbol->GetSize(), id);
+        currSymbol->SetStartAddr(addr);
+        symTable.InsertMallocCalloc(*currSymbol);
     }
+    else
+    {
+        IDNoType oldid = GetObjectID(prevAddr);
+        currSymbol->SetID(oldid);
 
-    D1ECHO("setting realloc start address " << ADDR(addr) );    
-    currSymbol->SetStartAddr(addr);    
+        // check if relocation has moved the object to a different address
+        if( addr != prevAddr )
+        {
+            D2ECHO("reallocation moved the object");
+            D2ECHO("setting realloc start address " << ADDR(addr) );
+            currSymbol->SetStartAddr(addr);
+        }
+        symTable.UpdateReallocAndGetObjectPtr(*currSymbol);
+    }
 }
 
 VOID FreeBefore(ADDRINT addr)
@@ -264,12 +277,24 @@ VOID Image_cb(IMG img, VOID * v)
 {
     string imgname = IMG_Name(img);
 
+    // For simplicity, instrument only the main image.
+    // This can be extended to any other image of course.
+    if (IMG_IsMainExecutable(img) == false &&
+            KnobMainExecutableOnly.Value() == true)
+    {
+        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
+        return;
+    }
+    else
+    {
+        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
+    }
+
     // we should instrument malloc/free only when tracking objects !
-    bool isLibC = imgname.find("libc") != string::npos;
-    if ( KnobTrackObjects.Value() && isLibC )
+    if ( KnobTrackObjects.Value() )
     {
         // instrument libc for malloc, free etc
-        D1ECHO("Instrumenting "<<imgname<<" for malloc, free etc ");
+        D1ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
 
         //  Find the malloc() function.
         RTN mallocRtn = RTN_FindByName(img, MALLOC.c_str() );
@@ -328,22 +353,6 @@ VOID Image_cb(IMG img, VOID * v)
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_Close(freeRtn);
         }
-
-        // no need to do any thing else for libc, so can return
-        return;
-    }
-
-    // For simplicity, instrument only the main image.
-    // This can be extended to any other image of course.
-    if (IMG_IsMainExecutable(img) == false &&
-            KnobMainExecutableOnly.Value() == true)
-    {
-        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
-        return;
-    }
-    else
-    {
-        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
     }
 
     // Traverse the sections of the image.
@@ -398,35 +407,37 @@ VOID Image_cb(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
+                D2ECHO("disassebled ins = " << INS_Disassemble(ins) );
+
                 if( KnobTrackObjects.Value() && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
-                    if(tname == ".plt")
+                    if( (tname == MALLOC) | (tname == CALLOC) || (tname == REALLOC) )
                     {
                         string filename("");    // This will hold the source file name.
                         INT32 line = 0;     // This will hold the line number within the file.
                         PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
-                        if(line)
-                        {
-                            ECHO(filename << ":" << line);
-                        }
 
-                        // think about it later
-                        // TODO may be rename locations to callsites
-                        u32 locIndex = Locations.Insert( Location(line, filename) );
-                        D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
-                                << filename <<":"<< line);
-                        INS_InsertCall
-                        (
-                            ins,
-                            IPOINT_BEFORE,
-                            AFUNPTR(SetCurrCallLocIdx),
-                            IARG_UINT32, locIndex,
-                            IARG_END
-                        );
+                        // Do not instrument the calls inside wrappers, so skip malloc_wrap.c file
+                        if(filename.find("malloc_wrap.c") == string::npos ) // not found
+                        {
+                            // TODO may be rename locations to callsites
+                            u32 locIndex = Locations.Insert( Location(line, filename) );
+                            ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
+                                    << filename <<":"<< line);
+                            INS_InsertCall
+                            (
+                                ins,
+                                IPOINT_BEFORE,
+                                AFUNPTR(SetCurrCallLocIdx),
+                                IARG_UINT32, locIndex,
+                                IARG_END
+                            );
+                        }
                     }
                     //TODO may be we can continue here in this case to speed it up
+                    continue;
                 }
 
                 UINT32 memOperands = INS_MemoryOperandCount(ins);
@@ -477,10 +488,10 @@ VOID Image_cb(IMG img, VOID * v)
  */
 VOID TheEnd(INT32 code, VOID *v)
 {
-
-// #if (DEBUG>0)
+#if (DEBUG>0)
+    // Print Symbol Table to output file
     symTable.Print();
-// #endif
+#endif
 
     switch( KnobEngine.Value() )
     {
@@ -488,12 +499,16 @@ VOID TheEnd(INT32 code, VOID *v)
         PrintAccesses();
         break;
     case 2:
-    case 3:
         OpenOutFile(KnobDotFile.Value(), dotout);
         OpenOutFile(KnobMatrixFile.Value(), mout);
         ComMatrix.PrintMatrix(mout);
         ComMatrix.PrintDot(dotout);
         mout.close();
+        dotout.close();
+        break;
+    case 3:
+        OpenOutFile(KnobDotFile.Value(), dotout);
+        ComMatrix.PrintDot(dotout);
         dotout.close();
         break;
     case 4:

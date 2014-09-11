@@ -30,7 +30,7 @@ void Matrix2D::RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
 float Matrix2D::MaxCommunication()
 {
     float currmax=0.0f;
-    // Following iterations can be optimized to TotalFtns instead of size
+    // Following iterations can be optimized to TotalSymbols instead of size
     for (IDNoType p=0; p<Matrix.size(); p++)
     {
         for (IDNoType c=0; c<Matrix.size(); c++)
@@ -43,12 +43,12 @@ float Matrix2D::MaxCommunication()
 
 void Matrix2D::Print(ostream &fout)
 {
-    IDNoType TotalFtns = symTable.TotalSymbolCount();
-    CHECK_LT(TotalFtns, Matrix.size());
+    IDNoType TotalSymbols = symTable.TotalSymbolCount();
+    CHECK_LT(TotalSymbols, Matrix.size());
 
-    for (IDNoType p=0; p<TotalFtns; p++)
+    for (IDNoType p=0; p<TotalSymbols; p++)
     {
-        for (IDNoType c=0; c<TotalFtns; c++)
+        for (IDNoType c=0; c<TotalSymbols; c++)
         {
             fout << setw(12) << Matrix[p][c] <<" ";
         }
@@ -58,37 +58,34 @@ void Matrix2D::Print(ostream &fout)
 
 void Matrix2D::PrintMatrix(ostream &fout)
 {
-    IDNoType TotalFtns = symTable.TotalSymbolCount();
-    CHECK_LT(TotalFtns, Matrix.size());
+    ECHO("Printing communication matrix as table in text");
+    IDNoType TotalSymbols = symTable.TotalSymbolCount();
+    CHECK_LT(TotalSymbols, Matrix.size());
 
     fout << setw(25) << " ";
-    for (IDNoType c=0; c<TotalFtns; c++)
+    for (IDNoType c=0; c<TotalSymbols; c++)
     {
-        if ( symTable.SymIsFunc(c) )
-            fout << setw(25) << symTable.GetSymName(c);
+        fout << setw(25) << symTable.GetSymName(c);
     }
     fout << endl;
 
-    for (IDNoType p=0; p<TotalFtns; p++)
+    for (IDNoType p=0; p<TotalSymbols; p++)
     {
-        if ( symTable.SymIsFunc(p) )
-        {
-            fout << setw(25) << symTable.GetSymName(p);
+        fout << setw(25) << symTable.GetSymName(p);
 
-            for (IDNoType c=0; c<TotalFtns; c++)
-            {
-                if ( symTable.SymIsFunc(c) )
-                    fout << setw(25) << Matrix[p][c];
-            }
-            fout<<endl;
+        for (IDNoType c=0; c<TotalSymbols; c++)
+        {
+            fout << setw(25) << Matrix[p][c];
         }
+        fout<<endl;
     }
 }
 
 void Matrix2D::PrintDot(ostream &dotout)
 {
-    IDNoType TotalFtns = symTable.TotalSymbolCount();
-    CHECK_LT(TotalFtns, Matrix.size());
+    ECHO("Printing communication in DOT");
+    IDNoType TotalSymbols = symTable.TotalSymbolCount();
+    CHECK_LT(TotalSymbols, Matrix.size());
 
     dotout << "digraph {\ngraph [];"
 //                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
@@ -97,7 +94,7 @@ void Matrix2D::PrintDot(ostream &dotout)
 
     string objNodeStyle("fontcolor=black, shape=box, fontsize=20");
     string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
-    for (IDNoType c=0; c<TotalFtns; c++)
+    for (IDNoType c=0; c<TotalSymbols; c++)
     {
         if ( symTable.SymIsObj(c) )
             dotout << "\"" << (u16)c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << objNodeStyle << "];" << endl;
@@ -108,9 +105,9 @@ void Matrix2D::PrintDot(ostream &dotout)
     int color;
     float maxComm = MaxCommunication();
 
-    for (IDNoType p=0; p<TotalFtns; p++)
+    for (IDNoType p=0; p<TotalSymbols; p++)
     {
-        for (IDNoType c=0; c<TotalFtns; c++)
+        for (IDNoType c=0; c<TotalSymbols; c++)
         {
             float comm = Matrix[p][c];
             if(comm > 0 )

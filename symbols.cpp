@@ -24,34 +24,52 @@ Symbol* Symbols::GetSymbolPtr(uptr saddr)
         return nullptr;
 }
 
-Symbol* Symbols::InsertAndGetObjectPtr(Symbol& newsym)
+void Symbols::InsertMallocCalloc(Symbol& newsym)
 {
     uptr saddr = newsym.GetStartAddr();
-    IDNoType id = GetObjectID(saddr);
-    if(id == UnknownID) // insert
-    {
-        IDNoType id=GlobalID++;
-        newsym.SetID(id);
 
-        //u32 locidx = sym.symLocIndex;
-        //LocIndex2ID[locidx] = id;
+    IDNoType id=GlobalID++;
+    newsym.SetID(id);
 
-        // Assign some name to this object symbol
-        // TODO following can be done later at the end when names are really needed
-        newsym.SetName( "Object" + to_string(id) );
+    //u32 locidx = sym.symLocIndex;
+    //LocIndex2ID[locidx] = id;
 
-        //TODO this can be done at the initialization of new obj in pintrace
-        newsym.SetType(SymType::OBJ);
+    // Assign some name to this object symbol
+    // TODO following can be done later at the end when names are really needed
+    newsym.SetName( "Object" + to_string(id) );
 
-        D1ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");    
-        _Symbols[id] = newsym;
+    //TODO this can be done at the initialization of new obj in pintrace
+    newsym.SetType(SymType::OBJ);
 
-        // we also need to set the object ids in the shadow table/mem for this object
-        InitObjectIDs(saddr, newsym.GetSize(), id);
-    }
+    D2ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");
+    _Symbols[id] = newsym;
 
-    Symbol* symptr = &(_Symbols[id]);
-    return symptr;
+    // we also need to set the object ids in the shadow table/mem for this object
+    D2ECHO("Setting object ID as " << id << " on a size " << newsym.GetSize());
+    InitObjectIDs(saddr, newsym.GetSize(), id);
+}
+
+void Symbols::UpdateReallocAndGetObjectPtr(Symbol& newsym)
+{
+    uptr saddr = newsym.GetStartAddr();
+    IDNoType id = newsym.GetID();
+
+    Symbol& availSym = _Symbols[id];
+    availSym.SetStartAddr(saddr);
+
+    // Assign some name to this object symbol
+    // TODO following can be done later at the end when names are really needed
+    availSym.SetName( "Object" + to_string(id) );
+
+    // TODO this can be done at the initialization of new obj in pintrace
+    availSym.SetType(SymType::OBJ);
+
+    u32 newsize = newsym.GetSize();
+    availSym.SetSize(newsize);
+
+    // we also need to set the object ids in the shadow table/mem for this object
+    D2ECHO("Setting object ID as " << id << " on a size " << newsym.GetSize());
+    InitObjectIDs(saddr, newsize, id);
 }
 
 void Symbols::InsertFunction(const string& ftnname)
@@ -59,7 +77,7 @@ void Symbols::InsertFunction(const string& ftnname)
     D1ECHO("Adding Function Symbol " << ftnname << " to Symbol Table");
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
-    Symbol sym(id, ftnname, SymType::NA);
+    Symbol sym(id, ftnname, SymType::FUNC);
 
     _Symbols[id] = sym;
 }

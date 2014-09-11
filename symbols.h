@@ -96,6 +96,7 @@ public:
     void Print(ostream& fout=std::cout);
 
     void SetLocIndex(u32 idx) { symLocIndex = idx; }
+    u32 GetLocIndex() { return symLocIndex; }
     u32 GetLine() {return Locations.GetLocation(symLocIndex).GetLineNo();}
     void SetSize(u32 s) {size = s;}
     u32 GetSize() { return size; }
@@ -118,7 +119,8 @@ private:
 
 public:
     Symbols(){}
-    Symbol* InsertAndGetObjectPtr(Symbol& newsym);
+    void InsertMallocCalloc(Symbol& newsym);
+    void UpdateReallocAndGetObjectPtr(Symbol& newsym);
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
     Symbol* GetSymbolPtr(uptr saddr1);
