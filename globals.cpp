@@ -1,6 +1,8 @@
 #include "globals.h"
 #include "pin.H"
 
+IDNoType GlobalID=UnknownID;
+
 using namespace std;
 
 bool isEmpty(ifstream& fin)

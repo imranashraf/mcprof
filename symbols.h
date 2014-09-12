@@ -66,7 +66,7 @@ private:
     u32 size;
     string name;
     SymType symType;
-    u32 symLocIndex;
+    u32 symLocIndex; //TODO not really needed now if using ID2LocIdx map
 
 public:
     Symbol() :
@@ -120,7 +120,7 @@ private:
 public:
     Symbols(){}
     void InsertMallocCalloc(Symbol& newsym);
-    void UpdateReallocAndGetObjectPtr(Symbol& newsym);
+    void UpdateRealloc(Symbol& newsym);
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
     Symbol* GetSymbolPtr(uptr saddr1);

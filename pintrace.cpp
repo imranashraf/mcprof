@@ -28,7 +28,7 @@
 // Global variables
 /* ================================================================== */
 extern map <string,IDNoType> FuncName2ID;
-
+// extern map <u32,IDNoType> LocIndex2ID;
 extern Symbols symTable;
 extern Matrix2D ComMatrix;
 
@@ -212,11 +212,34 @@ VOID RecordRoutineExit(VOID *ip)
 Symbol newSymbol; // TODO may be create it as object sym
 Symbol* currSymbol = &newSymbol; // TODO setting it to nullptr crashes
 
-void SetCurrCallLocIdx(u32 locidx)
+// void SetIDOfCurrCall(u32 locIndex)
+// {
+//     D2ECHO("setting last function call id/location");
+//     IDNoType id;
+//     bool seenLocIdx = (LocIndex2ID.find(locIndex) != LocIndex2ID.end() );
+//     if(seenLocIdx)    // available locIndex
+//     {
+//         id = LocIndex2ID[locIndex];
+//     }
+//     else    // new locIndex
+//     {
+//         // Get a new id for this location
+//         id=GlobalID++;
+//         // Insert it in the mapping for later retrieval
+//         LocIndex2ID[locIndex] = id;
+//     }
+// 
+//     currSymbol = &newSymbol;
+//     currSymbol->SetID(id);    // update ID
+//     currSymbol->SetLocIndex(locIndex);    // TODO update locIndex (not really needed now)
+// }
+
+void SetIDOfCurrCall(u32 locIndex, u16 id)
 {
-    D2ECHO("setting last function call location");
-    currSymbol = &newSymbol;
-    currSymbol->SetLocIndex(locidx);    // so update location as well
+    D2ECHO("setting last function call id/locIndex");
+    //currSymbol = &newSymbol; // TODO not needed as currSymbol is not later modified now
+    currSymbol->SetID(id);    // update ID
+    currSymbol->SetLocIndex(locIndex);    // TODO update locIndex (not really needed now)
 }
 
 // This is used both for malloc and calloc
@@ -265,7 +288,7 @@ VOID ReallocAfter(uptr addr)
             D2ECHO("setting realloc start address " << ADDR(addr) );
             currSymbol->SetStartAddr(addr);
         }
-        symTable.UpdateReallocAndGetObjectPtr(*currSymbol);
+        symTable.UpdateRealloc(*currSymbol);
     }
 }
 
@@ -374,54 +397,52 @@ VOID Image_cb(IMG img, VOID * v)
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_Close(freeRtn);
         }
+    }
 
-        RTN memcpyRtn = RTN_FindByName(img, MEMCPY.c_str() );
-        if (RTN_Valid(memcpyRtn))
-        {
-            ECHO("detected memcpy");
-            RTN_Open(memcpyRtn);
+    // Set the producers properly for the following functions
+    RTN memcpyRtn = RTN_FindByName(img, MEMCPY.c_str() );
+    if (RTN_Valid(memcpyRtn))
+    {
+        RTN_Open(memcpyRtn);
 
-            // Instrument memcpy() to print the input arguments
-            RTN_InsertCall(memcpyRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-                           IARG_END);
+        // Instrument memcpy() to print the input arguments
+        RTN_InsertCall(memcpyRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+                        IARG_END);
 
-            RTN_Close(memcpyRtn);
-        }
+        RTN_Close(memcpyRtn);
+    }
 
-        RTN memmoveRtn = RTN_FindByName(img, MEMMOVE.c_str() );
-        if (RTN_Valid(memmoveRtn))
-        {
-            ECHO("detected memmove");
-            RTN_Open(memmoveRtn);
+    RTN memmoveRtn = RTN_FindByName(img, MEMMOVE.c_str() );
+    if (RTN_Valid(memmoveRtn))
+    {
+        RTN_Open(memmoveRtn);
 
-            // Instrument memcpy() to print the input arguments
-            RTN_InsertCall(memmoveRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-                           IARG_END);
+        // Instrument memcpy() to print the input arguments
+        RTN_InsertCall(memmoveRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+                        IARG_END);
 
-            RTN_Close(memmoveRtn);
-        }
+        RTN_Close(memmoveRtn);
+    }
 
-        RTN memsetRtn = RTN_FindByName(img, MEMSET.c_str() );
-        if (RTN_Valid(memsetRtn))
-        {
-            ECHO("detected memset");
-            RTN_Open(memsetRtn);
+    RTN memsetRtn = RTN_FindByName(img, MEMSET.c_str() );
+    if (RTN_Valid(memsetRtn))
+    {
+        RTN_Open(memsetRtn);
 
-            // Instrument memcpy() to print the input arguments
-            RTN_InsertCall(memsetRtn, IPOINT_BEFORE, (AFUNPTR)MemsetBefore,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-                           IARG_END);
+        // Instrument memcpy() to print the input arguments
+        RTN_InsertCall(memsetRtn, IPOINT_BEFORE, (AFUNPTR)MemsetBefore,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                        IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+                        IARG_END);
 
-            RTN_Close(memsetRtn);
-        }
+        RTN_Close(memsetRtn);
     }
 
     // Traverse the sections of the image.
@@ -495,18 +516,21 @@ VOID Image_cb(IMG img, VOID * v)
                             u32 locIndex = Locations.Insert( Location(line, filename) );
                             ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
                                     << filename <<":"<< line);
+
+                            // Get a new id for this location
+                            IDNoType id=GlobalID++;
+
                             INS_InsertCall
                             (
                                 ins,
                                 IPOINT_BEFORE,
-                                AFUNPTR(SetCurrCallLocIdx),
+                                AFUNPTR(SetIDOfCurrCall),
                                 IARG_UINT32, locIndex,
+                                IARG_UINT32, id,
                                 IARG_END
                             );
                         }
                     }
-                    //TODO may be we can continue here in this case to speed it up
-                    continue;
                 }
 
                 UINT32 memOperands = INS_MemoryOperandCount(ins);

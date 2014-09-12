@@ -16,10 +16,20 @@ void RecordWriteEngine3(uptr addr, u32 size)
     IDNoType objid = GetObjectID(addr);
 
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    for(u32 i=0; i<size; i++)
+    if(objid == UnknownID)
     {
-        SetProducer(prod, addr+i);
-        ComMatrix.RecordCommunication(prod, objid, 1);
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer(prod, addr+i);
+        }
+    }
+    else
+    {
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer(prod, addr+i);
+            ComMatrix.RecordCommunication(prod, objid, 1);
+        }
     }
 }
 
@@ -27,25 +37,24 @@ void RecordReadEngine3(uptr addr, u32 size)
 {
     IDNoType cons = CallStack.Top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-//     IDNoType prod;
+    IDNoType prod;
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
 
-    //TODO for now its not needed to check, later if UnknownObjID is used then may be!
-//     if(objid != UnknownID)
+    //TODO may be UnknownObjID
+    if(objid == UnknownID)
     {
         for(u32 i=0; i<size; i++)
         {
-//             prod = GetProducer(addr+i);
+            prod = GetProducer(addr+i);
+            ComMatrix.RecordCommunication(prod, cons, 1);
+        }
+    }
+    else
+    {
+        for(u32 i=0; i<size; i++)
+        {
             ComMatrix.RecordCommunication(objid, cons, 1);
         }
     }
-//     else
-//     {
-//         for(u32 i=0; i<size; i++)
-//         {
-//             prod = GetProducer(addr+i);
-//             ComMatrix.RecordCommunication(prod, cons, 1);
-//         }
-//     }
 }

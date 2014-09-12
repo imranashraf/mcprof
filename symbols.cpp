@@ -3,8 +3,6 @@
 
 extern map <string,IDNoType> FuncName2ID;
 
-map <u32,IDNoType> LocIndex2ID;
-
 // List of all locations of symbols
 LocationList Locations;
 
@@ -27,12 +25,7 @@ Symbol* Symbols::GetSymbolPtr(uptr saddr)
 void Symbols::InsertMallocCalloc(Symbol& newsym)
 {
     uptr saddr = newsym.GetStartAddr();
-
-    IDNoType id=GlobalID++;
-    newsym.SetID(id);
-
-    //u32 locidx = sym.symLocIndex;
-    //LocIndex2ID[locidx] = id;
+    IDNoType id = newsym.GetID();
 
     // Assign some name to this object symbol
     // TODO following can be done later at the end when names are really needed
@@ -41,7 +34,7 @@ void Symbols::InsertMallocCalloc(Symbol& newsym)
     //TODO this can be done at the initialization of new obj in pintrace
     newsym.SetType(SymType::OBJ);
 
-    D2ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");
+    ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");
     _Symbols[id] = newsym;
 
     // we also need to set the object ids in the shadow table/mem for this object
@@ -49,7 +42,7 @@ void Symbols::InsertMallocCalloc(Symbol& newsym)
     InitObjectIDs(saddr, newsym.GetSize(), id);
 }
 
-void Symbols::UpdateReallocAndGetObjectPtr(Symbol& newsym)
+void Symbols::UpdateRealloc(Symbol& newsym)
 {
     uptr saddr = newsym.GetStartAddr();
     IDNoType id = newsym.GetID();
@@ -74,11 +67,11 @@ void Symbols::UpdateReallocAndGetObjectPtr(Symbol& newsym)
 
 void Symbols::InsertFunction(const string& ftnname)
 {
-    D1ECHO("Adding Function Symbol " << ftnname << " to Symbol Table");
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC);
-
+    ECHO("Adding Function Symbol " << ftnname
+        << " with id "<< id <<" to Symbol Table");
     _Symbols[id] = sym;
 }
 

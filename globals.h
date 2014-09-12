@@ -63,7 +63,7 @@ typedef signed   long long  s64;
 typedef u16 IDNoType;
 
 static const IDNoType UnknownID=0;
-static volatile IDNoType GlobalID=UnknownID;
+extern IDNoType GlobalID;
 
 static const std::string UnknownFtn("UnknownFtn");
 static const std::string UnknownObj("UnknownObj");
