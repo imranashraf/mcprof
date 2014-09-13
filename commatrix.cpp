@@ -84,7 +84,8 @@ void Matrix2D::PrintMatrix(ostream &fout)
 void Matrix2D::PrintDot(ostream &dotout)
 {
     ECHO("Printing communication in DOT");
-    IDNoType TotalSymbols = symTable.TotalSymbolCount();
+    u16 TotalSymbols = GlobalID;
+    ECHO( VAR(TotalSymbols) );
     CHECK_LT(TotalSymbols, Matrix.size());
 
     dotout << "digraph {\ngraph [];"
@@ -94,20 +95,24 @@ void Matrix2D::PrintDot(ostream &dotout)
 
     string objNodeStyle("fontcolor=black, shape=box, fontsize=20");
     string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
-    for (IDNoType c=0; c<TotalSymbols; c++)
+    for (u16 c=0; c<TotalSymbols; c++)
     {
-        if ( symTable.SymIsObj(c) )
-            dotout << "\"" << (u16)c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << objNodeStyle << "];" << endl;
-        else
-            dotout << "\"" << (u16)c << "\"" << " [label=\"" << symTable.GetSymName(c) << "\"" << ftnNodeStyle << "];" << endl;
+        string symname = symTable.GetSymName(c);
+        if( !symname.empty() )
+        {
+            if ( symTable.SymIsObj(c) )
+                dotout << "\"" << (u16)c << "\"" << " [label=\"" << symname << "\"" << objNodeStyle << "];" << endl;
+            else
+                dotout << "\"" << (u16)c << "\"" << " [label=\"" << symname << "\"" << ftnNodeStyle << "];" << endl;
+        }
     }
 
     int color;
     float maxComm = MaxCommunication();
 
-    for (IDNoType p=0; p<TotalSymbols; p++)
+    for (u16 p=0; p<TotalSymbols; p++)
     {
-        for (IDNoType c=0; c<TotalSymbols; c++)
+        for (u16 c=0; c<TotalSymbols; c++)
         {
             float comm = Matrix[p][c];
             if(comm > 0 )

@@ -126,8 +126,8 @@ public:
     u32 GetSymSize(IDNoType idno);
     Symbol* GetSymbolPtr(uptr saddr1);
     bool IsSeenFunctionName(string& ftnName);
-    IDNoType TotalSymbolCount();
-    IDNoType TotalFunctionCount(); // count of function symbols only
+    u16 TotalSymbolCount();
+    u16 TotalFunctionCount(); // count of function symbols only
     void Remove(uptr saddr);
     bool SymIsObj(IDNoType idno);
     bool SymIsFunc(IDNoType idno);

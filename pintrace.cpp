@@ -124,20 +124,18 @@ void SelectAnalysisEngine()
 /* ===================================================================== */
 
 BOOL ValidFtnName(string name)
-{
+{ 
+    // TODO name.compare > 0 or something like this ... or is it bool? (wrap_)
     return
         !(
-//         name[0]=='_' ||
-            name[0]=='?' ||
+            name.c_str()[0]=='_' ||
+            name.c_str()[0]=='?' ||
             !name.compare("atexit") ||
-            // following wrappers can be a single condition "wrap_"
+//             !name.compare("wrap_") ||
             !name.compare("wrap_malloc") ||
             !name.compare("wrap_calloc") ||
             !name.compare("wrap_realloc") ||
             !name.compare("wrap_free") ||
-            !name.compare("wrap_memcpy") ||
-            !name.compare("wrap_memmove") ||
-            !name.compare("wrap_memset") ||
             !name.compare("wrap_strdup") ||
 #ifdef WIN32
             !name.compare("GetPdbDll") ||
@@ -169,18 +167,18 @@ BOOL ValidFtnName(string name)
         );
 }
 
-VOID RecordRoutineEntry(VOID *ip)
+VOID RecordRoutineEntry(CHAR* rname)
 {
-    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-
-    D1ECHO ("Entring Routine : " << rname );
+    D1ECHO ("Entering Routine : " << rname );
     CallStack.Push(FuncName2ID[rname]);
 
     // In engine 4, to save time, the curr call is selected only at func entry,
     // so that it does not need to be determined on each access
     if (KnobEngine.Value() == 4)
-        SetCurrCall(rname);
+    {
+        string str(rname);
+        SetCurrCall( str );
+    }
 }
 
 
@@ -191,48 +189,27 @@ VOID RecordRoutineExit(VOID *ip)
 
     if(!(CallStack.Empty()) && ( CallStack.Top() == FuncName2ID[rname] ) )
     {
-        D1ECHO("Leaving Routine : " << rname);
+        D1ECHO("Leaving Routine : " << rname 
+            << " Popping call stack top is " << symTable.GetSymName( CallStack.Top() ) );
         CallStack.Pop();
-#if (DEBUG>0)
+// #if (DEBUG>0)
     }
     else if (!(CallStack.Empty()) )
     {
         D1ECHO("Not Leaving Routine : "<< VAR(rname)
-               << VAR(CallStack.Top()));
+            << " call stack top is " << symTable.GetSymName( CallStack.Top() ) );
     }
     else
     {
-        D1ECHO("Not Leaving Routine as CallStack empty without : "
-               << VAR(rname));
-#endif
+        D1ECHO("Not Leaving Routine : " << VAR(rname) 
+            << " as CallStack empty" );
+// #endif
     }
 
 }
 
 Symbol newSymbol; // TODO may be create it as object sym
 Symbol* currSymbol = &newSymbol; // TODO setting it to nullptr crashes
-
-// void SetIDOfCurrCall(u32 locIndex)
-// {
-//     D2ECHO("setting last function call id/location");
-//     IDNoType id;
-//     bool seenLocIdx = (LocIndex2ID.find(locIndex) != LocIndex2ID.end() );
-//     if(seenLocIdx)    // available locIndex
-//     {
-//         id = LocIndex2ID[locIndex];
-//     }
-//     else    // new locIndex
-//     {
-//         // Get a new id for this location
-//         id=GlobalID++;
-//         // Insert it in the mapping for later retrieval
-//         LocIndex2ID[locIndex] = id;
-//     }
-// 
-//     currSymbol = &newSymbol;
-//     currSymbol->SetID(id);    // update ID
-//     currSymbol->SetLocIndex(locIndex);    // TODO update locIndex (not really needed now)
-// }
 
 void SetIDOfCurrCall(u32 locIndex, u16 id)
 {
@@ -299,7 +276,6 @@ VOID FreeBefore(ADDRINT addr)
     //symTable.Remove(addr);
 }
 
-
 VOID StrdupBefore(uptr addr)
 {
     D2ECHO("setting strdup start address " << ADDR(addr) );
@@ -318,38 +294,8 @@ VOID StrdupAfter(uptr dstAddr)
     symTable.InsertMallocCalloc(*currSymbol);
 }
 
-
-// both for memcpy and memmove
-VOID MemcpyBefore(uptr dst, uptr src, u32 size)
-{
-    D2ECHO("memcpy/memmove" << ADDR(dst) << " " << ADDR(src) << " " << VAR(size) );
-    // Effectively memcpy/memmove is write recording, which records communication
-    // and also sets the producer accordingly
-    WriteRecorder(dst, size);
-}
-
-VOID MemsetBefore(uptr dst, u8 val, u32 size)
-{
-    D2ECHO("memset" << ADDR(dst) << " " << VAR(val) << " " << VAR(size) );
-    // Effectively memset is write recording, which records communication
-    // and also sets the producer accordingly
-    WriteRecorder(dst, size);
-}
-
-// both for memcpy and memmove
-VOID StrcpyBefore(uptr dstAddr, uptr srcAddr)
-{
-    IDNoType srcID = GetObjectID(srcAddr);
-    u32 srcSize = symTable.GetSymSize(srcID);
-    
-    D2ECHO("strcpy" << ADDR(dst) << " " << ADDR(src) << " " << VAR(size) );
-    // Effectively strcpy is write recording, which records communication
-    // and also sets the producer accordingly
-    WriteRecorder(dstAddr, srcSize);
-}
-
 // IMG instrumentation routine - called once per image upon image load
-VOID Image_cb(IMG img, VOID * v)
+VOID InstrumentImages(IMG img, VOID * v)
 {
     string imgname = IMG_Name(img);
 
@@ -447,114 +393,14 @@ VOID Image_cb(IMG img, VOID * v)
 
     }
 
-    // Set the producers properly for the following functions
-    RTN memcpyRtn = RTN_FindByName(img, MEMCPY.c_str() );
-    if (RTN_Valid(memcpyRtn))
-    {
-        RTN_Open(memcpyRtn);
-
-        // Instrument memcpy() to print the input arguments
-        RTN_InsertCall(memcpyRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-                        IARG_END);
-
-        RTN_Close(memcpyRtn);
-    }
-
-    RTN memmoveRtn = RTN_FindByName(img, MEMMOVE.c_str() );
-    if (RTN_Valid(memmoveRtn))
-    {
-        RTN_Open(memmoveRtn);
-
-        // Instrument memcpy() to print the input arguments
-        RTN_InsertCall(memmoveRtn, IPOINT_BEFORE, (AFUNPTR)MemcpyBefore,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-                        IARG_END);
-
-        RTN_Close(memmoveRtn);
-    }
-
-    RTN memsetRtn = RTN_FindByName(img, MEMSET.c_str() );
-    if (RTN_Valid(memsetRtn))
-    {
-        RTN_Open(memsetRtn);
-
-        // Instrument memcpy() to print the input arguments
-        RTN_InsertCall(memsetRtn, IPOINT_BEFORE, (AFUNPTR)MemsetBefore,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                        IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-                        IARG_END);
-
-        RTN_Close(memsetRtn);
-    }
-
-    RTN strcpyRtn = RTN_FindByName(img, STRCPY.c_str() );
-    if (RTN_Valid(strcpyRtn))
-    {
-        RTN_Open(strcpyRtn);
-        
-        // Instrument memcpy() to print the input arguments
-        RTN_InsertCall(strcpyRtn, IPOINT_BEFORE, (AFUNPTR)StrcpyBefore,
-                       IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-                       IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-                       IARG_END);
-        
-        RTN_Close(strcpyRtn);
-    }
-    
     // Traverse the sections of the image.
     for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec))
     {
-
         // For each section, process all RTNs.
         for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn))
         {
-            /*
-            * The following function recording can be done at the instrumentation time as below
-            * instead of doing at analysis time in RecordRoutineEntry(). This will result
-            * in more functions in SeenFnames which may not be even involved in communication.
-            * This, however, is not as such a problem as it will simply clutter the output.
-            */
-
-            string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
-
-            if (!ValidFtnName(rname))
-            {
-                D1ECHO ("Skipping Instrumentation of Invalid Routine : " << rname);
-                continue;
-            }
-
-            if( KnobSelectFunctions.Value() )
-            {
-                // In Select Function mode, functions are added a priori from
-                // the list file to symbol table. So, if a function is not
-                // found in symbol table, it means it is not in select ftn list
-                // so it should be skiped
-                if( ! symTable.IsSeenFunctionName(rname) )
-                {
-                    D1ECHO ("Skipping Instrumentation of un-selected Routine : " << rname);
-                    continue;
-                }
-            }
-            else
-            {
-                // First time seeing this valid function name, save it in the list
-                symTable.InsertFunction(rname);
-            }
-
-            D1ECHO ("Instrumenting Routine : " << rname);
-
             // Many RTN APIs require that the RTN be opened first.
             RTN_Open(rtn);
-
-            // Rest (apart from .plt) of the valid routines are instrumented
-            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                           IARG_INST_PTR ,IARG_END);
 
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
@@ -596,32 +442,6 @@ VOID Image_cb(IMG img, VOID * v)
                     }
                 }
 
-                UINT32 memOperands = INS_MemoryOperandCount(ins);
-                bool isStack = INS_IsStackRead(ins) || INS_IsStackWrite(ins);
-                if(!isStack || KnobStackAccess.Value())
-                {
-                    for (UINT32 memOp = 0; memOp < memOperands; memOp++)
-                    {
-                        size_t refSize = INS_MemoryOperandSize(ins, memOp);
-                        if (INS_MemoryOperandIsRead(ins, memOp))
-                        {
-                            INS_InsertPredicatedCall(
-                                ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                                IARG_MEMORYOP_EA, memOp,
-                                IARG_UINT32, refSize,
-                                IARG_END);
-                        }
-
-                        if (INS_MemoryOperandIsWritten(ins, memOp))
-                        {
-                            INS_InsertPredicatedCall(
-                                ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
-                                IARG_MEMORYOP_EA, memOp,
-                                IARG_UINT32, refSize,
-                                IARG_END);
-                        }
-                    }
-                }
                 if (INS_IsRet(ins))
                 {
                     INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
@@ -630,6 +450,175 @@ VOID Image_cb(IMG img, VOID * v)
                 }
             }
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
+        }
+    }
+}
+
+/*
+VOID InstrumentInstructions(INS ins, VOID* v)
+{
+    UINT32 memOperands = INS_MemoryOperandCount(ins);
+    for (UINT32 memOp = 0; memOp < memOperands; memOp++)
+    {
+        size_t refSize = INS_MemoryOperandSize(ins, memOp);
+        if ( //KnobStackAccess.Value() && INS_IsStackRead(ins) && 
+            INS_MemoryOperandIsRead(ins, memOp))
+        {
+            INS_InsertPredicatedCall(
+                ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                                        IARG_MEMORYOP_EA, memOp,
+                                        IARG_UINT32, refSize,
+                                        IARG_END);
+        }
+        
+        if ( //KnobStackAccess.Value() && INS_IsStackWrite(ins) && 
+            INS_MemoryOperandIsWritten(ins, memOp))
+        {
+            INS_InsertPredicatedCall(
+                ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
+                                        IARG_MEMORYOP_EA, memOp,
+                                        IARG_UINT32, refSize,
+                                        IARG_END);
+        }
+    }
+}
+*/
+
+/*
+// without stack
+VOID InstrumentTraces(TRACE trace, VOID *v)
+{
+    for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
+    {
+        for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
+        {
+            UINT32 memoryOperands = INS_MemoryOperandCount(ins);
+            
+            for (UINT32 memOp = 0; memOp < memoryOperands; memOp++)
+            {
+                UINT32 refSize = INS_MemoryOperandSize(ins, memOp);
+                
+                // Note that if the operand is both read and written,
+                // we record it once for each.
+                if (INS_MemoryOperandIsRead(ins, memOp))
+                {
+                    INS_InsertPredicatedCall(
+                        ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                                             IARG_MEMORYOP_EA, memOp,
+                                             IARG_UINT32, refSize,
+                                             IARG_END);
+                }
+                
+                if (INS_MemoryOperandIsWritten(ins, memOp))
+                {
+                    INS_InsertPredicatedCall(
+                        ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
+                                             IARG_MEMORYOP_EA, memOp,
+                                             IARG_UINT32, refSize,
+                                             IARG_END);
+                }
+            }
+        }
+    }
+}
+*/
+
+VOID InstrumentTraces(TRACE trace, VOID *v)
+{
+    for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
+    {
+        for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
+        {
+            
+            if (INS_IsMemoryRead(ins) && !(KnobStackAccess.Value() && INS_IsStackRead(ins)) )
+            {
+                INS_InsertPredicatedCall
+                (
+                    ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                    IARG_MEMORYREAD_EA,
+                    IARG_MEMORYREAD_SIZE,
+                    //IARG_UINT32, INS_IsPrefetch(ins),
+                    IARG_END
+                );
+            }
+            
+            if (INS_HasMemoryRead2(ins))
+            {
+                INS_InsertPredicatedCall
+                (
+                    ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                    IARG_MEMORYREAD2_EA,
+                    IARG_MEMORYREAD_SIZE,
+                    //IARG_UINT32, INS_IsPrefetch(ins),
+                    IARG_END
+                );
+            }
+            
+            if (INS_IsMemoryWrite(ins) && !(KnobStackAccess.Value() && INS_IsStackWrite(ins)))
+            {
+                INS_InsertPredicatedCall
+                (
+                    ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
+                    IARG_MEMORYWRITE_EA,
+                    IARG_MEMORYWRITE_SIZE,
+                    //IARG_UINT32, INS_IsPrefetch(ins),
+                    IARG_END
+                );
+            }
+            
+        }
+    }
+}
+
+
+VOID InstrumentRoutines(RTN rtn, VOID *v)
+{
+    /*
+     * The following function recording can be done at the instrumentation time as below
+     * instead of doing at analysis time in RecordRoutineEntry(). This will result
+     * in more functions in SeenFnames which may not be even involved in communication.
+     * This, however, is not as such a problem as it will simply clutter the output.
+     */
+    IMG img = SEC_Img(RTN_Sec(rtn));
+    //imagename = IMG_Name(img).c_str());
+    
+    if( IMG_IsMainExecutable(img) )
+    {
+        string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
+
+        if (ValidFtnName(rname))
+        {
+      
+            if( KnobSelectFunctions.Value() )
+            {
+                // In Select Function mode, functions are added a priori from
+                // the list file to symbol table. So, if a function is not
+                // found in symbol table, it means it is not in select ftn list
+                // so it should be skiped
+                if( !symTable.IsSeenFunctionName(rname) )
+                {
+                    D1ECHO ("Skipping Instrumentation of un-selected Routine : " << rname);
+                    return;
+                }
+            }
+            else
+            {
+                // First time seeing this valid function name, save it in the list
+                symTable.InsertFunction(rname);
+            }
+
+            D1ECHO ("Instrumenting Routine : " << rname);        
+            RTN_Open(rtn);
+            
+            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
+                           IARG_ADDRINT, rname.c_str(),
+                           IARG_END);
+            
+            RTN_Close(rtn);
+        }
+        else
+        {
+            D1ECHO ("Skipping Instrumentation of Invalid Routine : " << rname);
         }
     }
 }
@@ -725,8 +714,14 @@ void SetupPin(int argc, char *argv[])
     D1ECHO("Selecting Analysis Engine ...");
     SelectAnalysisEngine();
 
-    // Register function for Image level instrumentation
-    IMG_AddInstrumentFunction(Image_cb, 0);
+    // Register function for Image-level instrumentation
+    IMG_AddInstrumentFunction(InstrumentImages, 0);
+    // Register function for Routine-level instrumentation
+    RTN_AddInstrumentFunction(InstrumentRoutines, 0);
+    // Register function for Trace-level instrumentation
+    TRACE_AddInstrumentFunction(InstrumentTraces, 0);
+    // Register function for Instruction-level instrumentation
+//     INS_AddInstrumentFunction(InstrumentInstructions, 0);
 
     // Register function to be called when the application exits
     PIN_AddFiniFunction(TheEnd, 0);

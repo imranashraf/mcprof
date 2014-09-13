@@ -40,7 +40,7 @@ void Symbols::InsertMallocCalloc(Symbol& newsym)
     //TODO this can be done at the initialization of new obj in pintrace
     newsym.SetType(SymType::OBJ);
 
-    ECHO("Adding Object Symbol " << VAR(id) << " to Symbol Table");
+    D1ECHO("Adding Object Symbol with id : " << int(id) << " to Symbol Table");
     _Symbols[id] = newsym;
 
     // we also need to set the object ids in the shadow table/mem for this object
@@ -76,8 +76,8 @@ void Symbols::InsertFunction(const string& ftnname)
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC);
-    ECHO("Adding Function Symbol " << ftnname
-        << " with id "<< id <<" to Symbol Table");
+    ECHO("Adding Function Symbol: " << ftnname 
+        << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
 }
 

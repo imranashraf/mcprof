@@ -5,8 +5,7 @@
 #include "symbols.h"
 
 extern CallStackType CallStack; // main call stack
-extern std::map <std::string,u16> FuncName2ID;
-//extern std::map <u16,std::string> symTable.GetSymName;
+extern std::map <std::string,IDNoType> FuncName2ID;
 extern Symbols symTable;
 
 // all calls written to this file

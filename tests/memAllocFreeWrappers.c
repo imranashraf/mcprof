@@ -27,20 +27,20 @@ int nbytes;
 void initVecs()
 {
     int i;
-#   if 1
+#   if 0
     memset(srcArr1, 1, nbytes );
 #   else 
     for(i = 0; i < SIZE; i++) {
         srcArr1[i]=i*5 + 7;
-//         srcArr2[i]=2*i - 3;
+        srcArr2[i]=2*i - 3;
     }
 #   endif
 
-#   if 1
-    memcpy(srcArr2, srcArr1, nbytes);
-#   else
-    memmove(srcArr2, srcArr1, nbytes);
-#   endif
+// #   if 1
+//     memcpy(srcArr2, srcArr1, nbytes);
+// #   else
+//     memmove(srcArr2, srcArr1, nbytes);
+// #   endif
 }
 
 void sumVecs()
@@ -106,7 +106,7 @@ int main()
     char* str1 = malloc(10);
 
 //     char* str1 = "Hello";
-#   if 0
+#   if 1
     strcpy(str1, "Hello");
 #   else
     str1[0] = 'U';
@@ -121,17 +121,17 @@ int main()
     printf("Vector Operations Test.\n");
     printf("Total bytes : %d\n",nbytes);
 
-//     srcArr1 = malloc(nbytes);
-//     printf("srcArr1 addr after malloc : %p\n",srcArr1);
+    srcArr1 = malloc(nbytes);
+    printf("srcArr1 addr after malloc : %p\n",srcArr1);
 
-    srcArr1 = calloc(nbytes/2, sizeof(uint32_t) );
-    printf("srcArr1 addr after calloc : %p\n",srcArr1);
+//     srcArr1 = calloc(nbytes/2, sizeof(uint32_t) );
+//     printf("srcArr1 addr after calloc : %p\n",srcArr1);
 
     srcArr2 = malloc(nbytes);
     printf("srcArr2 addr after malloc : %p\n",srcArr2);
 
-    srcArr1 = realloc(srcArr1, nbytes);
-    printf("srcArr1 addr after realloc: %p\n",srcArr1);
+//     srcArr1 = realloc(srcArr1, nbytes);
+//     printf("srcArr1 addr after realloc: %p\n",srcArr1);
 
     sumArr = malloc(nbytes);
     printf("sumArr addr after malloc : %p\n",sumArr);
@@ -152,8 +152,8 @@ int main()
     diffVecs();
     sqrootVecs();
 
-    //printf("output and %s: %d\n", str2, sumArr[1]+diffArr[1]+sqrArr[1]);
-    printf("output and : %d\n", sumArr[1]+diffArr[1]+sqrArr[1]);
+    printf("output and %s: %d\n", str2, sumArr[1]+diffArr[1]+sqrArr[1]);
+//     printf("output and : %d\n", sumArr[1]+diffArr[1]+sqrArr[1]);
 
     free(srcArr1);
     free(srcArr2);

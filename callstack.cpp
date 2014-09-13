@@ -3,7 +3,7 @@
 #include "callstack.h"
 #include "commatrix.h"
 
-extern std::map <std::string,u16> FuncName2ID;
+extern std::map <std::string,IDNoType> FuncName2ID;
 
 extern Symbols symTable;
 

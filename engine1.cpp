@@ -12,11 +12,13 @@ extern CallStackType CallStack;
 
 extern Symbols symTable;
 
-struct Access
+class Access
 {
-    float Reads;
-    float Writes;
-    float Total;
+    public:
+        float Reads;
+        float Writes;
+        float Total;
+        Access() : Reads(0), Writes(0), Total(0) {}
 };
 
 bool _sortByReads (const Access &lhs, const Access &rhs) { return lhs.Reads > rhs.Reads; }
@@ -26,59 +28,45 @@ bool _sortByTotal (const Access &lhs, const Access &rhs) { return lhs.Total > rh
 class Accesses
 {
 private:
-    vector<Access> _Accesses;
+    map<IDNoType,Access> _Accesses;
 
 public:
     Accesses() {}
     void UpdateWrites(IDNoType prod, u32 size)
     {
-        if( prod < _Accesses.size() )
-            _Accesses[prod].Writes += size;   // on later accesses, increment the writes by size
-        else
-        {
-            Access acc;
-            acc.Reads  = 0;
-            acc.Writes = size;
-            acc.Total  = 0;
-            _Accesses.push_back(acc);
-        }
+        _Accesses[prod].Writes += size;   // on later accesses, increment the writes by size
     }
     void UpdateReads(IDNoType cons, u32 size)
     {
-        if( cons < _Accesses.size() )
-            _Accesses[cons].Reads += size;   // on later accesses, increment the writes by size
-        else
-        {
-            Access acc;
-            acc.Reads  = size;
-            acc.Writes = 0;
-            acc.Total  = 0;
-            _Accesses.push_back(acc);
-        }
+        _Accesses[cons].Reads += size;   // on later accesses, increment the writes by size
     }
     void UpdateTotal()
     {
-        for(auto& elem : _Accesses)
+        for(auto& pair : _Accesses)
         {
+            auto& elem = pair.second;
             elem.Total = elem.Reads + elem.Writes;
         }
     }
-    void SortByTotal()
-    {
-        sort(_Accesses.begin(), _Accesses.end(), _sortByTotal);
-    }
+    
+    // this bash command can be used to sort by total access:
+    //      sort -k2 -gr accesses.out
+//     void SortByTotal()
+//     {
+//         sort(_Accesses.begin(), _Accesses.end(), _sortByTotal);
+//     }
 
     void Print(ofstream& fout)
     {
         fout << setw(35) << "Function" << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes"<<endl;
-        IDNoType id = 0;
-        for(auto& elem : _Accesses)
+        for(auto& pair : _Accesses)
         {
+            auto& id = pair.first;
+            auto& elem = pair.second;
             fout << setw(35) << symTable.GetSymName(id)
                  << setw(14) << elem.Total
                  << setw(14) << elem.Reads
                  << setw(14) << elem.Writes << endl;
-            id++;
         }
     }
 };
@@ -99,6 +87,7 @@ void RecordWriteEngine1(uptr addr, u32 size)
 void RecordReadEngine1(uptr addr, u32 size)
 {
     IDNoType cons = CallStack.Top();
+    if(cons==11) ECHO("DETECTED\n");    
     IDNoType oid = GetObjectID(addr);
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
@@ -111,7 +100,7 @@ void PrintAccesses()
     ofstream fout;
     OpenOutFile("accesses.out", fout);
     TotalAccesses.UpdateTotal();
-    TotalAccesses.SortByTotal();
+//     TotalAccesses.SortByTotal();
     TotalAccesses.Print(fout);
     fout.close();
 }
