@@ -299,6 +299,26 @@ VOID FreeBefore(ADDRINT addr)
     //symTable.Remove(addr);
 }
 
+
+VOID StrdupBefore(uptr addr)
+{
+    D2ECHO("setting strdup start address " << ADDR(addr) );
+    currSymbol->SetStartAddr(addr);
+}
+
+VOID StrdupAfter(uptr dstAddr)
+{
+    uptr srcAddr = currSymbol->GetStartAddr();
+    currSymbol->SetStartAddr(dstAddr);
+
+    IDNoType oldid = GetObjectID(srcAddr);
+    u32 srcSize = symTable.GetSymSize(oldid);
+    currSymbol->SetSize(srcSize);
+
+    symTable.InsertMallocCalloc(*currSymbol);
+}
+
+
 // both for memcpy and memmove
 VOID MemcpyBefore(uptr dst, uptr src, u32 size)
 {
@@ -314,6 +334,18 @@ VOID MemsetBefore(uptr dst, u8 val, u32 size)
     // Effectively memset is write recording, which records communication
     // and also sets the producer accordingly
     WriteRecorder(dst, size);
+}
+
+// both for memcpy and memmove
+VOID StrcpyBefore(uptr dstAddr, uptr srcAddr)
+{
+    IDNoType srcID = GetObjectID(srcAddr);
+    u32 srcSize = symTable.GetSymSize(srcID);
+    
+    D2ECHO("strcpy" << ADDR(dst) << " " << ADDR(src) << " " << VAR(size) );
+    // Effectively strcpy is write recording, which records communication
+    // and also sets the producer accordingly
+    WriteRecorder(dstAddr, srcSize);
 }
 
 // IMG instrumentation routine - called once per image upon image load
@@ -397,6 +429,22 @@ VOID Image_cb(IMG img, VOID * v)
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_Close(freeRtn);
         }
+
+        //  Find the strdup() function.
+        RTN strdupRtn = RTN_FindByName(img, STRDUP.c_str() );
+        if (RTN_Valid(strdupRtn))
+        {
+            RTN_Open(strdupRtn);
+
+            // Instrument strdup() to print the input argument value and the return value.
+            RTN_InsertCall(strdupRtn, IPOINT_BEFORE, (AFUNPTR)StrdupBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
+            RTN_InsertCall(strdupRtn, IPOINT_AFTER, (AFUNPTR)StrdupAfter,
+                           IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
+
+            RTN_Close(strdupRtn);
+        }
+
     }
 
     // Set the producers properly for the following functions
@@ -445,6 +493,20 @@ VOID Image_cb(IMG img, VOID * v)
         RTN_Close(memsetRtn);
     }
 
+    RTN strcpyRtn = RTN_FindByName(img, STRCPY.c_str() );
+    if (RTN_Valid(strcpyRtn))
+    {
+        RTN_Open(strcpyRtn);
+        
+        // Instrument memcpy() to print the input arguments
+        RTN_InsertCall(strcpyRtn, IPOINT_BEFORE, (AFUNPTR)StrcpyBefore,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                       IARG_END);
+        
+        RTN_Close(strcpyRtn);
+    }
+    
     // Traverse the sections of the image.
     for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec))
     {
@@ -503,7 +565,8 @@ VOID Image_cb(IMG img, VOID * v)
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
-                    if( (tname == MALLOC) | (tname == CALLOC) || (tname == REALLOC) )
+                    if( (tname == MALLOC) || (tname == CALLOC) ||
+                        (tname == REALLOC) || (tname == STRDUP) )
                     {
                         string filename("");    // This will hold the source file name.
                         INT32 line = 0;     // This will hold the line number within the file.

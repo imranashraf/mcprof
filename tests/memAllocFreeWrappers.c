@@ -103,6 +103,20 @@ void sqrootVecs()
 
 int main()
 {
+    char* str1 = malloc(10);
+
+//     char* str1 = "Hello";
+#   if 0
+    strcpy(str1, "Hello");
+#   else
+    str1[0] = 'U';
+    str1[1] = 'B';
+    str1[2] = 'B';
+    str1[3] = 'I';
+    str1[4] = '\0';
+#endif
+    char* str2 = strdup(str1);
+
     nbytes = SIZE*sizeof(unsigned int);
     printf("Vector Operations Test.\n");
     printf("Total bytes : %d\n",nbytes);
@@ -138,7 +152,8 @@ int main()
     diffVecs();
     sqrootVecs();
 
-    printf("output : %d\n",sumArr[1]+diffArr[1]+sqrArr[1]);
+    //printf("output and %s: %d\n", str2, sumArr[1]+diffArr[1]+sqrArr[1]);
+    printf("output and : %d\n", sumArr[1]+diffArr[1]+sqrArr[1]);
 
     free(srcArr1);
     free(srcArr2);

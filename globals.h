@@ -78,6 +78,7 @@ static const std::string MEMMOVE("wrap_memmove");
 static const std::string MEMSET("wrap_memset");
 
 static const std::string STRDUP("wrap_strdup");
+static const std::string STRCPY("wrap_strcpy");
 
 extern std::map <std::string,IDNoType> FuncName2ID;
 #include "symbols.h"

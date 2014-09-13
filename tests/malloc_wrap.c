@@ -111,3 +111,17 @@ char *wrap_strdup(const char *s,
 	}
 	return p;
 }
+
+char *wrap_strcpy(char *d, const char *s,
+                  const char *file, unsigned int line, const char *func)
+{
+    char *p = strcpy(d, s);
+    if (d != p)
+    {
+        fprintf(stderr,
+                "[%s] returned destination address is different, when copying %zd bytes at %s line %u: %s\n",
+                func, strlen(s), file, line, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}

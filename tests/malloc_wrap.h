@@ -24,7 +24,9 @@ extern "C" {
                       const char *file, unsigned int line, const char *func);
 	char *wrap_strdup(const char *s,
 					  const char *file, unsigned int line, const char *func);
-
+    char *wrap_strcpy(char *d, const char *s,
+                      const char *file, unsigned int line, const char *func);
+    
 #ifdef __cplusplus
 }
 #endif
@@ -70,6 +72,11 @@ extern "C" {
 #    undef strdup
 #  endif
 #  define strdup(s)     wrap_strdup( (s),      __FILE__, __LINE__, __func__)
+
+#  ifdef strcpy
+#    undef strcpy
+#  endif
+#  define strcpy(d,s)     wrap_strcpy( (d), (s), __FILE__, __LINE__, __func__)
 
 #endif /* USE_MALLOC_WRAPPERS */
 

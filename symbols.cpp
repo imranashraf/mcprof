@@ -12,6 +12,12 @@ string& Symbols::GetSymName(IDNoType id)
     return ( sym.GetName() );
 }
 
+u32 Symbols::GetSymSize(IDNoType id)
+{
+    auto& sym = _Symbols[id];
+    return ( sym.GetSize() );
+}
+
 // returns the symbol ptr with start address as input
 Symbol* Symbols::GetSymbolPtr(uptr saddr)
 {

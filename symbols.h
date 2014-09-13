@@ -123,6 +123,7 @@ public:
     void UpdateRealloc(Symbol& newsym);
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
+    u32 GetSymSize(IDNoType idno);
     Symbol* GetSymbolPtr(uptr saddr1);
     bool IsSeenFunctionName(string& ftnName);
     IDNoType TotalSymbolCount();
