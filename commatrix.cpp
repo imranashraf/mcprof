@@ -85,7 +85,7 @@ void Matrix2D::PrintDot(ostream &dotout)
 {
     ECHO("Printing communication in DOT");
     u16 TotalSymbols = GlobalID;
-    ECHO( VAR(TotalSymbols) );
+    D1ECHO( VAR(TotalSymbols) );
     CHECK_LT(TotalSymbols, Matrix.size());
 
     dotout << "digraph {\ngraph [];"

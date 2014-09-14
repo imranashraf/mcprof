@@ -76,7 +76,7 @@ void Symbols::InsertFunction(const string& ftnname)
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC);
-    ECHO("Adding Function Symbol: " << ftnname 
+    D1ECHO("Adding Function Symbol: " << ftnname 
         << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
 }

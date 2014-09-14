@@ -176,6 +176,7 @@ VOID RecordRoutineEntry(CHAR* rname)
     // so that it does not need to be determined on each access
     if (KnobEngine.Value() == 4)
     {
+        D1ECHO ("Setting Current Call for : " << rname );
         string str(rname);
         SetCurrCall( str );
     }
@@ -423,7 +424,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                         {
                             // TODO may be rename locations to callsites
                             u32 locIndex = Locations.Insert( Location(line, filename) );
-                            ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
+                            D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
                                     << filename <<":"<< line);
 
                             // Get a new id for this location

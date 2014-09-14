@@ -11,14 +11,15 @@ typedef int uint32_t;
 
 // unsigned int srcArr1[SIZE];
 // unsigned int srcArr2[SIZE];
-// unsigned int sqrArr[SIZE];
 // unsigned int sumArr[SIZE];
 // unsigned int diffArr[SIZE];
+// unsigned int sqrArr[SIZE];
+
 unsigned int *srcArr1;
 unsigned int *srcArr2;
-unsigned int *sqrArr;
 unsigned int *sumArr;
 unsigned int *diffArr;
+unsigned int *sqrArr;
 
 unsigned int coeff = 2;
 
@@ -96,26 +97,27 @@ void sqrootVecs()
     int i;
     for(i = 0; i < SIZE; i++)
     {
-        sqrArr[i] = SquareRootRounded( sumArr[i] );
-        sqrArr[i] = SquareRootRounded( sqrArr[i] + diffArr[i] );
+//         sqrArr[i] = SquareRootRounded( sumArr[i] );
+//         sqrArr[i] = SquareRootRounded( sqrArr[i] + diffArr[i] );
+        sqrArr[i] = sumArr[i] + diffArr[i] ;
     }
 }
 
 int main()
 {
-    char* str1 = malloc(10);
-
-//     char* str1 = "Hello";
-#   if 1
-    strcpy(str1, "Hello");
-#   else
-    str1[0] = 'U';
-    str1[1] = 'B';
-    str1[2] = 'B';
-    str1[3] = 'I';
-    str1[4] = '\0';
-#endif
-    char* str2 = strdup(str1);
+//     char* str1 = malloc(10);
+// 
+// //     char* str1 = "Hello";
+// #   if 1
+//     strcpy(str1, "Hello");
+// #   else
+//     str1[0] = 'U';
+//     str1[1] = 'B';
+//     str1[2] = 'B';
+//     str1[3] = 'I';
+//     str1[4] = '\0';
+// #endif
+//     char* str2 = strdup(str1);
 
     nbytes = SIZE*sizeof(unsigned int);
     printf("Vector Operations Test.\n");
@@ -152,8 +154,8 @@ int main()
     diffVecs();
     sqrootVecs();
 
-    printf("output and %s: %d\n", str2, sumArr[1]+diffArr[1]+sqrArr[1]);
-//     printf("output and : %d\n", sumArr[1]+diffArr[1]+sqrArr[1]);
+//     printf("output and %s: %d\n", str2, sumArr[1]+diffArr[1]+sqrArr[1]);
+    printf("output : %d\n", sumArr[nbytes/2]+diffArr[nbytes/3]+sqrArr[nbytes/4]);
 
     free(srcArr1);
     free(srcArr2);
