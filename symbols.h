@@ -66,34 +66,24 @@ private:
     u32 size;
     string name;
     SymType symType;
-    u32 symLocIndex; //TODO not really needed now if using ID2LocIdx map
+    u32 symLocIndex;
 
 public:
     Symbol() :
         id(0), startAddr(0), size(0), name(""),
         symType(SymType::NA), symLocIndex(0) {}
 
-    Symbol(SymType typ) :
-        id(0), startAddr(0), size(0), name(""),
+    Symbol(IDNoType id1, string n, SymType typ) :
+        id(id1), startAddr(0), size(0), name(n),
         symType(typ), symLocIndex(0) {}
-
-    Symbol(string n, SymType typ) :
-        id(0), startAddr(0), size(0), name(n),
-        symType(typ), symLocIndex(0) {}
-
-    Symbol(string n, SymType typ, u16 locidx) :
-        id(0), startAddr(0), size(0), name(n),
-        symType(typ), symLocIndex(locidx) {}
 
     Symbol(IDNoType id1, string n, SymType typ, u16 locidx) :
         id(id1), startAddr(0), size(0), name(n),
         symType(typ), symLocIndex(locidx) {}
 
-    Symbol(IDNoType id1, string n, SymType typ) :
-        id(id1), startAddr(0), size(0), name(n),
-        symType(typ), symLocIndex(0) {}
-
-    void Print(ostream& fout=std::cout);
+    Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx) :
+        id(id1), startAddr(saddr), size(size1),
+        name(n), symType(typ), symLocIndex(locidx) {}
 
     void SetLocIndex(u32 idx) { symLocIndex = idx; }
     u32 GetLocIndex() { return symLocIndex; }
@@ -110,6 +100,7 @@ public:
     IDNoType GetID() {return id; }
     SymType GetType() {return symType;}
     void SetType(SymType typ) { symType = typ;}
+    void Print(ostream& fout=std::cout);
 };
 
 class Symbols
@@ -119,12 +110,11 @@ private:
 
 public:
     Symbols(){}
-    void InsertMallocCalloc(Symbol& newsym);
-    void UpdateRealloc(Symbol& newsym);
+    void InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
+    void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(IDNoType idno);
-    Symbol* GetSymbolPtr(uptr saddr1);
     bool IsSeenFunctionName(string& ftnName);
     u16 TotalSymbolCount();
     u16 TotalFunctionCount(); // count of function symbols only

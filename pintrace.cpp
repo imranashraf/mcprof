@@ -209,90 +209,88 @@ VOID RecordRoutineExit(VOID *ip)
 
 }
 
-Symbol newSymbol; // TODO may be create it as object sym
-Symbol* currSymbol = &newSymbol; // TODO setting it to nullptr crashes
+IDNoType currID;
+u32 currLocIndex;
+u32 currSize;
+uptr currStartAddress;
 
 void SetIDOfCurrCall(u32 locIndex, u16 id)
 {
     D2ECHO("setting last function call id/locIndex");
-    //currSymbol = &newSymbol; // TODO not needed as currSymbol is not later modified now
-    currSymbol->SetID(id);    // update ID
-    currSymbol->SetLocIndex(locIndex);    // TODO update locIndex (not really needed now)
+    currID = id;
+    currLocIndex = locIndex; // TODO update locIndex (not really needed now)
 }
 
 // This is used both for malloc and calloc
 VOID MallocBefore(u32 size)
 {
     D2ECHO("setting malloc/calloc size " << size );
-    currSymbol->SetSize(size);
+    currSize = size;
 }
 
 // This is used both for malloc and calloc
 VOID MallocAfter(uptr addr)
 {
     D2ECHO("setting malloc/calloc start address " << ADDR(addr) );
-    currSymbol->SetStartAddr(addr);
-    symTable.InsertMallocCalloc(*currSymbol);
+    currStartAddress = addr;
+    symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
 }
 
 // TODO can reallocation decrease size?
 VOID ReallocBefore(uptr addr, u32 size)
 {
     D2ECHO("reallocation at address : " << ADDR(addr) );
-    currSymbol->SetStartAddr(addr);
+    currStartAddress = addr;
 
     D2ECHO("setting realloc size " << size );
-    currSymbol->SetSize(size);
+    currSize = size;
 }
 
 VOID ReallocAfter(uptr addr)
 {
-    uptr prevAddr = currSymbol->GetStartAddr();
+    uptr prevAddr = currStartAddress;
     //TODO change "0" to nullptr
     if(prevAddr == 0) //realloc behaves like malloc, supplied null address as argument
     {
-        currSymbol->SetStartAddr(addr);
-        symTable.InsertMallocCalloc(*currSymbol);
+        currStartAddress = addr;
+        symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
     }
     else
     {
-        IDNoType oldid = GetObjectID(prevAddr);
-        currSymbol->SetID(oldid);
+        currID = GetObjectID(prevAddr);
 
         // check if relocation has moved the object to a different address
         if( addr != prevAddr )
         {
             D2ECHO("reallocation moved the object");
             D2ECHO("setting realloc start address " << ADDR(addr) );
-            currSymbol->SetStartAddr(addr);
+            currStartAddress = addr;
         }
-        symTable.UpdateRealloc(*currSymbol);
+        symTable.UpdateRealloc(currID, currStartAddress, currLocIndex, currSize);
     }
 }
 
 VOID FreeBefore(ADDRINT addr)
 {
     D2ECHO("removing object with start address " << ADDR(addr) );
-    // comment it to keep the objects in the table, useful for debugging
-    //symTable.Remove(addr);
+    symTable.Remove(addr);
 }
 
 VOID StrdupBefore(uptr addr)
 {
     D2ECHO("setting strdup start address " << ADDR(addr) );
-    currSymbol->SetStartAddr(addr);
+    currStartAddress = addr;
 }
 
 VOID StrdupAfter(uptr dstAddr)
 {
-    uptr srcAddr = currSymbol->GetStartAddr();
-    currSymbol->SetStartAddr(dstAddr);
+    uptr srcAddr = currStartAddress;
+    currStartAddress = dstAddr;
 
     IDNoType oldid = GetObjectID(srcAddr);
-    u32 srcSize = symTable.GetSymSize(oldid);
-    currSymbol->SetSize(srcSize);
+    u32 currSize = symTable.GetSymSize(oldid);
 
-    symTable.InsertMallocCalloc(*currSymbol);
+    symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
 }
 
 // IMG instrumentation routine - called once per image upon image load

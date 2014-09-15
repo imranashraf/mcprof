@@ -49,8 +49,8 @@ TOOL_ROOTS :=
 SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
-# APP_ROOTS := simple1 simple2 fibonacci vectOps memAllocFree memAllocFreeWrappers
-APP_ROOTS := memAllocFreeWrappers
+# APP_ROOTS := simple1 simple2 fibonacci vectOps memAllocFree memAllocFreeWrappers multiAlloc
+APP_ROOTS := multiAlloc
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -89,8 +89,11 @@ MCPROF_OPT:=-RecordStack 1 -SelectFunctions 0 -TrackObjects 1 -Engine 3 -SelectO
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
-mcprof.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX) $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+mcprof.test: $(OBJDIR)multiAlloc$(EXE_SUFFIX) $(OBJDIR)multiAlloc$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAlloc$(EXE_SUFFIX)
+
+# mcprof.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX) $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
 
 # mcprof.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX) $(OBJDIR)memAllocFree$(EXE_SUFFIX)
 # 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
@@ -106,8 +109,8 @@ mcprof.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX) $(OBJDIR)memAllocFreeWra
 # This section contains the build rules for all binaries that have special build rules.
 # See makefile.default.rules for the default build rules.
 
-CPPSRCS = globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
-        engine1.cpp engine2.cpp engine3.cpp engine4.cpp \
+CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
+		engine1.cpp engine2.cpp engine3.cpp engine4.cpp \
 		symbols.cpp\
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
@@ -138,30 +141,11 @@ open:
 	mcprof.cpp &> /dev/null &
 
 ###### Special applications' build rules ######
-$(OBJDIR)simple1$(EXE_SUFFIX): $(TESTDIR)simple1.c
-	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+# $(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c
+# 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)simple2$(EXE_SUFFIX): $(TESTDIR)simple2.cpp
-	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
-$(OBJDIR)vectOps$(EXE_SUFFIX): $(TESTDIR)vectOps.c
-	$(APP_CC) -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
-$(OBJDIR)memAllocFree$(EXE_SUFFIX): $(TESTDIR)memAllocFree.c
-	$(APP_CC) -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
-$(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
+$(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c $(OBJDIR)malloc_wrap.o
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@
-
-# Used for shared library compilation
-# $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)libwrap.so
-# 	$(APP_CC) -L$(OBJDIR) -Wl,-rpath=$(OBJDIR) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ -lwrap $(APP_LDFLAGS) $(APP_LIBS)
-# 
-# $(OBJDIR)libwrap.so: $(OBJDIR)malloc_wrap.o
-# 	$(APP_CC) -shared -o $@ $^
-# 
-# $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
-# 	$(APP_CC) -I. -fno-inline -O1 -g -c -fpic $^ -o $@

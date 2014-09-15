@@ -18,57 +18,30 @@ u32 Symbols::GetSymSize(IDNoType id)
     return ( sym.GetSize() );
 }
 
-// returns the symbol ptr with start address as input
-Symbol* Symbols::GetSymbolPtr(uptr saddr)
+void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
-    IDNoType id = GetObjectID(saddr);
-    if(id != UnknownID)
-        return &(_Symbols[id]);
-    else
-        return nullptr;
-}
-
-void Symbols::InsertMallocCalloc(Symbol& newsym)
-{
-    uptr saddr = newsym.GetStartAddr();
-    IDNoType id = newsym.GetID();
-
     // Assign some name to this object symbol
     // TODO following can be done later at the end when names are really needed
-    newsym.SetName( "Object" + to_string(id) );
+    string name( "Object" + to_string(id) );
+    Symbol newsym(id, saddr, size, name, SymType::OBJ, locIndex);
 
-    //TODO this can be done at the initialization of new obj in pintrace
-    newsym.SetType(SymType::OBJ);
-
-    D1ECHO("Adding Object Symbol with id : " << int(id) << " to Symbol Table");
+    ECHO("Adding Object Symbol with id : " << int(id) << " to Symbol Table");
     _Symbols[id] = newsym;
 
     // we also need to set the object ids in the shadow table/mem for this object
-    D2ECHO("Setting object ID as " << id << " on a size " << newsym.GetSize());
-    InitObjectIDs(saddr, newsym.GetSize(), id);
+    D2ECHO("Setting object ID as " << id << " on a size " << size);
+    InitObjectIDs(saddr, size, id);
 }
 
-void Symbols::UpdateRealloc(Symbol& newsym)
+void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
-    uptr saddr = newsym.GetStartAddr();
-    IDNoType id = newsym.GetID();
-
     Symbol& availSym = _Symbols[id];
     availSym.SetStartAddr(saddr);
-
-    // Assign some name to this object symbol
-    // TODO following can be done later at the end when names are really needed
-    availSym.SetName( "Object" + to_string(id) );
-
-    // TODO this can be done at the initialization of new obj in pintrace
-    availSym.SetType(SymType::OBJ);
-
-    u32 newsize = newsym.GetSize();
-    availSym.SetSize(newsize);
+    availSym.SetSize(size);
 
     // we also need to set the object ids in the shadow table/mem for this object
-    D2ECHO("Setting object ID as " << id << " on a size " << newsym.GetSize());
-    InitObjectIDs(saddr, newsize, id);
+    D2ECHO("Setting object ID as " << id << " on a size " << size);
+    InitObjectIDs(saddr, size, id);
 }
 
 void Symbols::InsertFunction(const string& ftnname)
@@ -107,13 +80,20 @@ u16 Symbols::TotalFunctionCount()
 void Symbols::Remove(uptr saddr)
 {
     IDNoType id = GetObjectID(saddr);
+    u32 size = GetSymSize(id);
+
+    // uncomment the following to remove the objects on free
+    // commented it to keep the objects in the table
+    /*
     auto it = _Symbols.find(id);
     if(it != _Symbols.end() )
     {
         _Symbols.erase(it);
     }
+    */
 
-    // TODO we also need to clear the obj ids for this object
+    // Clear the obj ids for this object, which is same as setting it to UnknownID
+    InitObjectIDs(saddr, size, UnknownID);
 }
 
 bool Symbols::SymIsObj(IDNoType id)
