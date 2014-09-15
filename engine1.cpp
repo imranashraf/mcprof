@@ -87,7 +87,6 @@ void RecordWriteEngine1(uptr addr, u32 size)
 void RecordReadEngine1(uptr addr, u32 size)
 {
     IDNoType cons = CallStack.Top();
-    if(cons==11) ECHO("DETECTED\n");    
     IDNoType oid = GetObjectID(addr);
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);

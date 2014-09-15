@@ -18,8 +18,8 @@ typedef vector<Call> AllCalls2OneFtnType;
 typedef map<u16,AllCalls2OneFtnType> AllCalls2AllFtnsType;
 
 AllCalls2AllFtnsType AllCalls;
-
-Call* currCall; // pointer to current call
+Call tempCall;  // To avoid seg fault for info stored b4 calling main
+Call* currCall=&tempCall; // pointer to current call
 /*
 whenever a func is entered, a new call is created.
 This pointer then points to that new call, which is
@@ -66,6 +66,7 @@ void RecordWriteEngine4(uptr addr, u32 size)
 //     {
 //     }
 
+    CHECK(currCall);
     currCall->Writes[objid]+=size;
     for(u32 i=0; i<size; i++)
     {

@@ -406,7 +406,7 @@ VOID InstrumentImages(IMG img, VOID * v)
             // Traverse all instructions
             for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
             {
-                D2ECHO("disassembeled ins = " << INS_Disassemble(ins) );
+                //D2ECHO("disassembeled ins = " << INS_Disassemble(ins) );
 
                 if( KnobTrackObjects.Value() && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
                 {
@@ -610,11 +610,11 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 
             D1ECHO ("Instrumenting Routine : " << rname);        
             RTN_Open(rtn);
-            
+
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
                            IARG_ADDRINT, rname.c_str(),
                            IARG_END);
-            
+
             RTN_Close(rtn);
         }
         else
