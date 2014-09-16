@@ -41,7 +41,7 @@ void OpenOutFile(const string& fileName, ofstream& fout)
         fout.open(fileName.c_str());
         if ( fout.fail() )
         {
-            ECHO("Can not open output file (" <<fileName.c_str() << "). Aborting ...");
+            ECHO("Can not open output file (" << fileName.c_str() << "). Aborting ...");
             Die();
         }
     }

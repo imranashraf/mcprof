@@ -130,7 +130,7 @@ format:
 # 	astyle --style=kr *.h *.cpp
 	rm -f *.orig
 
-open:
+openk:
 	kate makefile.rules globals.h globals.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
@@ -139,6 +139,16 @@ open:
 	engine4.h engine4.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
+
+openv:
+	vim -p makefile.rules globals.h globals.cpp \
+	shadow.h shadow.cpp commatrix.h commatrix.cpp \
+	symbols.h symbols.cpp \
+	callstack.h callstack.cpp \
+	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
+	engine4.h engine4.cpp \
+	pintrace.h pintrace.cpp \
+	mcprof.cpp
 
 ###### Special applications' build rules ######
 # $(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c

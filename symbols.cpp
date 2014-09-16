@@ -8,18 +8,21 @@ LocationList Locations;
 
 string& Symbols::GetSymName(IDNoType id)
 {
-    auto& sym = _Symbols[id];
+    D2ECHO("Getting name of symbol with id: " << id );
+    Symbol& sym = _Symbols[id];
     return ( sym.GetName() );
 }
 
 u32 Symbols::GetSymSize(uptr saddr)
 {
     IDNoType id = GetObjectID(saddr);
+    D2ECHO("Getting symbol size for address " << ADDR(saddr) << " " << VAR(id));
     return ( _Symbols[id].GetSize(saddr) );
 }
 
 void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
+    D2ECHO("Inserting Malloc/Calloc/Realloc ");
     if(_Symbols.find(id) != _Symbols.end() )
     {
         Symbol& availSym = _Symbols[id];
@@ -42,6 +45,7 @@ void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size
 
 void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
+    D2ECHO("Updating Realloc ");
     Symbol& availSym = _Symbols[id];
     availSym.SetSize(saddr,size);
 
@@ -52,10 +56,11 @@ void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 
 void Symbols::InsertFunction(const string& ftnname)
 {
+    D2ECHO("Inserting Function " << ftnname);
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC);
-    D1ECHO("Adding Function Symbol: " << ftnname 
+    D1ECHO("Adding Function Symbol: " << ftnname
         << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
 }
@@ -64,6 +69,7 @@ void Symbols::InsertFunction(const string& ftnname)
 // data structure for seen function names
 bool Symbols::IsSeenFunctionName(string& ftnName)
 {
+    D2ECHO("Checking if function " << ftnName << " is seen");
     if ( FuncName2ID.find(ftnName) == FuncName2ID.end() )
         return false;
     else
@@ -72,6 +78,7 @@ bool Symbols::IsSeenFunctionName(string& ftnName)
 
 u16 Symbols::TotalSymbolCount()
 {
+    D2ECHO("Getting total Symbol count");
     return _Symbols.size();
 }
 
@@ -85,6 +92,7 @@ u16 Symbols::TotalFunctionCount()
 
 void Symbols::Remove(uptr saddr)
 {
+    D2ECHO("Removing symbol at Start Address: " << ADDR(saddr) );
     u32 size = GetSymSize(saddr);
 
     // uncomment the following to remove the objects on free
@@ -98,16 +106,19 @@ void Symbols::Remove(uptr saddr)
     */
 
     // Clear the obj ids for this object, which is same as setting it to UnknownID
+    D2ECHO("Clearing object ID to " << UnknownID << " on a size " << size);
     InitObjectIDs(saddr, size, UnknownID);
 }
 
 bool Symbols::SymIsObj(IDNoType id)
 {
+    D2ECHO("Checking if Symbol "<< id << " is OBJ");
     return ( _Symbols[id].GetType() == SymType::OBJ );
 }
 
 bool Symbols::SymIsFunc(IDNoType id)
 {
+    D2ECHO("Checking if Symbol "<< id << " is FUNC");
     return ( _Symbols[id].GetType() == SymType::FUNC );
 }
 

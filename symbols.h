@@ -90,7 +90,14 @@ public:
     u32 GetLocIndex() { return symLocIndex; }
     u32 GetLine() {return Locations.GetLocation(symLocIndex).GetLineNo();}
     void SetSize(uptr saddr, u32 size) {startAddr2Size[saddr].push_back(size);}
-    u32 GetSize(uptr saddr) { return startAddr2Size[saddr].back(); }
+    u32 GetSize(uptr saddr)
+    {
+        auto& sizeVec = startAddr2Size[saddr];
+        if( sizeVec.size() )
+            return sizeVec.back();
+        else
+            return 0;
+    }
     bool isSameLine( u32 l) { return (Locations.GetLocation(symLocIndex).GetLineNo() == l);}
     bool isSameFile( string& f) { return (Locations.GetLocation(symLocIndex).GetFileName() == f);}
     void SetName(string n) {name = n;}

@@ -248,6 +248,7 @@ VOID ReallocBefore(uptr addr, u32 size)
 
 VOID ReallocAfter(uptr addr)
 {
+    D2ECHO("Setting Realloc address " << ADDR(addr) );
     uptr prevAddr = currStartAddress;
     //TODO change "0" to nullptr
     if(prevAddr == 0) //realloc behaves like malloc, supplied null address as argument
@@ -284,11 +285,12 @@ VOID StrdupBefore(uptr addr)
 
 VOID StrdupAfter(uptr dstAddr)
 {
+    D2ECHO("setting strdup destination address " << ADDR(dstAddr) );
     uptr srcAddr = currStartAddress;
     currStartAddress = dstAddr;
 
     u32 currSize = symTable.GetSymSize(srcAddr);
-
+    D2ECHO("strdup size: " << currSize);
     symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
 }
 
