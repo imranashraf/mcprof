@@ -6,7 +6,7 @@
 
 #include "malloc_wrap.h"
 
-#define SIZE 10
+
 typedef int TYPE;
 
 TYPE *srcArr1;
@@ -15,12 +15,13 @@ TYPE *sumArr;
 TYPE *diffArr;
 
 TYPE coeff = 2;
-int nbytes;
+int nBytes;
+int Size;
 
 void initVecs()
 {
     int i;
-    for(i = 0; i < SIZE; i++) {
+    for(i = 0; i < Size; i++) {
         srcArr1[i]=i*5 + 7;
         srcArr2[i]=2*i - 3;
     }
@@ -29,7 +30,7 @@ void initVecs()
 void sumVecs()
 {
     int i;
-    for(i = 0; i < SIZE; i++)
+    for(i = 0; i < Size; i++)
     {
         sumArr[i] = srcArr1[i] + coeff * srcArr2[i];
     }
@@ -38,54 +39,92 @@ void sumVecs()
 void diffVecs()
 {
     int i;
-    for(i = 0; i < SIZE; i++)
+    for(i = 0; i < Size; i++)
     {
         diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]);
     }
 }
 
-void createArray(TYPE** ptr, int n)
-{
-    *ptr = malloc(n);
-    if(*ptr == NULL)
-    {
-        printf("ERROR: Could not allocate memory");
-        exit(1);
-    }
+// void createArray(TYPE** ptr, int n)
+// {
+//     *ptr = malloc(n);
+//     if(*ptr == NULL)
+//     {
+//         printf("ERROR: Could not allocate memory");
+//         exit(1);
+//     }
+// }
+
+// *ptr = malloc(n);                               
+// *ptr = calloc(Size, sizeof(TYPE) );
+// *ptr = realloc(NULL, n);                 
+
+#define createArray(ptr, n)                         \
+{                                                   \
+    *ptr = malloc(n);                 \
+    if(*ptr == NULL)                                \
+    {                                               \
+        printf("ERROR: Could not allocate memory"); \
+        exit(1);                                    \
+    }                                               \
 }
 
-int main()
+#define extendArray(ptr, n)                         \
+{                                                   \
+    *ptr = realloc(*ptr, n);                 \
+    if(*ptr == NULL)                                \
+    {                                               \
+        printf("ERROR: Could not allocate memory"); \
+        exit(1);                                    \
+    }                                               \
+}
+
+void process()
 {
-    nbytes = SIZE*sizeof(TYPE);
-    printf("Multi Allocation Test.\n");
-    printf("Total bytes : %d\n",nbytes);
-
-//     srcArr1 = malloc(nbytes);
-    createArray(&srcArr1, nbytes);
+    nBytes = Size*sizeof(TYPE);
+    printf("Total bytes : %d\n",nBytes);
+    
+    //     srcArr1 = malloc(nBytes);
+    createArray(&srcArr1, nBytes);
     printf("srcArr1 addr after malloc : %p\n",srcArr1);
-
-//     srcArr2 = malloc(nbytes);
-    createArray(&srcArr2, nbytes);
+    
+    //     srcArr2 = malloc(nBytes);
+    createArray(&srcArr2, nBytes);
     printf("srcArr2 addr after malloc : %p\n",srcArr2);
-
-//     sumArr = malloc(nbytes);
-    createArray(&sumArr, nbytes);
+    
+    //     sumArr = malloc(nBytes);
+    createArray(&sumArr, nBytes/2);
     printf("sumArr addr after malloc : %p\n",sumArr);
-
-//     diffArr = malloc(nbytes);
-    createArray(&diffArr, nbytes);
+    extendArray(&sumArr, nBytes);
+    printf("sumArr addr after realloc : %p\n",sumArr);
+    
+    //     diffArr = malloc(nBytes);
+    createArray(&diffArr, nBytes);
     printf("diffArr addr after malloc : %p\n",diffArr);
-
+    
     initVecs();
     sumVecs();
     diffVecs();
-
-    printf("output : %d\n", sumArr[nbytes/2]+diffArr[nbytes/3]);
-
+    
+    printf("output : %d\n", sumArr[nBytes/2]+diffArr[nBytes/3]);
+    
     free(srcArr1);
     free(srcArr2);
     free(sumArr);
     free(diffArr);
+}
+
+int main()
+{
+//     nBytes = Size*sizeof(TYPE);
+    printf("Multi Allocation Test.\n");
+
+    int i;
+    for(i=1; i<=10; i++)
+    {
+        Size = i*10;
+        process();
+    }
 
     return 0;
 }

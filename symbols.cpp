@@ -12,22 +12,29 @@ string& Symbols::GetSymName(IDNoType id)
     return ( sym.GetName() );
 }
 
-u32 Symbols::GetSymSize(IDNoType id)
+u32 Symbols::GetSymSize(uptr saddr)
 {
-    auto& sym = _Symbols[id];
-    return ( sym.GetSize() );
+    IDNoType id = GetObjectID(saddr);
+    return ( _Symbols[id].GetSize(saddr) );
 }
 
 void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
-    // Assign some name to this object symbol
-    // TODO following can be done later at the end when names are really needed
-    string name( "Object" + to_string(id) );
-    Symbol newsym(id, saddr, size, name, SymType::OBJ, locIndex);
+    if(_Symbols.find(id) != _Symbols.end() )
+    {
+        Symbol& availSym = _Symbols[id];
+        availSym.SetSize(saddr, size);
+    }
+    else
+    {
+        // Assign some name to this object symbol
+        // TODO following can be done later at the end when names are really needed
+        string name( "Object" + to_string(id) );
+        Symbol newsym(id, saddr, size, name, SymType::OBJ, locIndex);
 
-    ECHO("Adding Object Symbol with id : " << int(id) << " to Symbol Table");
-    _Symbols[id] = newsym;
-
+        ECHO("Adding Object Symbol with id : " << int(id) << " to Symbol Table");
+        _Symbols[id] = newsym;
+    }
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     InitObjectIDs(saddr, size, id);
@@ -36,8 +43,7 @@ void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size
 void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
     Symbol& availSym = _Symbols[id];
-    availSym.SetStartAddr(saddr);
-    availSym.SetSize(size);
+    availSym.SetSize(saddr,size);
 
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
@@ -79,8 +85,7 @@ u16 Symbols::TotalFunctionCount()
 
 void Symbols::Remove(uptr saddr)
 {
-    IDNoType id = GetObjectID(saddr);
-    u32 size = GetSymSize(id);
+    u32 size = GetSymSize(saddr);
 
     // uncomment the following to remove the objects on free
     // commented it to keep the objects in the table
@@ -165,8 +170,19 @@ void Symbols::InitFromObjFile()
 
 void Symbol::Print(ostream& fout)
 {
-    fout << "ID: " << (int)id << " " << SymTypeName[symType] << " " << name << " " << ADDR(startAddr) << " " << VAR(size)
-        << " at " << VAR(symLocIndex) << " " << Locations.GetLocation(symLocIndex).toString() << endl;
+    fout << "ID: " << (int)id << " " 
+         << SymTypeName[symType] << " " << name << " " 
+         << VAR(symLocIndex) << " " 
+         << Locations.GetLocation(symLocIndex).toString() << endl;
+     for(auto& pair : startAddr2Size)
+     {
+         auto& saddr = pair.first;
+         auto& sizes = pair.second;
+         fout << "    " << ADDR(saddr) << "(";
+         for(auto& size : sizes)
+            fout << " " << size;
+         fout << ")" << endl;
+     }
 }
 
 void Symbols::Print()

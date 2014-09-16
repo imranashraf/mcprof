@@ -62,36 +62,35 @@ class Symbol
 {
 private:
     IDNoType id;
-    uptr startAddr;
-    u32 size;
+    // Following map is used to record multiple allocations from 
+    // same location (which will have same id). Secondly, multiple
+    // allocations can have same address but the size can be different.
+    // so a vector is used to preserve the allocation, where the last
+    // element in the vector to store size with be the one currently used
+    map<uptr,vector<u32>>startAddr2Size;
     string name;
     SymType symType;
     u32 symLocIndex;
 
 public:
     Symbol() :
-        id(0), startAddr(0), size(0), name(""),
-        symType(SymType::NA), symLocIndex(0) {}
+        id(0), name(""), symType(SymType::NA), symLocIndex(0) {}
 
     Symbol(IDNoType id1, string n, SymType typ) :
-        id(id1), startAddr(0), size(0), name(n),
-        symType(typ), symLocIndex(0) {}
+        id(id1), name(n), symType(typ), symLocIndex(0) {}
 
     Symbol(IDNoType id1, string n, SymType typ, u16 locidx) :
-        id(id1), startAddr(0), size(0), name(n),
-        symType(typ), symLocIndex(locidx) {}
+        id(id1), name(n), symType(typ), symLocIndex(locidx) {}
 
     Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx) :
-        id(id1), startAddr(saddr), size(size1),
-        name(n), symType(typ), symLocIndex(locidx) {}
+        id(id1), name(n), symType(typ), symLocIndex(locidx) 
+            {startAddr2Size[saddr].push_back(size1);}
 
     void SetLocIndex(u32 idx) { symLocIndex = idx; }
     u32 GetLocIndex() { return symLocIndex; }
     u32 GetLine() {return Locations.GetLocation(symLocIndex).GetLineNo();}
-    void SetSize(u32 s) {size = s;}
-    u32 GetSize() { return size; }
-    void SetStartAddr(uptr a) {startAddr = a;}
-    uptr GetStartAddr() { return startAddr; }
+    void SetSize(uptr saddr, u32 size) {startAddr2Size[saddr].push_back(size);}
+    u32 GetSize(uptr saddr) { return startAddr2Size[saddr].back(); }
     bool isSameLine( u32 l) { return (Locations.GetLocation(symLocIndex).GetLineNo() == l);}
     bool isSameFile( string& f) { return (Locations.GetLocation(symLocIndex).GetFileName() == f);}
     void SetName(string n) {name = n;}
@@ -114,7 +113,7 @@ public:
     void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
-    u32 GetSymSize(IDNoType idno);
+    u32 GetSymSize(uptr saddr);
     bool IsSeenFunctionName(string& ftnName);
     u16 TotalSymbolCount();
     u16 TotalFunctionCount(); // count of function symbols only

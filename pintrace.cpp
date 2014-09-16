@@ -287,8 +287,7 @@ VOID StrdupAfter(uptr dstAddr)
     uptr srcAddr = currStartAddress;
     currStartAddress = dstAddr;
 
-    IDNoType oldid = GetObjectID(srcAddr);
-    u32 currSize = symTable.GetSymSize(oldid);
+    u32 currSize = symTable.GetSymSize(srcAddr);
 
     symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
 }
