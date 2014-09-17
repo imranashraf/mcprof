@@ -66,7 +66,8 @@ public:
             fout << setw(35) << symTable.GetSymName(id)
                  << setw(14) << elem.Total
                  << setw(14) << elem.Reads
-                 << setw(14) << elem.Writes << endl;
+                 << setw(14) << elem.Writes
+                 << "  "     << symTable.GetSymLocation(id) << endl;
         }
     }
 };

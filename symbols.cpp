@@ -2,6 +2,7 @@
 #include "symbols.h"
 
 extern map <string,IDNoType> FuncName2ID;
+extern map <u32,IDNoType> LocIndex2ID;
 
 // List of all locations of symbols
 LocationList Locations;
@@ -20,11 +21,22 @@ u32 Symbols::GetSymSize(uptr saddr)
     return ( _Symbols[id].GetSize(saddr) );
 }
 
+string Symbols::GetSymLocation(IDNoType id)
+{
+    string loc;
+    Symbol& sym = _Symbols[id];
+    return sym.GetLocation();
+}
+
 void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
 {
+    //TODO do we also need to update the following map here?
+    // LocIndex2ID[loc] = id;
+
     D2ECHO("Inserting Malloc/Calloc/Realloc ");
     if(_Symbols.find(id) != _Symbols.end() )
     {
+        D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
         Symbol& availSym = _Symbols[id];
         availSym.SetSize(saddr, size);
     }
@@ -35,7 +47,7 @@ void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size
         string name( "Object" + to_string(id) );
         Symbol newsym(id, saddr, size, name, SymType::OBJ, locIndex);
 
-        ECHO("Adding Object Symbol with id : " << int(id) << " to Symbol Table");
+        ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
         _Symbols[id] = newsym;
     }
     // we also need to set the object ids in the shadow table/mem for this object
@@ -74,6 +86,12 @@ bool Symbols::IsSeenFunctionName(string& ftnName)
         return false;
     else
         return true;
+}
+
+bool Symbols::IsSeenLocation(Location& loc, u32& locIndex)
+{
+    D2ECHO("Checking if location " << loc.toString() << " is seen");
+    return Locations.GetLocIndexIfAvailable(loc, locIndex);
 }
 
 u16 Symbols::TotalSymbolCount()
@@ -164,9 +182,12 @@ void Symbols::InitFromObjFile()
     u32 i=0;
     while( (sifin >> symfile) && (sifin >> symline) && (sifin >> symname))
     {
-        u16 locindex = Locations.Insert( Location(symline, symfile) );
+        Location loc(symline, symfile);
+        u16 locindex = Locations.Insert( loc );
+        // Get a new id for this NEW location
         IDNoType id = GlobalID++;
-        D1ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
+        LocIndex2ID[locindex] = id;
+        ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
         _Symbols[id] = Symbol(id, symname, SymType::OBJ, locindex );
         ++i;
     }
@@ -181,7 +202,7 @@ void Symbols::InitFromObjFile()
 
 void Symbol::Print(ostream& fout)
 {
-    fout << "ID: " << (int)id << " " 
+    fout << "ID: " << id << " "
          << SymTypeName[symType] << " " << name << " " 
          << VAR(symLocIndex) << " " 
          << Locations.GetLocation(symLocIndex).toString() << endl;

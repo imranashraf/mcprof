@@ -15,18 +15,23 @@ using namespace std;
 static string selectFtnFileName("selectedfunctions.in");
 static string selectObjFileName("selectedobjects.in");
 
-class Location
+// change this class to struct
+struct Location
 {
-private:
     u32 lineNo;
     string fileName;
-public:
+
     Location() : lineNo(0), fileName("") {}
     Location(u32 l, string f) : lineNo(l), fileName(f) {}
     string toString(){ return fileName + ":" + to_string(lineNo); }
-    void SetLocation(u32 l, string f) { lineNo = l; fileName = f; }
-    u32 GetLineNo() { return lineNo; }
-    string& GetFileName() { return fileName; }
+
+    bool operator==(const Location& loc) const {
+        return lineNo == loc.lineNo && fileName == loc.fileName;
+    }
+
+    bool operator<(const Location& loc) const {
+        return lineNo < loc.lineNo && fileName  < loc.fileName;
+    }
 };
 
 // class for List of all locations of symbols
@@ -48,6 +53,21 @@ public:
     Location& GetLocation(u16 index)
     {
         return locations.at(index);
+    }
+
+    bool GetLocIndexIfAvailable(Location& loc, u32& locIndex)
+    {
+        for(u32 i=0; i<locations.size(); ++i)
+        {
+            if( loc.lineNo == locations[i].lineNo &&
+                loc.fileName == locations[i].fileName )
+            {
+                locIndex=i;
+                return true;
+            }
+        }
+
+        return false;
     }
 };
 
@@ -82,13 +102,16 @@ public:
     Symbol(IDNoType id1, string n, SymType typ, u16 locidx) :
         id(id1), name(n), symType(typ), symLocIndex(locidx) {}
 
+    Symbol(string n, SymType typ, u16 locidx) :
+        name(n), symType(typ), symLocIndex(locidx) {}
+
     Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx) :
         id(id1), name(n), symType(typ), symLocIndex(locidx) 
             {startAddr2Size[saddr].push_back(size1);}
 
     void SetLocIndex(u32 idx) { symLocIndex = idx; }
     u32 GetLocIndex() { return symLocIndex; }
-    u32 GetLine() {return Locations.GetLocation(symLocIndex).GetLineNo();}
+    u32 GetLine() {return Locations.GetLocation(symLocIndex).lineNo;}
     void SetSize(uptr saddr, u32 size) {startAddr2Size[saddr].push_back(size);}
     u32 GetSize(uptr saddr)
     {
@@ -98,8 +121,8 @@ public:
         else
             return 0;
     }
-    bool isSameLine( u32 l) { return (Locations.GetLocation(symLocIndex).GetLineNo() == l);}
-    bool isSameFile( string& f) { return (Locations.GetLocation(symLocIndex).GetFileName() == f);}
+    bool isSameLine( u32 l) { return (Locations.GetLocation(symLocIndex).lineNo == l);}
+    bool isSameFile( string& f) { return (Locations.GetLocation(symLocIndex).fileName == f);}
     void SetName(string n) {name = n;}
     string& GetName() {return name; }
     void SetID(IDNoType id0) {id = id0;}
@@ -107,6 +130,12 @@ public:
     SymType GetType() {return symType;}
     void SetType(SymType typ) { symType = typ;}
     void Print(ostream& fout=std::cout);
+    string GetLocation()
+    {
+        string f = Locations.GetLocation(symLocIndex).fileName + ":";
+        f += to_string(Locations.GetLocation(symLocIndex).lineNo );
+        return f;
+    }
 };
 
 class Symbols
@@ -121,7 +150,9 @@ public:
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
+    string GetSymLocation(IDNoType idno);
     bool IsSeenFunctionName(string& ftnName);
+    bool IsSeenLocation(Location& loc, u32& locIndex);
     u16 TotalSymbolCount();
     u16 TotalFunctionCount(); // count of function symbols only
     void Remove(uptr saddr);

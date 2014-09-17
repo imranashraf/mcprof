@@ -28,7 +28,7 @@
 // Global variables
 /* ================================================================== */
 extern map <string,IDNoType> FuncName2ID;
-// extern map <u32,IDNoType> LocIndex2ID;
+extern map <u32,IDNoType> LocIndex2ID;
 extern Symbols symTable;
 extern Matrix2D ComMatrix;
 
@@ -228,6 +228,12 @@ VOID MallocBefore(u32 size)
     currSize = size;
 }
 
+VOID CallocBefore(u32 n, u32 size)
+{
+    D2ECHO("setting malloc/calloc size " << size );
+    currSize = n*size;
+}
+
 // This is used both for malloc and calloc
 VOID MallocAfter(uptr addr)
 {
@@ -339,9 +345,11 @@ VOID InstrumentImages(IMG img, VOID * v)
             RTN_Open(callocRtn);
 
             // Instrument calloc() to print the input argument value and the return value.
+            RTN_InsertCall(callocRtn, IPOINT_BEFORE, (AFUNPTR)CallocBefore,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                           IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+                           IARG_END);
             // for now  using same callback ftns as for malloc
-            RTN_InsertCall(callocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
-                           IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(callocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
 
@@ -414,30 +422,56 @@ VOID InstrumentImages(IMG img, VOID * v)
                     if( (tname == MALLOC) || (tname == CALLOC) ||
                         (tname == REALLOC) || (tname == STRDUP) )
                     {
+                        u32 locIndex =-1;
                         string filename("");    // This will hold the source file name.
                         INT32 line = 0;     // This will hold the line number within the file.
                         PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
+                        Location loc(line, filename);
 
                         // Do not instrument the calls inside wrappers, so skip malloc_wrap.c file
                         if(filename.find("malloc_wrap.c") == string::npos ) // not found
                         {
-                            // TODO may be rename locations to callsites
-                            u32 locIndex = Locations.Insert( Location(line, filename) );
-                            D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
-                                    << filename <<":"<< line);
+                            if ( KnobSelectObjects.Value() ) // track selected allocation calls
+                            {
+                                if( symTable.IsSeenLocation(loc, locIndex) )
+                                {
+                                    // Obtain the id for this location
+                                    IDNoType id = LocIndex2ID[locIndex];
 
-                            // Get a new id for this location
-                            IDNoType id=GlobalID++;
+                                    ECHO("Instrumenting Selected library call for (re)(c)(m)alloc/free call at "
+                                        << filename <<":"<< line << " and id " << id);
 
-                            INS_InsertCall
-                            (
-                                ins,
-                                IPOINT_BEFORE,
-                                AFUNPTR(SetIDOfCurrCall),
-                                IARG_UINT32, locIndex,
-                                IARG_UINT32, id,
-                                IARG_END
-                            );
+                                    INS_InsertCall
+                                    (
+                                        ins,
+                                        IPOINT_BEFORE,
+                                        AFUNPTR(SetIDOfCurrCall),
+                                        IARG_UINT32, locIndex,
+                                        IARG_UINT32, id,
+                                        IARG_END
+                                    );
+                                }
+                            }
+                            else    // track all allocation calls
+                            {
+                                // TODO may be rename locations to callsites
+                                locIndex = Locations.Insert(loc);
+                                D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
+                                        << filename <<":"<< line);
+
+                                // Get a new id for this NEW location
+                                IDNoType id = GlobalID++;
+
+                                INS_InsertCall
+                                (
+                                    ins,
+                                    IPOINT_BEFORE,
+                                    AFUNPTR(SetIDOfCurrCall),
+                                    IARG_UINT32, locIndex,
+                                    IARG_UINT32, id,
+                                    IARG_END
+                                );
+                            }
                         }
                     }
                 }
