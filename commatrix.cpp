@@ -62,18 +62,21 @@ void Matrix2D::PrintMatrix(ostream &fout)
     IDNoType TotalSymbols = symTable.TotalSymbolCount();
     CHECK_LT(TotalSymbols, Matrix.size());
 
+    IDNoType Start = 0; //use this if you want to print unknown
+//     IDNoType Start = 1; //use this if you dont want to print unknown
+
     fout << setw(25) << " ";
-    for (IDNoType c=0; c<TotalSymbols; c++)
+    for (IDNoType c=Start; c<TotalSymbols; c++)
     {
         fout << setw(25) << symTable.GetSymName(c);
     }
     fout << endl;
 
-    for (IDNoType p=0; p<TotalSymbols; p++)
+    for (IDNoType p=Start; p<TotalSymbols; p++)
     {
         fout << setw(25) << symTable.GetSymName(p);
 
-        for (IDNoType c=0; c<TotalSymbols; c++)
+        for (IDNoType c=Start; c<TotalSymbols; c++)
         {
             fout << setw(25) << Matrix[p][c];
         }
