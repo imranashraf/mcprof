@@ -10,8 +10,8 @@ ASTYLE := $(shell which astyle)
 ifeq ($(ASTYLE),)
 $(info command <astyle> not found! \
 Install it to get advantage of automatic code formatting.\
-After installation, run <make format> to format all the files to Kernighan & \
-Ritchie (K&R) style code formatting.)
+After installation, run <make format> to format all the files to
+allman style code formatting.)
 endif
 
 ##############################################################
@@ -49,8 +49,8 @@ TOOL_ROOTS :=
 SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
-# APP_ROOTS := simple1 simple2 fibonacci vectOps
-APP_ROOTS := vectOps
+# APP_ROOTS := simple1 simple2 fibonacci vectOps memAllocFree memAllocFreeWrappers multiAlloc
+APP_ROOTS := multiAlloc
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -69,8 +69,11 @@ endif
 
 # Linux
 ifeq ($(TARGET_OS),linux)
-	TOOL_CXXFLAGS+=-MD
-	APP_CXXFLAGS+=-fno-inline
+	TOOL_CXXFLAGS+= -MD -std=c++11
+# 	TOOL_LDFLAGS+= -pg
+# 	TOOL_LIBS+= -pg
+	APP_CXXFLAGS+= -fno-inline -g
+# 	APP_CCFLAGS+= -fno-inline -g
 endif
 
 # Windows
@@ -82,13 +85,21 @@ endif
 # Test recipes
 #
 ##############################################################
-
+MCPROF_OPT:=-RecordStack 1 -SelectFunctions 0 -TrackObjects 1 -Engine 3 -SelectObjects 0
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
-mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -- $(OBJDIR)vectOps$(EXE_SUFFIX)
-# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -- $(OBJDIR)simple2$(EXE_SUFFIX)
+mcprof.test: $(OBJDIR)multiAlloc$(EXE_SUFFIX) $(OBJDIR)multiAlloc$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAlloc$(EXE_SUFFIX)
+
+# mcprof.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX) $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+
+# mcprof.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX) $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+
+# mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
+# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
 
 ##############################################################
 #
@@ -98,7 +109,10 @@ mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
 # This section contains the build rules for all binaries that have special build rules.
 # See makefile.default.rules for the default build rules.
 
-CPPSRCS = globals.cpp shadow.cpp commatrix.cpp pintrace.cpp mcprof.cpp
+CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
+		engine1.cpp engine2.cpp engine3.cpp engine4.cpp \
+		symbols.cpp\
+		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
 
 $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
@@ -108,23 +122,40 @@ $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
 
 clean: cleantemp
 cleantemp:
-	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf
+	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps
 
 
 format:
-	astyle --style=kr *.h *.cpp
+	astyle --style=allman *.h *.cpp
+# 	astyle --style=kr *.h *.cpp
 	rm -f *.orig
 
-open:
-	kate makefile.rules globals.h globals.cpp shadow.h shadow.cpp commatrix.h \
-	commatrix.cpp pintrace.h pintrace.cpp mcprof.cpp &> /dev/null &
+openk:
+	kate makefile.rules globals.h globals.cpp \
+	shadow.h shadow.cpp commatrix.h commatrix.cpp \
+	symbols.h symbols.cpp \
+	callstack.h callstack.cpp \
+	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
+	engine4.h engine4.cpp \
+	pintrace.h pintrace.cpp \
+	mcprof.cpp &> /dev/null &
+
+openv:
+	vim -p makefile.rules globals.h globals.cpp \
+	shadow.h shadow.cpp commatrix.h commatrix.cpp \
+	symbols.h symbols.cpp \
+	callstack.h callstack.cpp \
+	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
+	engine4.h engine4.cpp \
+	pintrace.h pintrace.cpp \
+	mcprof.cpp
 
 ###### Special applications' build rules ######
-$(OBJDIR)simple1$(EXE_SUFFIX): $(TESTDIR)simple1.c
-	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+# $(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c
+# 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)simple2$(EXE_SUFFIX): $(TESTDIR)simple2.cpp
-	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+$(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c $(OBJDIR)malloc_wrap.o
+	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)vectOps$(EXE_SUFFIX): $(TESTDIR)vectOps.cpp
-	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+$(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
+	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@

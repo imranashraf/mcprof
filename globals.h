@@ -2,10 +2,16 @@
 #define GLOBALS_H
 
 #include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <map>
+#include <string>
 #include <cstdlib>
 
-//comment the following to hide debugging output
-// #define DEBUG
+//Set the debugging level (0-3)
+// 0   -> No Debug
+// 1-3 -> Debug mode, while 3 is the most verbose
+#define DEBUG 0
 
 #if defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
@@ -24,8 +30,6 @@ typedef signed   char       s8;
 typedef signed   short      s16;
 typedef signed   int        s32;
 typedef signed   long long  s64;
-
-typedef u8  FtnNo;
 
 // Common defs.
 #define INLINE inline
@@ -55,16 +59,63 @@ typedef u8  FtnNo;
 # endif
 #endif  // _MSC_VER
 
+// used for ftn and object numbers
+typedef u16 IDNoType;
+
+static const IDNoType UnknownID=0;
+extern IDNoType GlobalID;
+
+static const std::string UnknownFtn("UnknownFtn");
+static const std::string UnknownObj("UnknownObj");
+// Names of malloc and free
+static const std::string MALLOC("wrap_malloc");
+static const std::string CALLOC("wrap_calloc");
+static const std::string REALLOC("wrap_realloc");
+static const std::string FREE("wrap_free");
+
+static const std::string MEMCPY("wrap_memcpy");
+static const std::string MEMMOVE("wrap_memmove");
+static const std::string MEMSET("wrap_memset");
+
+static const std::string STRDUP("wrap_strdup");
+static const std::string STRCPY("wrap_strcpy");
+
+extern std::map <std::string,IDNoType> FuncName2ID;
+#include "symbols.h"
+extern Symbols symTable;
+
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
-#define VAR(v) "`" #v "': " << v
+
+#define VAR(v) " `" #v "': " << v << " "
 #define VARS2(first, second) VAR(first) << " - " << VAR(second)
 #define VARS3(first, second, third) VAR(first) << " - " << VARS2(second, third)
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
-#ifdef DEBUG
+#define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
+#define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
+
+#if (DEBUG>0)
 #define DECHO(content)                          ECHO(content)
 #else
 #define DECHO(content)
+#endif
+
+#if (DEBUG>=1)
+#define D1ECHO(content)                          ECHO(content)
+#else
+#define D1ECHO(content)
+#endif
+
+#if (DEBUG>=2)
+#define D2ECHO(content)                          ECHO(content)
+#else
+#define D2ECHO(content)
+#endif
+
+#if (DEBUG>=3)
+#define D3ECHO(content)                          ECHO(content)
+#else
+#define D3ECHO(content)
 #endif
 
 // void Die();
@@ -93,7 +144,7 @@ do { \
 #define CHECK_GT(a, b) CHECK_IMPL((a), >,  (b))
 #define CHECK_GE(a, b) CHECK_IMPL((a), >=, (b))
 
-#ifdef DEBUG
+#if (DEBUG>0)
 #define DCHECK(a)       CHECK(a)
 #define DCHECK_EQ(a, b) CHECK_EQ(a, b)
 #define DCHECK_NE(a, b) CHECK_NE(a, b)
@@ -111,5 +162,14 @@ do { \
 #define DCHECK_GE(a, b)
 #endif
 
+bool isEmpty(std::ifstream& fin);
+void OpenInFile(const std::string& fileName, std::ifstream& fin);
+void OpenOutFile(const std::string& fileName, std::ofstream& fout);
+bool IsPowerOfTwo(uptr x);
+uptr RoundUpTo(uptr size, uptr boundary);
+uptr RoundDownTo(uptr x, uptr boundary);
+bool IsAligned(uptr a, uptr alignment);
+const std::string& Target2RtnName(uptr target);
+const std::string& Target2LibName(uptr target);
 
 #endif
