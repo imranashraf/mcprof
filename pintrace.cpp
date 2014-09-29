@@ -14,7 +14,6 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
-#include "engine4.h"
 
 #include <iostream>
 #include <fstream>
@@ -39,6 +38,7 @@ CallStackType CallStack;
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 
+bool TrackObjects;
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -108,10 +108,6 @@ void SelectAnalysisEngine()
         ReadRecorder = RecordReadEngine3;
         WriteRecorder = RecordWriteEngine3;
         break;
-    case 4:
-        ReadRecorder = RecordReadEngine4;
-        WriteRecorder = RecordWriteEngine4;
-        break;
     default:
         ECHO("Specify a valid Engine number to be used");
         Die();
@@ -172,9 +168,9 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname );
     CallStack.Push(FuncName2ID[rname]);
 
-    // In engine 4, to save time, the curr call is selected only at func entry,
+    // In engine 3, to save time, the curr call is selected only at func entry,
     // so that it does not need to be determined on each access
-    if (KnobEngine.Value() == 4)
+    if (KnobEngine.Value() == 3)
     {
         D1ECHO ("Setting Current Call for : " << rname );
         string str(rname);
@@ -319,7 +315,7 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 
     // we should instrument malloc/free only when tracking objects !
-    if ( KnobTrackObjects.Value() )
+    if ( TrackObjects )
     {
         // instrument libc for malloc, free etc
         D1ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
@@ -415,7 +411,7 @@ VOID InstrumentImages(IMG img, VOID * v)
             {
                 //D2ECHO("disassembeled ins = " << INS_Disassemble(ins) );
 
-                if( KnobTrackObjects.Value() && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
+                if( TrackObjects && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
                     string tname = Target2RtnName(target);
@@ -739,19 +735,23 @@ VOID TheEnd(INT32 code, VOID *v)
         PrintAccesses();
         break;
     case 2:
-        OpenOutFile(KnobDotFile.Value(), dotout);
-        OpenOutFile(KnobMatrixFile.Value(), mout);
-        ComMatrix.PrintMatrix(mout);
-        ComMatrix.PrintDot(dotout);
-        mout.close();
-        dotout.close();
-        break;
+        if(TrackObjects)
+        {
+            OpenOutFile(KnobDotFile.Value(), dotout);
+            ComMatrix.PrintDot(dotout);
+            dotout.close();
+        }
+        else
+        {
+            OpenOutFile(KnobDotFile.Value(), dotout);
+            OpenOutFile(KnobMatrixFile.Value(), mout);
+            ComMatrix.PrintMatrix(mout);
+            ComMatrix.PrintDot(dotout);
+            mout.close();
+            dotout.close();
+            break;
+        }
     case 3:
-        OpenOutFile(KnobDotFile.Value(), dotout);
-        ComMatrix.PrintDot(dotout);
-        dotout.close();
-        break;
-    case 4:
         PrintAllCalls();
         break;
     default:
@@ -799,6 +799,8 @@ void SetupPin(int argc, char *argv[])
         D1ECHO("Initialize objects from Selected Objects file ...");
         symTable.InitFromObjFile();
     }
+
+    TrackObjects = KnobTrackObjects.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");

@@ -110,7 +110,7 @@ mcprof.test: $(OBJDIR)multiAlloc$(EXE_SUFFIX) $(OBJDIR)multiAlloc$(EXE_SUFFIX)
 # See makefile.default.rules for the default build rules.
 
 CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
-		engine1.cpp engine2.cpp engine3.cpp engine4.cpp \
+		engine1.cpp engine2.cpp engine3.cpp \
 		symbols.cpp\
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
@@ -136,7 +136,6 @@ openk:
 	symbols.h symbols.cpp \
 	callstack.h callstack.cpp \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
-	engine4.h engine4.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 
@@ -146,7 +145,6 @@ openv:
 	symbols.h symbols.cpp \
 	callstack.h callstack.cpp \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
-	engine4.h engine4.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp
 
