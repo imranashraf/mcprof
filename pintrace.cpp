@@ -55,7 +55,7 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   "Trace functions that are contained only in the\
                           executable image");
 
-KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
+KNOB<BOOL> KnobRecordStack(KNOB_MODE_WRITEONCE, "pintool",
                            "RecordStack","0", "Include Stack Accesses");
 
 KNOB<BOOL> KnobTrackObjects(KNOB_MODE_WRITEONCE, "pintool",
@@ -495,7 +495,7 @@ VOID InstrumentInstructions(INS ins, VOID* v)
     for (UINT32 memOp = 0; memOp < memOperands; memOp++)
     {
         size_t refSize = INS_MemoryOperandSize(ins, memOp);
-        if ( //KnobStackAccess.Value() && INS_IsStackRead(ins) && 
+        if ( //KnobRecordStack.Value() && INS_IsStackRead(ins) &&
             INS_MemoryOperandIsRead(ins, memOp))
         {
             INS_InsertPredicatedCall(
@@ -505,7 +505,7 @@ VOID InstrumentInstructions(INS ins, VOID* v)
                                         IARG_END);
         }
         
-        if ( //KnobStackAccess.Value() && INS_IsStackWrite(ins) && 
+        if ( //KnobRecordStack.Value() && INS_IsStackWrite(ins) &&
             INS_MemoryOperandIsWritten(ins, memOp))
         {
             INS_InsertPredicatedCall(
@@ -563,43 +563,103 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
     {
         for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
         {
-            
-            if (INS_IsMemoryRead(ins) && !(KnobStackAccess.Value() && INS_IsStackRead(ins)) )
+            D2ECHO("Dissassembled ins : " << INS_Disassemble(ins) );
+            bool isStackRead = INS_IsStackRead(ins)  || INS_IsIpRelRead(ins) ;
+            bool isStackWrite = INS_IsStackWrite(ins) || INS_IsIpRelWrite(ins);
+            bool ignoreStack = !KnobRecordStack.Value();
+
+            // Instrument Read accesses
+            if( ignoreStack )
             {
-                INS_InsertPredicatedCall
-                (
-                    ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                    IARG_MEMORYREAD_EA,
-                    IARG_MEMORYREAD_SIZE,
-                    //IARG_UINT32, INS_IsPrefetch(ins),
-                    IARG_END
-                );
+                if ( isStackRead )
+                {
+                    D2ECHO("Ignoring as stack");
+                }
+                else if (INS_IsMemoryRead(ins) )
+                {
+                    D2ECHO("Recording heap");
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                        IARG_MEMORYREAD_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+
+                    if (INS_HasMemoryRead2(ins) )
+                    {
+                        INS_InsertPredicatedCall
+                        (
+                            ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                            IARG_MEMORYREAD2_EA,
+                            IARG_MEMORYREAD_SIZE,
+                            //IARG_UINT32, INS_IsPrefetch(ins),
+                            IARG_END
+                        );
+                    }
+                }
             }
-            
-            if (INS_HasMemoryRead2(ins))
+            else
             {
-                INS_InsertPredicatedCall
-                (
-                    ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                    IARG_MEMORYREAD2_EA,
-                    IARG_MEMORYREAD_SIZE,
-                    //IARG_UINT32, INS_IsPrefetch(ins),
-                    IARG_END
-                );
+                D2ECHO("Recording heap (not ignoring)");
+                if (INS_IsMemoryRead(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                        IARG_MEMORYREAD_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
+
+                if (INS_HasMemoryRead2(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                        IARG_MEMORYREAD2_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
             }
-            
-            if (INS_IsMemoryWrite(ins) && !(KnobStackAccess.Value() && INS_IsStackWrite(ins)))
+
+            // Instrument Write accesses
+            if( ignoreStack )
             {
-                INS_InsertPredicatedCall
-                (
-                    ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
-                    IARG_MEMORYWRITE_EA,
-                    IARG_MEMORYWRITE_SIZE,
-                    //IARG_UINT32, INS_IsPrefetch(ins),
-                    IARG_END
-                );
+                if ( isStackWrite)
+                {
+                }
+                else if (INS_IsMemoryWrite(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
+                        IARG_MEMORYWRITE_EA,
+                        IARG_MEMORYWRITE_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
             }
-            
+            else
+            {
+                if (INS_IsMemoryWrite(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
+                        IARG_MEMORYWRITE_EA,
+                        IARG_MEMORYWRITE_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
+            }
         }
     }
 }
