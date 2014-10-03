@@ -145,7 +145,7 @@ private:
 
 public:
     Symbols(){}
-    void InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
+    void InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size);
     void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);

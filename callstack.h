@@ -21,6 +21,22 @@ public:
     bool Empty(){return stack.empty();}
     void Push(u16 f) { stack.push_back(f); }
     void Pop() { stack.pop_back(); }
+    void Print();
+    void Print(ofstream& fout);
+};
+
+class CallSiteStackType
+{
+private:
+    vector<u32> sites;  // vector containing location indexes of call sites
+
+public:
+    CallSiteStackType(){} // TODO Do we need to insert the first call site as for main()
+    bool Empty(){return sites.empty();}
+    void Push(u32 locidx) { sites.push_back(locidx); }
+    void Pop() { sites.pop_back(); }
+    u32 GetCallSites();
+    void Print();
     void Print(ofstream& fout);
 };
 

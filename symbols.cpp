@@ -1,8 +1,11 @@
 #include "shadow.h"
 #include "symbols.h"
+#include "callstack.h"
 
 extern map <string,IDNoType> FuncName2ID;
 extern map <u32,IDNoType> LocIndex2ID;
+extern map <u32,IDNoType> CallSites2ID;
+extern CallSiteStackType CallSiteStack;
 
 // List of all locations of symbols
 LocationList Locations;
@@ -28,26 +31,43 @@ string Symbols::GetSymLocation(IDNoType id)
     return sym.GetLocation();
 }
 
-void Symbols::InsertMallocCalloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
+void Symbols::InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size)
 {
-    //TODO do we also need to update the following map here?
-    // LocIndex2ID[loc] = id;
-
     D2ECHO("Inserting Malloc/Calloc/Realloc ");
-    if(_Symbols.find(id) != _Symbols.end() )
+
+    IDNoType id;
+    // combining with the last locIndex of alloc ftn
+    u32 callsites = CallSiteStack.GetCallSites() + locIndex;
+
+    if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
-        D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
-        Symbol& availSym = _Symbols[id];
-        availSym.SetSize(saddr, size);
+        // use existing id as this call site is already seen
+        id = CallSites2ID[callsites];
     }
     else
+    {
+        // use a new id for this call site
+        id = GlobalID++;
+        CallSites2ID[callsites] = id;
+    }
+
+    // To check if symbol is already in the table. This is possible because of
+    // the list of selected objects provided as input
+    // TODO currently not complete
+//     if(_Symbols.find(id) != _Symbols.end() )
+//     {
+//         D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
+//         Symbol& availSym = _Symbols[id];
+//         availSym.SetSize(saddr, size);
+//     }
+//     else
     {
         // Assign some name to this object symbol
         // TODO following can be done later at the end when names are really needed
         string name( "Object" + to_string(id) );
         Symbol newsym(id, saddr, size, name, SymType::OBJ, locIndex);
 
-        ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
+        //ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
         _Symbols[id] = newsym;
     }
     // we also need to set the object ids in the shadow table/mem for this object

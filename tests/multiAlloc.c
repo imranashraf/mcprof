@@ -21,12 +21,12 @@ int Size;
 void initVecs()
 {
     int i;
-    memset(srcArr1, 0, nBytes);
-    memcpy(srcArr2, srcArr1, nBytes);
-//     for(i = 0; i < Size; i++) {
-//         srcArr1[i]=i*5 + 7;
-//         srcArr2[i]=2*i - 3;
-//     }
+//     memset(srcArr1, 0, nBytes);
+//     memcpy(srcArr2, srcArr1, nBytes);
+    for(i = 0; i < Size; i++) {
+        srcArr1[i]=i*5 + 7;
+        srcArr2[i]=2*i - 3;
+    }
 }
 
 void sumVecs()
@@ -85,31 +85,36 @@ void process()
 {
     nBytes = Size*sizeof(TYPE);
     printf("Total bytes : %d\n",nBytes);
-    
+
     //     srcArr1 = malloc(nBytes);
     createArray(&srcArr1, nBytes);
     printf("srcArr1 addr after malloc : %p\n",srcArr1);
-    
+
     //     srcArr2 = malloc(nBytes);
     createArray(&srcArr2, nBytes);
     printf("srcArr2 addr after malloc : %p\n",srcArr2);
-    
+
     //     sumArr = malloc(nBytes);
+#if 1
+    createArray(&sumArr, nBytes);
+    printf("sumArr addr after malloc : %p\n",sumArr);
+#else
     createArray(&sumArr, nBytes/2);
     printf("sumArr addr after malloc : %p\n",sumArr);
     extendArray(&sumArr, nBytes);
     printf("sumArr addr after realloc : %p\n",sumArr);
-    
+#endif
     //     diffArr = malloc(nBytes);
     createArray(&diffArr, nBytes);
     printf("diffArr addr after malloc : %p\n",diffArr);
-    
+
     initVecs();
     sumVecs();
     diffVecs();
-    
-    printf("output : %d\n", sumArr[nBytes/2]+diffArr[nBytes/3]);
-    
+
+    printf("output : %d\n", sumArr[2]);
+    printf("output : %d\n", diffArr[3]);
+
     free(srcArr1);
     free(srcArr2);
     free(sumArr);
@@ -122,7 +127,7 @@ int main()
     printf("Multi Allocation Test.\n");
 
     int i=1;
-//     for(; i<=10; i++)
+    for(; i<=10; i++)
     {
         Size = i*10;
         process();
