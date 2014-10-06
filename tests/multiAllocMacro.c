@@ -21,8 +21,6 @@ int Size;
 void initVecs()
 {
     int i;
-//     memset(srcArr1, 0, nBytes);
-//     memcpy(srcArr2, srcArr1, nBytes);
     for(i = 0; i < Size; i++) {
         srcArr1[i]=i*5 + 7;
         srcArr2[i]=2*i - 3;
@@ -123,7 +121,6 @@ void process()
 
 int main()
 {
-//     nBytes = Size*sizeof(TYPE);
     printf("Multi Allocation Test.\n");
 
     int i=1;

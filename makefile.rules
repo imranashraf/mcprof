@@ -49,7 +49,8 @@ TOOL_ROOTS := mcprof
 SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
-APP_ROOTS := simple1 simple2 fibonacci vectOps memAllocFree memAllocFreeWrappers multiAlloc
+APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
+	multiAllocFtn multiAllocMacro multiAllocClass
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -84,19 +85,10 @@ endif
 # Test recipes
 #
 ##############################################################
-MCPROF_OPT:=-RecordStack 0 -SelectFunctions 0 -TrackObjects 1 -Engine 2 -SelectObjects 0
+MCPROF_OPT:=-RecordStack 0 -SelectFunctions 0 -TrackObjects 1 -Engine 2
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
-
-simple1.test: $(OBJDIR)simple1$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)simple1$(EXE_SUFFIX)
-
-simple2.test: $(OBJDIR)simple2$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)simple2$(EXE_SUFFIX)
-
-fibonacci.test: $(OBJDIR)fibonacci$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)fibonacci$(EXE_SUFFIX)
 
 vectOps.test: $(OBJDIR)vectOps$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOps$(EXE_SUFFIX)
@@ -107,8 +99,17 @@ memAllocFree.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX)
 memAllocFreeWrappers.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
 
-multiAlloc.test: $(OBJDIR)multiAlloc$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAlloc$(EXE_SUFFIX)
+memSetCopyMove.test: $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
+
+multiAllocFtn.test: $(OBJDIR)multiAllocFtn$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocFtn$(EXE_SUFFIX)
+
+multiAllocMacro.test: $(OBJDIR)multiAllocMacro$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocMacro$(EXE_SUFFIX)
+
+multiAllocClass.test: $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
 
 ##############################################################
 #
@@ -158,11 +159,11 @@ openv:
 	mcprof.cpp
 
 ###### Special applications' build rules ######
-# $(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c
-# 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c $(OBJDIR)malloc_wrap.o
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp $(OBJDIR)malloc_wrap.o
+	$(APP_CXX) -I. -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@

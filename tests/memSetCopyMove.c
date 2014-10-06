@@ -2,24 +2,36 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define USE_MALLOC_WRAPPERS
+
+#include "malloc_wrap.h"
+
 #define SIZE 10
 typedef int TYPE;
 
 unsigned int *srcArr1;
 unsigned int *srcArr2;
-unsigned int *sqrArr;
 unsigned int *sumArr;
 unsigned int *diffArr;
+unsigned int *sqrArr;
 
 unsigned int coeff = 2;
+
+int nbytes;
 
 void initVecs()
 {
     int i;
+#   if 1
+    memset(srcArr1, 1, nbytes );
+    memcpy(srcArr2, srcArr1, nbytes);
+    //memmove(srcArr2, srcArr1, nbytes);
+#   else 
     for(i = 0; i < SIZE; i++) {
         srcArr1[i]=i*5 + 7;
         srcArr2[i]=2*i - 3;
     }
+#   endif
 }
 
 void sumVecs()
@@ -44,7 +56,9 @@ TYPE SquareRootRounded(TYPE a_nInput)
 {
     TYPE op  = a_nInput;
     TYPE res = 0;
-    TYPE one = 1uL << 30; // The second-to-top bit is set: use 1u << 14 for uint16_t type; use 1uL<<30 for TYPE type
+    // The second-to-top bit is set: use 1u << 14 for uint16_t type;
+    // use 1uL<<30 for TYPE type
+    TYPE one = 1uL << 30;
 
     // "one" starts at the highest power of four <= than the argument.
     while (one > op)
@@ -61,11 +75,9 @@ TYPE SquareRootRounded(TYPE a_nInput)
         one >>= 2;
     }
 
-    /* Do arithmetic rounding to nearest integer */
+    // Do arithmetic rounding to nearest integer
     if (op > res)
-    {
         res++;
-    }
 
     return res;
 }
@@ -75,50 +87,39 @@ void sqrootVecs()
     int i;
     for(i = 0; i < SIZE; i++)
     {
-        sqrArr[i] = SquareRootRounded( sumArr[i] );
         sqrArr[i] = SquareRootRounded( sqrArr[i] + diffArr[i] );
     }
 }
 
 int main()
 {
+    nbytes = SIZE*sizeof(unsigned int);
     printf("Vector Operations Test.\n");
+    printf("Total bytes : %d\n",nbytes);
 
-    ////////////////////////////////////////////////////////////////////
-    // These are dummy calculations used to make first access to memory
-    // allocation functions so that there symbols are resolved for later
-    // accesses, Do we need it with new implementation? TEST!
-    char *dummy = malloc(1);
-    dummy = calloc(1, sizeof(char) );
-    dummy = realloc(dummy, 2);
-    printf("Dummy malloc addr : %p\n", (void *)dummy );
-    free(dummy);
-    ////////////////////////////////////////////////////////////////////
+    srcArr1 = malloc(nbytes);
+    printf("srcArr1 addr after malloc : %p\n",srcArr1);
 
-    srcArr1 = calloc(SIZE/2 * sizeof(TYPE), sizeof(TYPE) );
-    printf("srcArr1 addr after calloc : %p\n",srcArr1);
 
-    srcArr2 = malloc(SIZE * sizeof(TYPE));
-    printf("srcArr2 addr : %p\n",srcArr2);
+    srcArr2 = malloc(nbytes);
+    printf("srcArr2 addr after malloc : %p\n",srcArr2);
 
-    srcArr1 = realloc(srcArr1, SIZE * sizeof(TYPE));
-    printf("srcArr1 addr after realloc: %p\n",srcArr1);
+    sumArr = malloc(nbytes);
+    printf("sumArr addr after malloc : %p\n",sumArr);
 
-    sumArr = malloc(SIZE * sizeof(TYPE));
-    printf("sumArr addr : %p\n",sumArr);
 
-    diffArr = malloc(SIZE * sizeof(TYPE));
-    printf("diffArr addr : %p\n",diffArr);
+    diffArr = malloc(nbytes);
+    printf("diffArr addr after malloc : %p\n",diffArr);
 
-    sqrArr = malloc(SIZE * sizeof(TYPE));
-    printf("sqrArr addr : %p\n",sqrArr);
+    sqrArr = malloc(nbytes);
+    printf("sqrArr addr after malloc : %p\n",sqrArr);
 
     initVecs();
     sumVecs();
     diffVecs();
     sqrootVecs();
 
-    printf("output : %d\n",sumArr[1]+diffArr[1]+sqrArr[1]);
+    printf("output : %d\n", sumArr[2]+diffArr[3]+sqrArr[4]);
 
     free(srcArr1);
     free(srcArr2);
