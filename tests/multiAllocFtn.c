@@ -2,11 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define USE_MALLOC_WRAPPERS
-
-#include "malloc_wrap.h"
-
-
 typedef int TYPE;
 
 TYPE *srcArr1;

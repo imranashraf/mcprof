@@ -68,17 +68,12 @@ extern IDNoType GlobalID;
 static const std::string UnknownFtn("UnknownFtn");
 static const std::string UnknownObj("UnknownObj");
 // Names of malloc and free
-static const std::string MALLOC("wrap_malloc");
-static const std::string CALLOC("wrap_calloc");
-static const std::string REALLOC("wrap_realloc");
-static const std::string FREE("wrap_free");
+static const std::string MALLOC("malloc");
+static const std::string CALLOC("calloc");
+static const std::string REALLOC("realloc");
+static const std::string FREE("free");
 
-static const std::string MEMCPY("wrap_memcpy");
-static const std::string MEMMOVE("wrap_memmove");
-static const std::string MEMSET("wrap_memset");
-
-static const std::string STRDUP("wrap_strdup");
-static const std::string STRCPY("wrap_strcpy");
+static const std::string STRDUP("strdup");
 
 extern std::map <std::string,IDNoType> FuncName2ID;
 #include "symbols.h"

@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define USE_MALLOC_WRAPPERS
-
-#include "malloc_wrap.h"
-
 #define SIZE 10
 typedef int TYPE;
 
@@ -52,42 +48,12 @@ void diffVecs()
     }
 }
 
-TYPE SquareRootRounded(TYPE a_nInput)
-{
-    TYPE op  = a_nInput;
-    TYPE res = 0;
-    // The second-to-top bit is set: use 1u << 14 for uint16_t type;
-    // use 1uL<<30 for TYPE type
-    TYPE one = 1uL << 30;
-
-    // "one" starts at the highest power of four <= than the argument.
-    while (one > op)
-        one >>= 2;
-
-    while (one != 0)
-    {
-        if (op >= res + one)
-        {
-            op = op - (res + one);
-            res = res +  2 * one;
-        }
-        res >>= 1;
-        one >>= 2;
-    }
-
-    // Do arithmetic rounding to nearest integer
-    if (op > res)
-        res++;
-
-    return res;
-}
-
 void sqrootVecs()
 {
     int i;
     for(i = 0; i < SIZE; i++)
     {
-        sqrArr[i] = SquareRootRounded( sqrArr[i] + diffArr[i] );
+        sqrArr[i] =  sumArr[i] * diffArr[i] ;
     }
 }
 

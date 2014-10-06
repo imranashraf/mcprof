@@ -228,7 +228,7 @@ uptr currStartAddress;
 void SetAllocCallSite(u32 locIndex)
 {
     D2ECHO("setting last alloc function call locIndex");
-    currLocIndex = locIndex; // TODO update locIndex (not really needed now)
+    currLocIndex = locIndex;
 }
 
 // This is used both for malloc and calloc
@@ -267,7 +267,6 @@ VOID ReallocAfter(uptr addr)
 {
     D2ECHO("Setting Realloc address " << ADDR(addr) );
     uptr prevAddr = currStartAddress;
-    //TODO change "0" to nullptr
     if(prevAddr == 0) //realloc behaves like malloc, supplied null address as argument
     {
         currStartAddress = addr;
@@ -315,27 +314,14 @@ VOID StrdupAfter(uptr dstAddr)
 VOID InstrumentImages(IMG img, VOID * v)
 {
     string imgname = IMG_Name(img);
-
-    // For simplicity, instrument only the main image.
-    // This can be extended to any other image of course.
-    if (IMG_IsMainExecutable(img) == false &&
-            KnobMainExecutableOnly.Value() == true)
-    {
-        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
-        return;
-    }
-    else
-    {
-        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
-    }
+    bool isLibC = imgname.find("/libc") != string::npos;
 
     // we should instrument malloc/free only when tracking objects !
-    if ( TrackObjects )
+    if ( TrackObjects && isLibC )
     {
         // instrument libc for malloc, free etc
-        D1ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
+        ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
 
-        //  Find the malloc() function.
         RTN mallocRtn = RTN_FindByName(img, MALLOC.c_str() );
         if (RTN_Valid(mallocRtn))
         {
@@ -412,6 +398,19 @@ VOID InstrumentImages(IMG img, VOID * v)
 
     }
 
+    // For simplicity, do rest of instrumentation only for main image.
+    // This can be extended to any other image of course.
+    if (IMG_IsMainExecutable(img) == false &&
+            KnobMainExecutableOnly.Value() == true)
+    {
+        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
+        return;
+    }
+    else
+    {
+        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
+    }
+
     // Traverse the sections of the image.
     for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec))
     {
@@ -439,32 +438,23 @@ VOID InstrumentImages(IMG img, VOID * v)
                     Location loc(line, filename);
                     D1ECHO("call to routine " << tname << " call-site " << filename <<":"<< line);
 
-                    if( TrackObjects &&
-                        (
-                        (tname == MALLOC) || (tname == CALLOC) ||
-                        (tname == REALLOC) || (tname == STRDUP)
-                        )
-                      )
+                    if( TrackObjects && tname == ".plt" )
                     {
-                        // Do not instrument the calls inside wrappers, so skip malloc_wrap.c file
-                        if(filename.find("malloc_wrap.c") == string::npos ) // not found
-                        {
-                            bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
-                            if( !found )
-                                locIndex = Locations.Insert(loc);
+                        bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
+                        if( !found )
+                            locIndex = Locations.Insert(loc);
 
-                            D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
-                                    << filename <<":"<< line);
+                        D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
+                                << filename <<":"<< line);
 
-                            INS_InsertCall
-                            (
-                                ins,
-                                IPOINT_BEFORE,
-                                AFUNPTR(SetAllocCallSite),
-                                IARG_UINT32, locIndex,
-                                IARG_END
-                            );
-                        }
+                        INS_InsertCall
+                        (
+                            ins,
+                            IPOINT_BEFORE,
+                            AFUNPTR(SetAllocCallSite),
+                            IARG_UINT32, locIndex,
+                            IARG_END
+                        );
                     }
 
                     if ( INS_IsProcedureCall(ins) )
@@ -488,7 +478,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                             if( !found )
                                 locIndex = Locations.Insert(loc);
 
-                            D2ECHO("Instrumenting call for valid routine at " << VAR(locIndex) << " " << filename <<":"<< line);
+                            D1ECHO("Instrumenting call for valid routine at " << VAR(locIndex) << " " << filename <<":"<< line);
 
                             INS_InsertCall(
                                             ins,

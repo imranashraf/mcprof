@@ -6,7 +6,7 @@
 
 #define SIZE 10
 
-typedef short TYPE;
+typedef int TYPE;
 
 int coeff = 2;
 
@@ -30,6 +30,15 @@ void sumVecs(Vector<TYPE>& a, Vector<TYPE>& b, Vector<TYPE>& c)
     }
 }
 
+void diffVecs(Vector<TYPE>& a, Vector<TYPE>& b, Vector<TYPE>& c)
+{
+    int i;
+    for(i = 0; i < SIZE; i++)
+    {
+        c.push_back(coeff*a(i) - b(i));
+    }
+}
+
 int main()
 {
     printf("Vector Operation Test");
@@ -37,19 +46,18 @@ int main()
     Vector<TYPE> srcArr1;
     Vector<TYPE> srcArr2;
     Vector<TYPE> sumArr;
+    Vector<TYPE> diffArr;
 
     srcArr1.init(SIZE);
     srcArr2.init(SIZE);
     sumArr.init(SIZE);
-
+    diffArr.init(SIZE);
 
     initVecs(srcArr1, srcArr2);
     sumVecs(srcArr1, srcArr2, sumArr);
+    diffVecs(srcArr1, srcArr2, diffArr);
 
-    for (int i=0; i<SIZE; i++)
-    {
-        printf("%d ", sumArr(i));
-    }
+    printf("Result = %d ", sumArr(0) + diffArr(1) );
 
     printf("End Vector Operation Test");
     return 0;

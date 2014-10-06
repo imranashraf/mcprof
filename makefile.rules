@@ -50,7 +50,8 @@ SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
-	multiAllocFtn multiAllocMacro multiAllocClass
+	multiAllocFtn multiAllocMacro multiAllocClass \
+	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -98,6 +99,18 @@ memAllocFree.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX)
 
 memAllocFreeWrappers.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+
+memNewDelete.test: $(OBJDIR)memNewDelete$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memNewDelete$(EXE_SUFFIX)
+
+vectOpsCPP01.test: $(OBJDIR)vectOpsCPP01$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP01$(EXE_SUFFIX)
+
+vectOpsCPP02.test: $(OBJDIR)vectOpsCPP02$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP02$(EXE_SUFFIX)
+
+vectOpsCPP03.test: $(OBJDIR)vectOpsCPP03$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP03$(EXE_SUFFIX)
 
 memSetCopyMove.test: $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
@@ -159,11 +172,14 @@ openv:
 	mcprof.cpp
 
 ###### Special applications' build rules ######
-$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c $(OBJDIR)malloc_wrap.o
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp $(OBJDIR)malloc_wrap.o
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
 	$(APP_CXX) -I. -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
+
+$(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
+	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@

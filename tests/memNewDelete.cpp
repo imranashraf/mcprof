@@ -1,5 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <iostream>
 
 typedef int TYPE;
 
@@ -10,6 +10,8 @@ TYPE *diffArr;
 
 TYPE coeff = 2;
 int nElem;
+
+using namespace std;
 
 void initVecs()
 {
@@ -40,29 +42,24 @@ void diffVecs()
 
 int main()
 {
-    TYPE* dummy1 = malloc(5);
-    printf("dummy1 addr : %p\n",dummy1);
-    free(dummy1);
-    TYPE* dummy2 = calloc(5,sizeof(TYPE));
-    printf("dummy2 addr : %p\n",dummy2);
-    free(dummy2);
-    TYPE* dummy3 = realloc(NULL,5*sizeof(TYPE));
-    printf("dummy3 addr : %p\n",dummy3);
-    free(dummy3);
-
     printf("Vector Operations Test.\n");
-    nElem = 100;
+    nElem = 10;
 
-    srcArr1 = (TYPE*)malloc(nElem * sizeof(TYPE) );
-    printf("srcArr1 addr : %p\n",srcArr1);
+    TYPE* dummy1 = new TYPE[nElem];
+    delete[] dummy1;
+    TYPE* dummy2 = new TYPE;
+    delete dummy2;
 
-    srcArr2 = (TYPE*)malloc(nElem * sizeof(TYPE));
+    srcArr1 = new TYPE[nElem];
+    printf("srcArr1 addr after calloc : %p\n",srcArr1);
+
+    srcArr2 = new TYPE[nElem];
     printf("srcArr2 addr : %p\n",srcArr2);
 
-    sumArr = (TYPE*)malloc(nElem * sizeof(TYPE));
+    sumArr = new TYPE[nElem];
     printf("sumArr addr : %p\n",sumArr);
 
-    diffArr = (TYPE*)malloc(nElem * sizeof(TYPE));
+    diffArr = new TYPE[nElem];
     printf("diffArr addr : %p\n",diffArr);
 
     initVecs();
@@ -71,10 +68,10 @@ int main()
 
     printf("output : %d\n",sumArr[1]+diffArr[2]);
 
-    free(srcArr1);
-    free(srcArr2);
-    free(sumArr);
-    free(diffArr);
+    delete[] srcArr1;
+    delete[] srcArr2;
+    delete[] sumArr;
+    delete[] diffArr;
 
     return 0;
 }
