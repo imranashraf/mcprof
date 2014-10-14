@@ -25,7 +25,7 @@ endif
 # This defines tests which run tools of the same name.  This is simply for convenience to avoid
 # defining the test name twice (once in TOOL_ROOTS and again in TEST_ROOTS).
 # Tests defined here should not be defined in TOOL_ROOTS and TEST_ROOTS.
-TEST_TOOL_ROOTS := mcprof
+TEST_TOOL_ROOTS := 
 
 # This defines the tests to be run that were not already defined in TEST_TOOL_ROOTS.
 TEST_ROOTS :=
@@ -38,7 +38,7 @@ SANITY_SUBSET :=
 
 # This defines the tools which will be run during the the tests, and were not already defined in
 # TEST_TOOL_ROOTS.
-TOOL_ROOTS :=
+TOOL_ROOTS := mcprof
 
 # This defines the static analysis tools which will be run during the the tests. They should not
 # be defined in TEST_TOOL_ROOTS. If a test with the same name exists, it should be defined in
@@ -49,8 +49,9 @@ TOOL_ROOTS :=
 SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
-# APP_ROOTS := simple1 simple2 fibonacci vectOps memAllocFree memAllocFreeWrappers multiAlloc
-APP_ROOTS := multiAlloc
+APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
+	multiAllocFtn multiAllocMacro multiAllocClass \
+	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -85,21 +86,43 @@ endif
 # Test recipes
 #
 ##############################################################
-MCPROF_OPT:=-RecordStack 1 -SelectFunctions 0 -TrackObjects 1 -Engine 3 -SelectObjects 0
+MCPROF_OPT:=-RecordStack 0 -SelectFunctions 0 -TrackObjects 1 -Engine 2
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
-mcprof.test: $(OBJDIR)multiAlloc$(EXE_SUFFIX) $(OBJDIR)multiAlloc$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAlloc$(EXE_SUFFIX)
 
-# mcprof.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX) $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
-# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+vectOps.test: $(OBJDIR)vectOps$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOps$(EXE_SUFFIX)
 
-# mcprof.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX) $(OBJDIR)memAllocFree$(EXE_SUFFIX)
-# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+memAllocFree.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
 
-# mcprof.test: $(OBJDIR)vectOps$(EXE_SUFFIX) $(OBJDIR)vectOps$(EXE_SUFFIX)
-# 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
+memAllocFreeWrappers.test: $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX)
+
+memNewDelete.test: $(OBJDIR)memNewDelete$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memNewDelete$(EXE_SUFFIX)
+
+vectOpsCPP01.test: $(OBJDIR)vectOpsCPP01$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP01$(EXE_SUFFIX)
+
+vectOpsCPP02.test: $(OBJDIR)vectOpsCPP02$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP02$(EXE_SUFFIX)
+
+vectOpsCPP03.test: $(OBJDIR)vectOpsCPP03$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP03$(EXE_SUFFIX)
+
+memSetCopyMove.test: $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
+
+multiAllocFtn.test: $(OBJDIR)multiAllocFtn$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocFtn$(EXE_SUFFIX)
+
+multiAllocMacro.test: $(OBJDIR)multiAllocMacro$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocMacro$(EXE_SUFFIX)
+
+multiAllocClass.test: $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
 
 ##############################################################
 #
@@ -110,7 +133,7 @@ mcprof.test: $(OBJDIR)multiAlloc$(EXE_SUFFIX) $(OBJDIR)multiAlloc$(EXE_SUFFIX)
 # See makefile.default.rules for the default build rules.
 
 CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
-		engine1.cpp engine2.cpp engine3.cpp engine4.cpp \
+		engine1.cpp engine2.cpp engine3.cpp \
 		symbols.cpp\
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
@@ -130,13 +153,12 @@ format:
 # 	astyle --style=kr *.h *.cpp
 	rm -f *.orig
 
-openk:
+open:
 	kate makefile.rules globals.h globals.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
 	callstack.h callstack.cpp \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
-	engine4.h engine4.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 
@@ -146,16 +168,18 @@ openv:
 	symbols.h symbols.cpp \
 	callstack.h callstack.cpp \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
-	engine4.h engine4.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp
 
 ###### Special applications' build rules ######
-# $(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c
-# 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
-$(OBJDIR)$(APP_ROOTS)$(EXE_SUFFIX): $(TESTDIR)$(APP_ROOTS).c $(OBJDIR)malloc_wrap.o
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
+	$(APP_CXX) -I. -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
+
+$(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
+	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@

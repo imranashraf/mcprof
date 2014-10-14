@@ -1,4 +1,3 @@
-
 /*! @file
  *  This is an example of the PIN tool that demonstrates some basic PIN APIs
  *  and could serve as the starting point for developing your first PIN tool
@@ -14,7 +13,6 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
-#include "engine4.h"
 
 #include <iostream>
 #include <fstream>
@@ -34,11 +32,14 @@ extern Matrix2D ComMatrix;
 
 std::ofstream dotout;
 std::ofstream mout;
+
 CallStackType CallStack;
+CallSiteStackType CallSiteStack;
 
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 
+bool TrackObjects;
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -55,7 +56,7 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   "Trace functions that are contained only in the\
                           executable image");
 
-KNOB<BOOL> KnobStackAccess(KNOB_MODE_WRITEONCE, "pintool",
+KNOB<BOOL> KnobRecordStack(KNOB_MODE_WRITEONCE, "pintool",
                            "RecordStack","0", "Include Stack Accesses");
 
 KNOB<BOOL> KnobTrackObjects(KNOB_MODE_WRITEONCE, "pintool",
@@ -108,10 +109,6 @@ void SelectAnalysisEngine()
         ReadRecorder = RecordReadEngine3;
         WriteRecorder = RecordWriteEngine3;
         break;
-    case 4:
-        ReadRecorder = RecordReadEngine4;
-        WriteRecorder = RecordWriteEngine4;
-        break;
     default:
         ECHO("Specify a valid Engine number to be used");
         Die();
@@ -131,7 +128,6 @@ BOOL ValidFtnName(string name)
             name.c_str()[0]=='_' ||
             name.c_str()[0]=='?' ||
             !name.compare("atexit") ||
-//             !name.compare("wrap_") ||
             !name.compare("wrap_malloc") ||
             !name.compare("wrap_calloc") ||
             !name.compare("wrap_realloc") ||
@@ -167,19 +163,30 @@ BOOL ValidFtnName(string name)
         );
 }
 
+u32 lastCallLocIndex=0;
+VOID SetCallSite(u32 locIndex)
+{
+    D1ECHO("setting last function call locIndex to " << locIndex);
+    lastCallLocIndex=locIndex;
+}
+
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
     CallStack.Push(FuncName2ID[rname]);
+    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
+    //CallStack.Print();
+    //CallSiteStack.Print();
 
-    // In engine 4, to save time, the curr call is selected only at func entry,
+    // In engine 3, to save time, the curr call is selected only at func entry,
     // so that it does not need to be determined on each access
-    if (KnobEngine.Value() == 4)
+    if (KnobEngine.Value() == 3)
     {
         D1ECHO ("Setting Current Call for : " << rname );
         string str(rname);
         SetCurrCall( str );
     }
+    D1ECHO ("End of Entering Routine : " << rname );
 }
 
 
@@ -187,26 +194,29 @@ VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+    D1ECHO ("Exiting Routine : " << rname );
 
-    if(!(CallStack.Empty()) && ( CallStack.Top() == FuncName2ID[rname] ) )
+    // check first if map as entry for this ftn
+    if (FuncName2ID.find(rname) != FuncName2ID.end() )
     {
-        D1ECHO("Leaving Routine : " << rname
-            << " Popping call stack top is " << symTable.GetSymName( CallStack.Top() ) );
-        CallStack.Pop();
-// #if (DEBUG>0)
-    }
-    else if (!(CallStack.Empty()) )
-    {
-        D1ECHO("Not Leaving Routine : "<< VAR(rname)
-            << " call stack top is " << symTable.GetSymName( CallStack.Top() ) );
-    }
-    else
-    {
-        D1ECHO("Not Leaving Routine : " << VAR(rname)
-            << " as CallStack empty" );
-// #endif
+        // check if the top ftn is the current one
+        if ( CallStack.Top() == FuncName2ID[rname] )
+        {
+            D1ECHO("Routine ID: " << FuncName2ID[rname]
+                << " Call stack top id " << CallStack.Top() );
+
+            D1ECHO("Leaving Routine : " << rname
+                << " Popping call stack top is "
+                << symTable.GetSymName( CallStack.Top() ) );
+
+            CallStack.Pop();
+            CallSiteStack.Pop();
+            //CallStack.Print();
+            //CallSiteStack.Print();
+        }
     }
 
+    D1ECHO ("End of Exiting Routine : " << rname );
 }
 
 IDNoType currID;
@@ -214,11 +224,10 @@ u32 currLocIndex;
 u32 currSize;
 uptr currStartAddress;
 
-void SetIDOfCurrCall(u32 locIndex, u16 id)
+void SetAllocCallSite(u32 locIndex)
 {
-    D2ECHO("setting last function call id/locIndex");
-    currID = id;
-    currLocIndex = locIndex; // TODO update locIndex (not really needed now)
+    D2ECHO("setting last alloc function call locIndex");
+    currLocIndex = locIndex;
 }
 
 // This is used both for malloc and calloc
@@ -235,11 +244,12 @@ VOID CallocBefore(u32 n, u32 size)
 }
 
 // This is used both for malloc and calloc
-VOID MallocAfter(uptr addr)
+VOID MallocCallocAfter(uptr addr)
 {
     D2ECHO("setting malloc/calloc start address " << ADDR(addr) );
     currStartAddress = addr;
-    symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
+
+    symTable.InsertMallocCalloc(currStartAddress, currLocIndex, currSize);
 }
 
 // TODO can reallocation decrease size?
@@ -256,11 +266,10 @@ VOID ReallocAfter(uptr addr)
 {
     D2ECHO("Setting Realloc address " << ADDR(addr) );
     uptr prevAddr = currStartAddress;
-    //TODO change "0" to nullptr
     if(prevAddr == 0) //realloc behaves like malloc, supplied null address as argument
     {
         currStartAddress = addr;
-        symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
+        symTable.InsertMallocCalloc(currStartAddress, currLocIndex, currSize);
     }
     else
     {
@@ -297,34 +306,21 @@ VOID StrdupAfter(uptr dstAddr)
 
     u32 currSize = symTable.GetSymSize(srcAddr);
     D2ECHO("strdup size: " << currSize);
-    symTable.InsertMallocCalloc(currID, currStartAddress, currLocIndex, currSize);
+    symTable.InsertMallocCalloc(currStartAddress, currLocIndex, currSize);
 }
 
 // IMG instrumentation routine - called once per image upon image load
 VOID InstrumentImages(IMG img, VOID * v)
 {
     string imgname = IMG_Name(img);
-
-    // For simplicity, instrument only the main image.
-    // This can be extended to any other image of course.
-    if (IMG_IsMainExecutable(img) == false &&
-            KnobMainExecutableOnly.Value() == true)
-    {
-        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
-        return;
-    }
-    else
-    {
-        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
-    }
+    bool isLibC = imgname.find("/libc") != string::npos;
 
     // we should instrument malloc/free only when tracking objects !
-    if ( KnobTrackObjects.Value() )
+    if ( TrackObjects && isLibC )
     {
         // instrument libc for malloc, free etc
-        D1ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
+        ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
 
-        //  Find the malloc() function.
         RTN mallocRtn = RTN_FindByName(img, MALLOC.c_str() );
         if (RTN_Valid(mallocRtn))
         {
@@ -333,7 +329,7 @@ VOID InstrumentImages(IMG img, VOID * v)
             // Instrument malloc() to print the input argument value and the return value.
             RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
-            RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
+            RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocCallocAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
 
             RTN_Close(mallocRtn);
@@ -350,7 +346,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
                            IARG_END);
             // for now  using same callback ftns as for malloc
-            RTN_InsertCall(callocRtn, IPOINT_AFTER, (AFUNPTR)MallocAfter,
+            RTN_InsertCall(callocRtn, IPOINT_AFTER, (AFUNPTR)MallocCallocAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
 
             RTN_Close(callocRtn);
@@ -401,6 +397,19 @@ VOID InstrumentImages(IMG img, VOID * v)
 
     }
 
+    // For simplicity, do rest of instrumentation only for main image.
+    // This can be extended to any other image of course.
+    if (IMG_IsMainExecutable(img) == false &&
+            KnobMainExecutableOnly.Value() == true)
+    {
+        ECHO("Skipping Image "<< imgname<< " as it is not main executable");
+        return;
+    }
+    else
+    {
+        ECHO("Instrumenting "<<imgname<<" as it is the Main executable ");
+    }
+
     // Traverse the sections of the image.
     for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec))
     {
@@ -415,72 +424,85 @@ VOID InstrumentImages(IMG img, VOID * v)
             {
                 //D2ECHO("disassembeled ins = " << INS_Disassemble(ins) );
 
-                if( KnobTrackObjects.Value() && INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
+                if( INS_IsDirectBranchOrCall(ins) ) // or should it be procedure call?
                 {
                     ADDRINT target = INS_DirectBranchOrCallTargetAddress(ins);
-                    string tname = Target2RtnName(target);
-                    if( (tname == MALLOC) || (tname == CALLOC) ||
-                        (tname == REALLOC) || (tname == STRDUP) )
+                    string tname1 = Target2RtnName(target);
+                    string tname = PIN_UndecorateSymbolName( tname1, UNDECORATION_NAME_ONLY);
+
+                    u32 locIndex =-1;
+                    string filename("");    // This will hold the source file name.
+                    INT32 line = 0;     // This will hold the line number within the file
+                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
+                    Location loc(line, filename);
+                    D1ECHO("call to routine " << tname << " call-site " << filename <<":"<< line);
+
+                    if( TrackObjects && tname == ".plt" )
                     {
-                        u32 locIndex =-1;
-                        string filename("");    // This will hold the source file name.
-                        INT32 line = 0;     // This will hold the line number within the file.
-                        PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
-                        Location loc(line, filename);
+                        bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
+                        if( !found )
+                            locIndex = Locations.Insert(loc);
 
-                        // Do not instrument the calls inside wrappers, so skip malloc_wrap.c file
-                        if(filename.find("malloc_wrap.c") == string::npos ) // not found
+                        D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
+                                << filename <<":"<< line);
+
+                        INS_InsertCall
+                        (
+                            ins,
+                            IPOINT_BEFORE,
+                            AFUNPTR(SetAllocCallSite),
+                            IARG_UINT32, locIndex,
+                            IARG_END
+                        );
+                    }
+
+                    if ( INS_IsProcedureCall(ins) )
+                    {
+                        if( ValidFtnName(tname) )    // normal valid routines
                         {
-                            if ( KnobSelectObjects.Value() ) // track selected allocation calls
+                            if( KnobSelectFunctions.Value() )
                             {
-                                if( symTable.IsSeenLocation(loc, locIndex) )
+                                // In Select Function mode, functions are added a priori from
+                                // the list file to symbol table. So, if a function is not
+                                // found in symbol table, it means it is not in select ftn list
+                                // so it should be skiped
+                                if( !symTable.IsSeenFunctionName(tname) )
                                 {
-                                    // Obtain the id for this location
-                                    IDNoType id = LocIndex2ID[locIndex];
-
-                                    ECHO("Instrumenting Selected library call for (re)(c)(m)alloc/free call at "
-                                        << filename <<":"<< line << " and id " << id);
-
-                                    INS_InsertCall
-                                    (
-                                        ins,
-                                        IPOINT_BEFORE,
-                                        AFUNPTR(SetIDOfCurrCall),
-                                        IARG_UINT32, locIndex,
-                                        IARG_UINT32, id,
-                                        IARG_END
-                                    );
+                                    D1ECHO ("Skipping Call Instrumentation of un-selected Routine : " << tname);
+                                    continue;
                                 }
                             }
-                            else    // track all allocation calls
-                            {
-                                // TODO may be rename locations to callsites
+
+                            bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
+                            if( !found )
                                 locIndex = Locations.Insert(loc);
-                                D1ECHO("Instrumenting library call for (re)(c)(m)alloc/free call at "
-                                        << filename <<":"<< line);
 
-                                // Get a new id for this NEW location
-                                IDNoType id = GlobalID++;
+                            D1ECHO("Instrumenting call for valid routine at " << VAR(locIndex) << " " << filename <<":"<< line);
 
-                                INS_InsertCall
-                                (
-                                    ins,
-                                    IPOINT_BEFORE,
-                                    AFUNPTR(SetIDOfCurrCall),
-                                    IARG_UINT32, locIndex,
-                                    IARG_UINT32, id,
-                                    IARG_END
-                                );
-                            }
+                            INS_InsertCall(
+                                            ins,
+                                            IPOINT_BEFORE,
+                                            (AFUNPTR)SetCallSite,
+                                            IARG_UINT32, locIndex,
+                                            IARG_END
+                                          );
+                        }
+                        else    // normal invalid routines
+                        {
+                            D1ECHO ("Skipping Call Instrumentation of Invalid Routine : " << tname);
                         }
                     }
-                }
+                } //end INS_IsDirectBranchOrCall
 
                 if (INS_IsRet(ins))
                 {
-                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
-                                             (AFUNPTR)RecordRoutineExit,
-                                             IARG_INST_PTR, IARG_END);
+                    INS_InsertPredicatedCall(
+                                                ins,
+                                                IPOINT_BEFORE,
+                                                (AFUNPTR)RecordRoutineExit,
+                                                IARG_INST_PTR,
+                                                IARG_END
+                                            );
                 }
             }
             RTN_Close(rtn); // Don't forget to close the RTN once you're done.
@@ -488,131 +510,121 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
-/*
-VOID InstrumentInstructions(INS ins, VOID* v)
-{
-    UINT32 memOperands = INS_MemoryOperandCount(ins);
-    for (UINT32 memOp = 0; memOp < memOperands; memOp++)
-    {
-        size_t refSize = INS_MemoryOperandSize(ins, memOp);
-        if ( //KnobStackAccess.Value() && INS_IsStackRead(ins) &&
-            INS_MemoryOperandIsRead(ins, memOp))
-        {
-            INS_InsertPredicatedCall(
-                ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                                        IARG_MEMORYOP_EA, memOp,
-                                        IARG_UINT32, refSize,
-                                        IARG_END);
-        }
-
-        if ( //KnobStackAccess.Value() && INS_IsStackWrite(ins) &&
-            INS_MemoryOperandIsWritten(ins, memOp))
-        {
-            INS_InsertPredicatedCall(
-                ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
-                                        IARG_MEMORYOP_EA, memOp,
-                                        IARG_UINT32, refSize,
-                                        IARG_END);
-        }
-    }
-}
-*/
-
-/*
-// without stack
 VOID InstrumentTraces(TRACE trace, VOID *v)
 {
     for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
     {
         for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
         {
-            UINT32 memoryOperands = INS_MemoryOperandCount(ins);
+            D2ECHO("Dissassembled ins : " << INS_Disassemble(ins) );
+            bool isStackRead = INS_IsStackRead(ins)  || INS_IsIpRelRead(ins) ;
+            bool isStackWrite = INS_IsStackWrite(ins) || INS_IsIpRelWrite(ins);
+            bool ignoreStack = !KnobRecordStack.Value();
 
-            for (UINT32 memOp = 0; memOp < memoryOperands; memOp++)
+            // Instrument Read accesses
+            if( ignoreStack )
             {
-                UINT32 refSize = INS_MemoryOperandSize(ins, memOp);
-
-                // Note that if the operand is both read and written,
-                // we record it once for each.
-                if (INS_MemoryOperandIsRead(ins, memOp))
+                if ( isStackRead )
                 {
-                    INS_InsertPredicatedCall(
+                    D2ECHO("Ignoring as stack");
+                }
+                else if (INS_IsMemoryRead(ins) )
+                {
+                    D2ECHO("Recording heap");
+                    INS_InsertPredicatedCall
+                    (
                         ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                                             IARG_MEMORYOP_EA, memOp,
-                                             IARG_UINT32, refSize,
-                                             IARG_END);
-                }
+                        IARG_MEMORYREAD_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
 
-                if (INS_MemoryOperandIsWritten(ins, memOp))
+                    if (INS_HasMemoryRead2(ins) )
+                    {
+                        INS_InsertPredicatedCall
+                        (
+                            ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                            IARG_MEMORYREAD2_EA,
+                            IARG_MEMORYREAD_SIZE,
+                            //IARG_UINT32, INS_IsPrefetch(ins),
+                            IARG_END
+                        );
+                    }
+                }
+            }
+            else
+            {
+                D2ECHO("Recording heap (not ignoring)");
+                if (INS_IsMemoryRead(ins) )
                 {
-                    INS_InsertPredicatedCall(
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                        IARG_MEMORYREAD_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
+
+                if (INS_HasMemoryRead2(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
+                        IARG_MEMORYREAD2_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
+            }
+
+            // Instrument Write accesses
+            if( ignoreStack )
+            {
+                if ( isStackWrite)
+                {
+                }
+                else if (INS_IsMemoryWrite(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
                         ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
-                                             IARG_MEMORYOP_EA, memOp,
-                                             IARG_UINT32, refSize,
-                                             IARG_END);
+                        IARG_MEMORYWRITE_EA,
+                        IARG_MEMORYWRITE_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
+                }
+            }
+            else
+            {
+                if (INS_IsMemoryWrite(ins) )
+                {
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
+                        IARG_MEMORYWRITE_EA,
+                        IARG_MEMORYWRITE_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_END
+                    );
                 }
             }
         }
     }
 }
-*/
-
-VOID InstrumentTraces(TRACE trace, VOID *v)
-{
-    for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
-    {
-        for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
-        {
-
-            if (INS_IsMemoryRead(ins) && !(KnobStackAccess.Value() && INS_IsStackRead(ins)) )
-            {
-                INS_InsertPredicatedCall
-                (
-                    ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                    IARG_MEMORYREAD_EA,
-                    IARG_MEMORYREAD_SIZE,
-                    //IARG_UINT32, INS_IsPrefetch(ins),
-                    IARG_END
-                );
-            }
-
-            if (INS_HasMemoryRead2(ins))
-            {
-                INS_InsertPredicatedCall
-                (
-                    ins, IPOINT_BEFORE, (AFUNPTR)ReadRecorder,
-                    IARG_MEMORYREAD2_EA,
-                    IARG_MEMORYREAD_SIZE,
-                    //IARG_UINT32, INS_IsPrefetch(ins),
-                    IARG_END
-                );
-            }
-
-            if (INS_IsMemoryWrite(ins) && !(KnobStackAccess.Value() && INS_IsStackWrite(ins)))
-            {
-                INS_InsertPredicatedCall
-                (
-                    ins, IPOINT_BEFORE, (AFUNPTR)WriteRecorder,
-                    IARG_MEMORYWRITE_EA,
-                    IARG_MEMORYWRITE_SIZE,
-                    //IARG_UINT32, INS_IsPrefetch(ins),
-                    IARG_END
-                );
-            }
-
-        }
-    }
-}
-
 
 VOID InstrumentRoutines(RTN rtn, VOID *v)
 {
-    /*
-     * The following function recording can be done at the instrumentation time as below
-     * instead of doing at analysis time in RecordRoutineEntry(). This will result
-     * in more functions in SeenFnames which may not be even involved in communication.
-     * This, however, is not as such a problem as it will simply clutter the output.
-     */
+
+//     The following function recording can be done at the instrumentation time as below
+//     instead of doing at analysis time in RecordRoutineEntry(). This will result
+//     in more functions in SeenFnames which may not be even involved in communication.
+//     This, however, is not as such a problem as it will simply clutter the output.
+
     IMG img = SEC_Img(RTN_Sec(rtn));
     //imagename = IMG_Name(img).c_str());
 
@@ -622,7 +634,6 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 
         if (ValidFtnName(rname))
         {
-
             if( KnobSelectFunctions.Value() )
             {
                 // In Select Function mode, functions are added a priori from
@@ -657,7 +668,6 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
     }
 }
 
-
 /*!
  * Print out analysis results.
  * This function is called when the application exits.
@@ -679,19 +689,23 @@ VOID TheEnd(INT32 code, VOID *v)
         PrintAccesses();
         break;
     case 2:
-        OpenOutFile(KnobDotFile.Value(), dotout);
-        OpenOutFile(KnobMatrixFile.Value(), mout);
-        ComMatrix.PrintMatrix(mout);
-        ComMatrix.PrintDot(dotout);
-        mout.close();
-        dotout.close();
-        break;
+        if(TrackObjects)
+        {
+            OpenOutFile(KnobDotFile.Value(), dotout);
+            ComMatrix.PrintDot(dotout);
+            dotout.close();
+        }
+        else
+        {
+            OpenOutFile(KnobDotFile.Value(), dotout);
+            OpenOutFile(KnobMatrixFile.Value(), mout);
+            ComMatrix.PrintMatrix(mout);
+            ComMatrix.PrintDot(dotout);
+            mout.close();
+            dotout.close();
+            break;
+        }
     case 3:
-        OpenOutFile(KnobDotFile.Value(), dotout);
-        ComMatrix.PrintDot(dotout);
-        dotout.close();
-        break;
-    case 4:
         PrintAllCalls();
         break;
     default:
@@ -736,9 +750,13 @@ void SetupPin(int argc, char *argv[])
 
     if(KnobSelectObjects.Value() )
     {
-        D1ECHO("Initialize objects from Selected Objects file ...");
-        symTable.InitFromObjFile();
+        ECHO("Selected Objects file Feature is not complete...");
+        Die();
+        //D1ECHO("Initialize objects from Selected Objects file ...");
+        //symTable.InitFromObjFile();
     }
+
+    TrackObjects = KnobTrackObjects.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
