@@ -38,6 +38,15 @@ u32 CallSiteStackType::GetCallSites()
     return callsites;
 }
 
+string CallSiteStackType::GetCallSitesString()
+{
+    string callsites("");
+    if( !sites.empty()) callsites += Locations.GetLocation(sites[0]).toString();
+    for ( u16 loc=1; loc < sites.size(); loc++)
+        callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
+    return callsites;
+}
+
 void CallSiteStackType::Print()
 {
     string callsites("");

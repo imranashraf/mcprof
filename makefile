@@ -5,17 +5,25 @@
 ##############################################################
 
 # If the tool is built out of the kit, PIN_ROOT must be specified in the make invocation and point to the kit root.
+LAST_SUPPORTED_REV := 62732
 ifdef PIN_ROOT
-PIN := $(shell pin -version | head -1)
-# REV := $(shell pin -version | awk '/Rev/{print $3}')
-ifneq ($(PIN), Pin 2.14)
-$(error Pin 2.14 is required, found $(PIN)!)
+AVAIL_REV := $(shell pin -version | awk '/Rev/{print $$3}')
+IS_CORRECT_VER := $(shell echo $(AVAIL_REV) \> $(LAST_SUPPORTED_REV) | bc )
+ifneq ($(IS_CORRECT_VER), 1)
+$(info Pin Rev ${AVAIL_REV} )
+$(error Required Pin Rev above ${LAST_SUPPORTED_REV} )
 endif
 CONFIG_ROOT := $(PIN_ROOT)/source/tools/Config
-else
-$(warning Pin 2.13 is required. Ignore this warning if you are compiling this\
-tool inside pin kit. Otherwise, install it and set PIN_ROOT to point to it!)
+else # PIN_ROOT not defined, so may be compiling from inside Pin kit
 CONFIG_ROOT := ../Config
+endif
+
+CONFIG_EXISTS := $(shell [ -d ${CONFIG_ROOT} ] && echo 1 )
+ifneq (${CONFIG_EXISTS}, 1)
+$(info PIN_ROOT not set to point to the Pin directory.)
+# $(info And you are also compiling this tool from outside pin kit.)
+$(info Install Pin and set PIN_ROOT to point to it.)
+$(error Required Pin Rev above ${LAST_SUPPORTED_REV} )
 endif
 
 include $(CONFIG_ROOT)/makefile.config

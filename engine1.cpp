@@ -14,16 +14,25 @@ extern Symbols symTable;
 
 class Access
 {
-    public:
-        float Reads;
-        float Writes;
-        float Total;
-        Access() : Reads(0), Writes(0), Total(0) {}
+public:
+    float Reads;
+    float Writes;
+    float Total;
+    Access() : Reads(0), Writes(0), Total(0) {}
 };
 
-bool _sortByReads (const Access &lhs, const Access &rhs) { return lhs.Reads > rhs.Reads; }
-bool _sortByWrites(const Access &lhs, const Access &rhs) { return lhs.Writes > rhs.Writes; }
-bool _sortByTotal (const Access &lhs, const Access &rhs) { return lhs.Total > rhs.Total; }
+bool _sortByReads (const Access &lhs, const Access &rhs)
+{
+    return lhs.Reads > rhs.Reads;
+}
+bool _sortByWrites(const Access &lhs, const Access &rhs)
+{
+    return lhs.Writes > rhs.Writes;
+}
+bool _sortByTotal (const Access &lhs, const Access &rhs)
+{
+    return lhs.Total > rhs.Total;
+}
 
 class Accesses
 {
@@ -42,13 +51,13 @@ public:
     }
     void UpdateTotal()
     {
-        for(auto& pair : _Accesses)
+for(auto& pair : _Accesses)
         {
             auto& elem = pair.second;
             elem.Total = elem.Reads + elem.Writes;
         }
     }
-    
+
     // this bash command can be used to sort by total access:
     //      sort -k2 -gr accesses.out
 //     void SortByTotal()
@@ -59,7 +68,7 @@ public:
     void Print(ofstream& fout)
     {
         fout << setw(35) << "Function" << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes"<<endl;
-        for(auto& pair : _Accesses)
+for(auto& pair : _Accesses)
         {
             auto& id = pair.first;
             auto& elem = pair.second;

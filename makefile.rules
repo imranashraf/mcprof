@@ -51,7 +51,7 @@ SA_TOOL_ROOTS :=
 # This defines all the applications that will be run during the tests.
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
 	multiAllocFtn multiAllocMacro multiAllocClass \
-	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03
+	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -112,6 +112,9 @@ vectOpsCPP02.test: $(OBJDIR)vectOpsCPP02$(EXE_SUFFIX)
 vectOpsCPP03.test: $(OBJDIR)vectOpsCPP03$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP03$(EXE_SUFFIX)
 
+vectOpsCPP04.test: $(OBJDIR)vectOpsCPP04$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOpsCPP04$(EXE_SUFFIX)
+
 memSetCopyMove.test: $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
 
@@ -162,7 +165,7 @@ open:
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 
-openv:
+openvim:
 	vim -p makefile.rules globals.h globals.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
@@ -173,13 +176,13 @@ openv:
 
 ###### Special applications' build rules ######
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
-	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+	$(APP_CC) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
-	$(APP_CXX) -I. -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
+	$(APP_CXX) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@

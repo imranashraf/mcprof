@@ -27,7 +27,7 @@ void RecordWriteEngine2(uptr addr, u32 size)
     else
     {
         D2ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
-                    << " and " << symTable.GetSymName(objid) << dec);
+               << " and " << symTable.GetSymName(objid) << dec);
         for(u32 i=0; i<size; i++)
         {
             SetProducer(prod, addr+i);
@@ -55,7 +55,7 @@ void RecordReadEngine2(uptr addr, u32 size)
     else
     {
         D2ECHO("Recording comm of " << VAR(size) << " b/w "
-                << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
+               << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
         for(u32 i=0; i<size; i++)
         {
             ComMatrix.RecordCommunication(objid, cons, 1);
