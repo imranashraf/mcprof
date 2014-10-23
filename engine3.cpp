@@ -94,13 +94,13 @@ void PrintCall(Call& call, ofstream& fout)
 {
     fout << "Call Seq No : " << call.SeqNo << "\n" ;
     call.CallPath.Print(fout);
-    for ( auto& readPair : call.Reads)
+for ( auto& readPair : call.Reads)
     {
         IDNoType oid = readPair.first;
         fout << "Reads from " << symTable.GetSymName(oid) << " : " << readPair.second << "\n" ;
     }
 
-    for ( auto& writePair : call.Writes)
+for ( auto& writePair : call.Writes)
     {
         IDNoType oid = writePair.first;
         fout << "Writes to " << symTable.GetSymName(oid) << " : " << writePair.second << "\n" ;
@@ -113,7 +113,7 @@ void PrintCalls(AllCalls2OneFtnType& calls, ofstream& fout)
     u32 totalCalls = calls.size();
     fout <<"Total Calls : " << totalCalls << "\n";
     u32 cno=0;
-    for ( auto& call : calls)
+for ( auto& call : calls)
     {
         fout << "Call No : " << cno << "\n";
         PrintCall(call, fout);
@@ -128,7 +128,7 @@ void PrintAllCalls()
     OpenOutFile(perCallFileName, fout);
 
     fout << "Printing All Calls\n";
-    for ( auto& callpair :AllCalls)
+for ( auto& callpair :AllCalls)
     {
         IDNoType fid = callpair.first;
         fout << "Printing Calls to " << symTable.GetSymName(fid) << "\n";

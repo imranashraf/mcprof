@@ -71,6 +71,7 @@ static const std::string UnknownObj("UnknownObj");
 static const std::string MALLOC("malloc");
 static const std::string CALLOC("calloc");
 static const std::string REALLOC("realloc");
+static const std::string ALLOCA("alloca");
 static const std::string FREE("free");
 
 static const std::string STRDUP("strdup");

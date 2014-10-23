@@ -3,7 +3,6 @@
 #include "callstack.h"
 
 extern map <string,IDNoType> FuncName2ID;
-extern map <u32,IDNoType> LocIndex2ID;
 extern map <u32,IDNoType> CallSites2ID;
 extern CallSiteStackType CallSiteStack;
 
@@ -31,13 +30,18 @@ string Symbols::GetSymLocation(IDNoType id)
     return sym.GetLocation();
 }
 
-void Symbols::InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size)
+void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
 {
     D2ECHO("Inserting Malloc/Calloc/Realloc ");
 
     IDNoType id;
-    // combining with the last locIndex of alloc ftn
-    u32 callsites = CallSiteStack.GetCallSites() + locIndex;
+    u32 callsites = CallSiteStack.GetCallSites();
+    // combining with the last lastCallLocIndex
+    if( CallSiteStack.Top() != lastCallLocIndex )
+        callsites += lastCallLocIndex;
+
+//     CallSiteStack.Print();
+//     ECHO( "last call site : " Locations.GetLocation(lastCallLocIndex).toString() );
 
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
@@ -51,21 +55,21 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size)
         CallSites2ID[callsites] = id;
     }
 
-    // To check if symbol is already in the table. This is possible because of
-    // the list of selected objects provided as input
-    // TODO currently not complete
-//     if(_Symbols.find(id) != _Symbols.end() )
-//     {
-//         D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
-//         Symbol& availSym = _Symbols[id];
-//         availSym.SetSize(saddr, size);
-//     }
-//     else
+    // To check if symbol is already in the table. This is possible because of:
+    //  * the list of selected objects provided as input
+    //  * multiple allocations from same line
+    if(_Symbols.find(id) != _Symbols.end() )
+    {
+        D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
+        Symbol& availSym = _Symbols[id];
+        availSym.SetSize(saddr, size);
+    }
+    else
     {
         // Assign some name to this object symbol
         // TODO following can be done later at the end when names are really needed
         string name( "Object" + to_string(id) );
-        Symbol newsym(id, saddr, size, name, SymType::OBJ, locIndex);
+        Symbol newsym(id, saddr, size, name, SymType::OBJ, lastCallLocIndex, CallSiteStack);
 
         //ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
         _Symbols[id] = newsym;
@@ -75,7 +79,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size)
     InitObjectIDs(saddr, size, id);
 }
 
-void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size)
+void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 size)
 {
     D2ECHO("Updating Realloc ");
     Symbol& availSym = _Symbols[id];
@@ -93,7 +97,7 @@ void Symbols::InsertFunction(const string& ftnname)
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC);
     D1ECHO("Adding Function Symbol: " << ftnname
-        << " with id: " << int(id) << " to Symbol Table");
+           << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
 }
 
@@ -125,6 +129,7 @@ u16 Symbols::TotalSymbolCount()
 // so size of this map gives total function count
 u16 Symbols::TotalFunctionCount()
 {
+    D2ECHO("Getting total Function count");
     return FuncName2ID.size();
 }
 
@@ -133,8 +138,8 @@ void Symbols::Remove(uptr saddr)
     D2ECHO("Removing symbol at Start Address: " << ADDR(saddr) );
     u32 size = GetSymSize(saddr);
 
-    // uncomment the following to remove the objects on free
-    // commented it to keep the objects in the table
+    // uncomment the following to remove the objects on free.
+    // commented it to keep the objects in the table for later use.
     /*
     auto it = _Symbols.find(id);
     if(it != _Symbols.end() )
@@ -206,7 +211,7 @@ void Symbols::InitFromObjFile()
         u16 locindex = Locations.Insert( loc );
         // Get a new id for this NEW location
         IDNoType id = GlobalID++;
-        LocIndex2ID[locindex] = id;
+        //LocIndex2ID[locindex] = id;
         ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
         _Symbols[id] = Symbol(id, symname, SymType::OBJ, locindex );
         ++i;
@@ -223,18 +228,21 @@ void Symbols::InitFromObjFile()
 void Symbol::Print(ostream& fout)
 {
     fout << "ID: " << id << " "
-         << SymTypeName[symType] << " " << name << " " 
-         << VAR(symLocIndex) << " " 
+         << SymTypeName[symType] << " " << name << " "
+         << VAR(symLocIndex) << " ";
+
+    fout << symCallSite.GetCallSitesString() << " -> "
          << Locations.GetLocation(symLocIndex).toString() << endl;
-     for(auto& pair : startAddr2Size)
-     {
-         auto& saddr = pair.first;
-         auto& sizes = pair.second;
-         fout << "    " << ADDR(saddr) << "(";
-         for(auto& size : sizes)
+
+for(auto& pair : startAddr2Size)
+    {
+        auto& saddr = pair.first;
+        auto& sizes = pair.second;
+        fout << "    " << ADDR(saddr) << "(";
+for(auto& size : sizes)
             fout << " " << size;
-         fout << ")" << endl;
-     }
+        fout << ")" << endl;
+    }
 }
 
 void Symbols::Print()
@@ -247,8 +255,8 @@ void Symbols::Print()
         ofstream fout;
         OpenOutFile(fname.c_str(), fout);
         ECHO("Printing Symbol Table to " << fname );
-        for ( auto& entry : _Symbols)
-        { 
+for ( auto& entry : _Symbols)
+        {
             auto& sym = entry.second;
             sym.Print(fout);
         }

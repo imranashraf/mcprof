@@ -20,8 +20,8 @@ struct Call
     map<IDNoType,float> Reads;     // all the  read accesses in this call, updated per access
     map<IDNoType,float> Writes;    // all the write accesses in this call, updated per access
     u64 SeqNo; // TODO use it later for temporal aspect of a call
-                // This should be incremented on each func entry, so that
-                // each function call has a unique sequence no
+    // This should be incremented on each func entry, so that
+    // each function call has a unique sequence no
 };
 
 void SetCurrCall(string& fname);

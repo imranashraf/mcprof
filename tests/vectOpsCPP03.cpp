@@ -2,6 +2,12 @@
 #include <iostream>
 #include <vector>
 
+/*
+ * Because of the calls to push_back extra communication is
+ * reported because of creation and then initialization, but
+ * it still needs detailed explanation
+ */
+
 typedef int TYPE;
 
 TYPE coeff = 2;
@@ -40,10 +46,10 @@ int main()
 {
     nElem = 10;
 
-    TYPE* dummy1 = new TYPE[nElem];
-    delete[] dummy1;
-    TYPE* dummy2 = new TYPE;
-    delete dummy2;
+//     TYPE* dummy1 = new TYPE[nElem];
+//     delete[] dummy1;
+//     TYPE* dummy2 = new TYPE;
+//     delete dummy2;
 
     printf("Vector Operations Test.\n");
 

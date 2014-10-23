@@ -2,6 +2,7 @@
 #define SYMBOLS_H
 
 #include "globals.h"
+#include "callstack.h"
 #include "pin.H"
 
 #include <vector>
@@ -23,13 +24,18 @@ struct Location
 
     Location() : lineNo(0), fileName("") {}
     Location(u32 l, string f) : lineNo(l), fileName(f) {}
-    string toString(){ return fileName + ":" + to_string(lineNo); }
+    string toString()
+    {
+        return fileName + ":" + to_string(lineNo);
+    }
 
-    bool operator==(const Location& loc) const {
+    bool operator==(const Location& loc) const
+    {
         return lineNo == loc.lineNo && fileName == loc.fileName;
     }
 
-    bool operator<(const Location& loc) const {
+    bool operator<(const Location& loc) const
+    {
         return lineNo < loc.lineNo && fileName  < loc.fileName;
     }
 };
@@ -41,7 +47,10 @@ private:
     vector<Location> locations;
     // NOTE location index 0 is for unknown location
 public:
-    LocationList() { locations.push_back( Location() ); }
+    LocationList()
+    {
+        locations.push_back( Location() );
+    }
 
     // Insert a location and return location index
     u16 Insert(Location loc)
@@ -60,7 +69,7 @@ public:
         for(u32 i=0; i<locations.size(); ++i)
         {
             if( loc.lineNo == locations[i].lineNo &&
-                loc.fileName == locations[i].fileName )
+                    loc.fileName == locations[i].fileName )
             {
                 locIndex=i;
                 return true;
@@ -82,7 +91,7 @@ class Symbol
 {
 private:
     IDNoType id;
-    // Following map is used to record multiple allocations from 
+    // Following map is used to record multiple allocations from
     // same location (which will have same id). Secondly, multiple
     // allocations can have same address but the size can be different.
     // so a vector is used to preserve the allocation, where the last
@@ -91,6 +100,7 @@ private:
     string name;
     SymType symType;
     u32 symLocIndex;
+    CallSiteStackType symCallSite;
 
 public:
     Symbol() :
@@ -106,13 +116,33 @@ public:
         name(n), symType(typ), symLocIndex(locidx) {}
 
     Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx) :
-        id(id1), name(n), symType(typ), symLocIndex(locidx) 
-            {startAddr2Size[saddr].push_back(size1);}
+        id(id1), name(n), symType(typ), symLocIndex(locidx)
+    {
+        startAddr2Size[saddr].push_back(size1);
+    }
 
-    void SetLocIndex(u32 idx) { symLocIndex = idx; }
-    u32 GetLocIndex() { return symLocIndex; }
-    u32 GetLine() {return Locations.GetLocation(symLocIndex).lineNo;}
-    void SetSize(uptr saddr, u32 size) {startAddr2Size[saddr].push_back(size);}
+    Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx, CallSiteStackType& callsitestack) :
+        id(id1), name(n), symType(typ), symLocIndex(locidx), symCallSite(callsitestack)
+    {
+        startAddr2Size[saddr].push_back(size1);
+    }
+
+    void SetLocIndex(u32 idx)
+    {
+        symLocIndex = idx;
+    }
+    u32 GetLocIndex()
+    {
+        return symLocIndex;
+    }
+    u32 GetLine()
+    {
+        return Locations.GetLocation(symLocIndex).lineNo;
+    }
+    void SetSize(uptr saddr, u32 size)
+    {
+        startAddr2Size[saddr].push_back(size);
+    }
     u32 GetSize(uptr saddr)
     {
         auto& sizeVec = startAddr2Size[saddr];
@@ -121,14 +151,38 @@ public:
         else
             return 0;
     }
-    bool isSameLine( u32 l) { return (Locations.GetLocation(symLocIndex).lineNo == l);}
-    bool isSameFile( string& f) { return (Locations.GetLocation(symLocIndex).fileName == f);}
-    void SetName(string n) {name = n;}
-    string& GetName() {return name; }
-    void SetID(IDNoType id0) {id = id0;}
-    IDNoType GetID() {return id; }
-    SymType GetType() {return symType;}
-    void SetType(SymType typ) { symType = typ;}
+    bool isSameLine( u32 l)
+    {
+        return (Locations.GetLocation(symLocIndex).lineNo == l);
+    }
+    bool isSameFile( string& f)
+    {
+        return (Locations.GetLocation(symLocIndex).fileName == f);
+    }
+    void SetName(string n)
+    {
+        name = n;
+    }
+    string& GetName()
+    {
+        return name;
+    }
+    void SetID(IDNoType id0)
+    {
+        id = id0;
+    }
+    IDNoType GetID()
+    {
+        return id;
+    }
+    SymType GetType()
+    {
+        return symType;
+    }
+    void SetType(SymType typ)
+    {
+        symType = typ;
+    }
     void Print(ostream& fout=std::cout);
     string GetLocation()
     {
@@ -144,7 +198,7 @@ private:
     unordered_map<IDNoType,Symbol> _Symbols;
 
 public:
-    Symbols(){}
+    Symbols() {}
     void InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size);
     void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
     void InsertFunction(const string& ftnname);

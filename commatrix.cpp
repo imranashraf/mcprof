@@ -21,7 +21,7 @@ Matrix2D::Matrix2D(IDNoType size)
 void Matrix2D::RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
 {
     D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
-        << FUNC(cons) << " of size: " << size );
+           << FUNC(cons) << " of size: " << size );
 
     if( prod < Matrix.size() && cons < Matrix.size() )
         Matrix[prod][cons] += size;
@@ -93,8 +93,8 @@ void Matrix2D::PrintDot(ostream &dotout)
 
     dotout << "digraph {\ngraph [];"
 //                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
-            << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
-            << endl;
+           << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
+           << endl;
 
     string objNodeStyle("fontcolor=black, shape=box, fontsize=20");
     string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
@@ -122,19 +122,19 @@ void Matrix2D::PrintDot(ostream &dotout)
             {
                 color = (int) (  1023 *  log((float)(comm)) / log((float)maxComm)  );
                 dotout << dec
-                        << "\"" << (u16)p << "\""
-                        << "->"
-                        << "\"" << (u16)c << "\""
-                        << "[label=\""
-                        << comm <<" Bytes\""
-                        << "color = \"#"
-                        << hex
-                        << setw(2) << setfill('0') << max(0, color-768)
-                        << setw(2) << setfill('0') << min(255, 512-(int)abs(color-512))
-                        << setw(2) << setfill('0') << max(0, min(255,512-color))
-                        << "\""
-                        << "]"
-                        << endl;
+                       << "\"" << (u16)p << "\""
+                       << "->"
+                       << "\"" << (u16)c << "\""
+                       << "[label=\""
+                       << comm <<" Bytes\""
+                       << "color = \"#"
+                       << hex
+                       << setw(2) << setfill('0') << max(0, color-768)
+                       << setw(2) << setfill('0') << min(255, 512-(int)abs(color-512))
+                       << setw(2) << setfill('0') << max(0, min(255,512-color))
+                       << "\""
+                       << "]"
+                       << endl;
             }
         }
     }
