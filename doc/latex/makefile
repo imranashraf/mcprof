@@ -1,6 +1,9 @@
 
 texfname = manual
 
+simple: $(texfname).tex
+	pdflatex $(texfname).tex
+
 pdf: $(texfname).tex
 	pdflatex $(texfname).tex
 	bibtex $(texfname).aux

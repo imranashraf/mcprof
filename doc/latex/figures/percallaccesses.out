@@ -1,0 +1,35 @@
+Printing All Calls
+Printing Calls to initVecs
+Total Calls : 1
+Call No : 0
+Call Seq No : 1
+Call Stack : UnknownFtn -> main -> initVecs
+Writes to Object5 : 400
+Writes to Object6 : 400
+Printing Calls to sumVecs
+Total Calls : 1
+Call No : 0
+Call Seq No : 2
+Call Stack : UnknownFtn -> main -> sumVecs
+Reads from Object5 : 400
+Reads from Object6 : 400
+Writes to Object7 : 400
+Printing Calls to diffVecs
+Total Calls : 1
+Call No : 0
+Call Seq No : 3
+Call Stack : UnknownFtn -> main -> diffVecs
+Reads from UnknownFtn : 3115
+Reads from Object5 : 400
+Reads from Object6 : 400
+Reads from Object7 : 4
+Reads from Object8 : 4
+Writes to UnknownFtn : 797
+Writes to Object8 : 400
+Printing Calls to main
+Total Calls : 1
+Call No : 0
+Call Seq No : 0
+Call Stack : UnknownFtn -> main
+Reads from UnknownFtn : 69368
+Writes to UnknownFtn : 3568

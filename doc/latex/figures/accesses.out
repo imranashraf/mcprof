@@ -1,0 +1,10 @@
+                           Function         Total         Reads        Writes
+                         UnknownFtn        286562        232480         54082  :0
+                           initVecs           800             0           800  :0
+                            sumVecs          1200           800           400  :0
+                           diffVecs          1200           800           400  :0
+                               main         74974         70968          4006  :0
+                            Object5          1200           800           400  /home/mani/repositories/mcprof/tests/vectOps.c:55
+                            Object6          1200           800           400  /home/mani/repositories/mcprof/tests/vectOps.c:58
+                            Object7           404             4           400  /home/mani/repositories/mcprof/tests/vectOps.c:61
+                            Object8           404             4           400  /home/mani/repositories/mcprof/tests/vectOps.c:64

@@ -27,6 +27,8 @@
 \DeclareGraphicsExtensions{.pdf,.eps,.png,.jpg}
 \graphicspath{{./figures/}}
 
+\usepackage{fancyvrb}
+
 % for code listings
 \usepackage{listings}
 
@@ -117,9 +119,12 @@ sources on 32-bit / 64-bit Linux, the following steps can be performed.
 \item Download Pin and copy and extract it to the directory where you want to keep Pin.
 
 \item Define a variable \verb|PIN_ROOT| by running the following commands:
-        \begin{center}
-        \verb|export PIN_ROOT=/<absolute path to pin>|
-        \end{center}
+{
+\small
+\begin{Verbatim}[frame=single]
+export PIN_ROOT=/<absolute path to pin>
+\end{Verbatim}
+}
 
 \item You can also add this line, for instance, to your \textbf{.bashrc} in case you are
 using \textbf{bash} to export the variable automatically on opening a terminal.
@@ -127,9 +132,12 @@ using \textbf{bash} to export the variable automatically on opening a terminal.
 \item Download \MCPROF{} and copy and extract it to the directory where you want to compile it.
 
 \item Go the \MCPROF{} directory and run the following command to compile:
-        \begin{center}
-        \verb|make|
-        \end{center}
+{
+\small
+\begin{Verbatim}[frame=single]
+make
+\end{Verbatim}
+}
 
 \end{itemize}
 
@@ -176,9 +184,13 @@ directory of source package.
 This example will be compiled during the default compilation of the
 \MCPROF{} discussed in Section \ref{sec:installation}. In order to profile this
 application by \MCPROF{} you can give the following command:
-        \begin{center}
-        \verb|make vectOps.test|
-        \end{center}
+
+{
+\small
+\begin{Verbatim}[frame=single]
+make vectOps.test
+\end{Verbatim}
+}
 
 Simmilarly, other tests can also be executed by replacing the <vectOps> with the
 <name of the test application>.test as given in \textbf{tests} directory. This
@@ -193,6 +205,53 @@ This application can be compiled
 %----------------------------------------------------------------------------------
 \section{Output}
 \label{sec:output}
+
+Figure \ref{fig:figWithObjects} shows the output communication graph.
+
+\begin{figure}[!bt]
+\centering
+\includegraphics[width=0.75\linewidth]{figures/figWithObjects.pdf}
+\caption{Figure 1 caption.}
+\label{fig:figWithObjects}
+\end{figure}
+
+%----------------------------------------------------------------------------------
+\section{Frequently Encountered Problems}
+\label{sec:faq}
+
+This section will cover some of the frequently encountered problems will setting-up/using
+\MCPROF{}.
+
+\subsection{Pin Injection Mode Error}
+
+On some systems if Pin (parent) injection mode is not enabled by default then you see
+an error as shown below.
+
+{
+\small
+\begin{Verbatim}[frame=single]
+E:Attach to pid 13972 failed. 
+E:  The Operating System configuration prevents Pin
+E:  from using the default (parent) injection mode.
+E:  To resolve, either execute the following (as root):
+E:  $ echo 0 > /proc/sys/kernel/yama/ptrace_scope
+E:  Or use the "-injection child" option.
+E:  For more information, regarding child injection,
+E:  see Injection section in the Pin User Manual.
+\end{Verbatim}
+}
+
+Solution is also suggested in this message, which is to become root and enable this
+injection. This can be achieved by running the following two commands:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+sudo -i
+echo 0 > /proc/sys/kernel/yama/ptrace_scope
+exit
+\end{Verbatim}
+}
 
 
 
@@ -218,15 +277,6 @@ improvements, or you want to report a bug, contact:
 
 
 
-% an example of a figure \ref{fig:figure1}.
-% \begin{figure}[!bt]
-% \centering
-% \includegraphics[width=0.67\linewidth]{figures/figure1.pdf}
-% \caption{Figure 1 caption.}
-% \label{fig:figure1}
-% \end{figure}
-% 
-% 
 % An example of an equation \ref{eq:amdhal}.
 % \begin{equation}
 % \label{eq:amdhal}
@@ -235,18 +285,3 @@ improvements, or you want to report a bug, contact:
 %  where $p$ is the speedup factor of the accelerated part, $f$ is the percentual
 % contribution of the sequential part, and $s$ is the original percentual
 % contribution of the accelerated part.
-
-% \begin{figure} %[!bt]
-% \centering
-% \begin{verbatim}
-% ReadImage-Byte2Float        9600
-% Byte2Float-convolveHoriz    255360
-% ComputeKernel-convolveVert  248640
-% ComputeKernel-convolveHoriz 255360
-% convolveHoriz-convolveVert  248640
-% convolveVert-Float2Byte     38400
-% Float2Byte-PrintImg         9600
-% \end{verbatim}
-% \caption{Simplified Output for the Image Convolution Application.}
-% \label{fig:pincommout}
-% \end{figure}
