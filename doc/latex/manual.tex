@@ -22,11 +22,14 @@
 \usepackage{arydshln}
 \usepackage{booktabs}
 \usepackage{rotating}
-% \usepackage{hyperref}
+
 \usepackage{graphicx}
 \DeclareGraphicsExtensions{.pdf,.eps,.png,.jpg}
 \graphicspath{{./figures/}}
 
+\usepackage{url}
+
+% for border on Verbatim environment
 \usepackage{fancyvrb}
 
 % for code listings
@@ -68,9 +71,7 @@
 % paper title
 \title{\MCPROF{}: Memory and Communication Profiler}
 \author{Imran Ashraf \\
-    Computer Science and Engineering\\
-    Department of Software and Computer Technology\\
-    Delft University of Technology, Delft, The Netherlands\\
+    Computer Engineering Lab, TU Delft, The Netherlands\\
     I.Ashraf@tudelft.nl
 }
 \maketitle
@@ -79,11 +80,12 @@
 \section{Introduction}
 \label{sec:introduction}
 
-\MCPROF{} is a memory and communication profiler. It traces memory reads/writes and reports
-memory accesses by various functions in the application as well as the
-data-communication between functions. The information is obtained by
-performing dynamic binary instrumentation by utilizing Intel Pin \cite{Pin} framework.
-This manual explains the process of setting up \MCPROF{} and using it.
+\MCPROF{} is a memory and communication profiler. It traces memory reads/writes
+and reports memory accesses by various functions in the application as well as
+the data-communication between functions. The information is obtained by
+performing dynamic binary instrumentation by utilizing Intel Pin \cite{Pin,
+Pin_Download} framework.  This manual explains the process of setting up
+\MCPROF{} and using it.
 
 
 
@@ -101,9 +103,14 @@ This manual explains the process of setting up \MCPROF{} and using it.
 In order to setup and use \MCPROF{} the following two packages are required:
 
 \begin{itemize}
-\item Intel Pin DBI framework \cite{Pin} Revision 62732 or higher
+
+\item Intel Pin DBI framework \cite{Pin_Download} Revision 62732 or higher
+
 \item g++ compiler with support for C++11X
-\item  graphviz Dot utility for converting the generated communication graphs from DOT to pdf formats
+
+\item  graphviz Dot utility for converting the generated communication graphs
+    from DOT to pdf formats
+
 \end{itemize}
 
 
@@ -111,14 +118,16 @@ In order to setup and use \MCPROF{} the following two packages are required:
 \section{Installation}
 \label{sec:installation}
 
-\MCPROF{} uses Makefile to compile the sources. In order to compile \MCPROF{} from
-sources on 32-bit / 64-bit Linux, the following steps can be performed.
+\MCPROF{} uses Makefile to compile the sources. In order to compile \MCPROF{}
+from sources on 32-bit / 64-bit Linux, the following steps can be performed.
 
 \begin{itemize}
 
-\item Download Pin and copy and extract it to the directory where you want to keep Pin.
+\item Download Pin and copy and extract it to the directory where you want to
+    keep Pin.
 
 \item Define a variable \verb|PIN_ROOT| by running the following commands:
+
 {
 \small
 \begin{Verbatim}[frame=single]
@@ -126,12 +135,15 @@ export PIN_ROOT=/<absolute path to pin>
 \end{Verbatim}
 }
 
-\item You can also add this line, for instance, to your \textbf{.bashrc} in case you are
-using \textbf{bash} to export the variable automatically on opening a terminal.
+\item You can also add this line, for instance, to your \textbf{.bashrc} in case
+    you are using \textbf{bash} to export the variable automatically on opening
+    a terminal.
 
-\item Download \MCPROF{} and copy and extract it to the directory where you want to compile it.
+\item Download \MCPROF{} and copy and extract it to the directory where you want
+    to compile it.
 
 \item Go the \MCPROF{} directory and run the following command to compile:
+
 {
 \small
 \begin{Verbatim}[frame=single]
@@ -141,15 +153,19 @@ make
 
 \end{itemize}
 
-If every thing goes fine, you will see a directory \verb|obj-intel64| (or \verb|obj-ia32|
-depending upon your architecture). This directory will contain the executables and
-object files generated as a result of the compilation. The important files are:
+If every thing goes fine, you will see a directory \verb|obj-intel64| (or
+\verb|obj-ia32| depending upon your architecture). This directory will contain
+the executables and object files generated as a result of the compilation. The
+important files are:
 
 \begin{itemize}
+
 \item \textbf{mcprof.so} which is the tool. This will be used to profile the
-applications as explained in Section \ref{sec:usage}.
-\item executable files of the test applications available in \textbf{tests} directory.
-These executables can be used as test inputs.
+    applications as explained in Section \ref{sec:usage}.
+
+\item executable files of the test applications available in \textbf{tests}
+    directory.  These executables can be used as test inputs.
+
 \end{itemize}
 
 
@@ -159,8 +175,12 @@ These executables can be used as test inputs.
 \label{sec:usage}
 
 In order to explain the usage of \MCPROF{} we will use the example application
-listed in Figure \ref{fig:vectOps}. The source code is available in \verb|tests|
-directory of source package.
+listed in Figure \ref{fig:vectOps}. The complete source-code is available in
+\textbf{tests} directory of source package. In this application, $4$ \verb|int|
+arrays are created on source lines 23, 24, 25 and 26. These arrays are
+initialized in \verb|initVecs| function. The sum and difference of the elements
+of these arrays are computed in \verb|sumVecs| and \verb|diffVecs| functions,
+respectively.  Finally, these arrays are free on lines 32-35.
 
 \begin{figure} %[ht]
     \centering
@@ -179,10 +199,10 @@ directory of source package.
 \end{figure}
 
 
-\subsection{Using Given Tests}
+\subsection{Profiling Given Tests}
 
-This example will be compiled during the default compilation of the
-\MCPROF{} discussed in Section \ref{sec:installation}. In order to profile this
+This example will be compiled during the default compilation of the \MCPROF{}
+discussed in Section \ref{sec:installation}. In order to profile this
 application by \MCPROF{} you can give the following command:
 
 {
@@ -192,40 +212,226 @@ make vectOps.test
 \end{Verbatim}
 }
 
-Simmilarly, other tests can also be executed by replacing the <vectOps> with the
-<name of the test application>.test as given in \textbf{tests} directory. This
-will generate the output information depending upon which engines is used. This
-will be explained in Section \ref{sec:output}.
+Similarly, other tests can also be executed by replacing the
+\textbf{<vectOps>.test} with the \textbf{<name of the test application>.test} as
+given in \textbf{tests} directory. This will generate the output information
+depending upon the selected engine. The details of the generated output are
+provided in Section \ref{sec:output}.
 
-\subsection{Using Your Own Example}
+\subsection{Profiling Your Own Example}
 
-This application can be compiled 
+In order to provide an example of how you can compile and profile your own
+application, the same \textbf{vectOps} example is provided in directory
+\textbf{yourApp}. You can copy this directory to any location you like your
+Linux machine. In order to profile this application, a \textbf{makefile} is
+provided in this directory containing all the rules to compile and profile this
+application. You need to make some changes before profiling this application.
+
+\begin{itemize}
+
+\item Modify the path to Pin directory on line 1 in the makefile.
+
+\item Modify the path to \MCPROF{} directory on line 2 in the makefile.
+
+\end{itemize}
+
+It should be noted that the \MCPROF{} options are provided in \verb|MCPROF\_OPT|
+variable in \textbf{makefile}. You can modify these options as required. The
+details of these options are available in Section \ref{sec:inputopt}. Once these
+modifications are performed, this application can be compiled and profiled by
+the following command:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+make mcprof
+\end{Verbatim}
+}
 
 
 %----------------------------------------------------------------------------------
-\section{Output}
+\section{\MCPROF{} Input Options}
+\label{sec:inputopt}
+
+Follwing are the input options of \MCPROF{}.
+
+\begin{description}
+
+\item [-RecordStack] can be 0 or 1 to tell \MCPROF{} to include stack accesses or not.
+
+\item [-TrackObjects] can be 0 or 1 to tell \MCPROF{} if you want to track objects. If
+set 1, the calls to memory allocations functions (malloc, calloc, realloc,
+free, new, delete) will be instrumented to track the allocation and deallocation of
+objects at run-time in the application. The complete call-path with source
+file-name and line-no information will be recorded as well.
+
+\item [-Engine] can be 1,2 or 3. This selects the engine to be used in
+    \MCPROF{}.  Based on the selected engine, the desired output is generated as
+    below:
+
+    \begin{description}
+
+    \item [Engine 1]    provides the hot-functions and hot-objects (if
+        TrackObjects is 1) in the application based on the memory accesses. The
+        number of memory reads/writes performed by each function/object is also
+        reported.
+
+    \item [Engine 2]    provides the data-communication information between
+        functions. If TrackObjects is 1, the communication is also reported
+        through objects in the application.
+
+    \item [Engine 3]    reports the memory access information through functions
+        and objects per call.
+
+    \end{description}
+
+\end{description}
+
+%----------------------------------------------------------------------------------
+\section{\MCPROF{} Generated Output}
 \label{sec:output}
 
-Figure \ref{fig:figWithObjects} shows the output communication graph.
+\MCPROF{} generates various output files based on the selected engines. An
+important file which is generated independent of the selected engine is
+\textbf{symbols.out}.  This file contains the information about the
+function/object symbols tracked during the application execution. In case of
+objects, the allocation address, allocation size, call-path of the allocation is
+also reported.
 
-\begin{figure}[!bt]
+\subsection{Engine 1 Output}
+
+The output of Engine 1 is a text-file \textbf{accesses.out} in the current
+directory. This file contains the information about the access performed by
+functions/objects in the application. An example output for the \textbf{vectOps}
+application is shown below:
+
+{
+\scriptsize
+\begin{Verbatim}[frame=single]
+Function    Total   Reads   Writes  Location
+UnknownFtn  286562  232480  54082   :0
+initVecs    800     0       800     :0
+sumVecs     1200    800     400     :0
+diffVecs    1200    800     400     :0
+main        74974   70968   4006    :0
+Object5     1200    800     400     /<complete path>/vectOps.c:55
+Object6     1200    800     400     /<complete path>/vectOps.c:58
+Object7     404     4       400     /<complete path>/vectOps.c:61
+Object8     404     4       400     /<complete path>/vectOps.c:64
+\end{Verbatim}
+}
+
+The accesses reported against \textbf{UnknownFtn} are the accesses which cannot
+be associated to any function. For instance the accesses before starting the
+\textbf{main} function is called.
+
+In case of objects, there source-file and line-no information is also reported in
+the last column.
+
+\subsection{Engine 2 Output}
+
+\MCPROF{} records data-communication among functions. This is reported as a
+data-communication in DOT format in the file \textbf{communication.dot} in the
+current directory. This file can be converted to pdf by the following command:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+dot -Tpdf communication.dot -o communication.pdf
+\end{Verbatim}
+}
+
+Figure \ref{fig:comm} shows the data-communication graph generated by \MCPROF{}
+with TrackObjects as 0. Figure \ref{fig:comm} shows the same graph with
+TrackObjects as 1.
+
+\begin{figure}[!h]
 \centering
-\includegraphics[width=0.75\linewidth]{figures/figWithObjects.pdf}
-\caption{Figure 1 caption.}
-\label{fig:figWithObjects}
+\includegraphics[width=0.85\linewidth]{figures/comm.pdf}
+
+\caption{Data-communication among functions in vectOps application as reported
+    by \MCPROF{}. The Grey ovals represent functions. The arcs represent the
+    communication with the number on the arc representing the amount of
+    data-communication in bytes.}
+
+\label{fig:comm}
 \end{figure}
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/commWithObjects.pdf}
+
+\caption{Data-communication among functions in vectOps application as reported
+    by \MCPROF{}. The tracked objects and communication through these objects
+    is also shown. The Grey ovals represent functions. The white rectangles
+    represent objects. The arcs represent the communication with the number on
+    the arc representing the amount of data-communication in bytes.}
+
+\label{fig:commWithObjects}
+\end{figure}
+
+\subsection{Engine 3 Output}
+
+\MCPROF{} reports per function call accesses in Engine 3 in the text-file
+\textbf{percallaccesses.out} as shown below:
+
+{
+\scriptsize
+\begin{Verbatim}[frame=single]
+Printing All Calls
+
+Printing Calls to initVecs
+Total Calls : 1
+Call No : 0
+Call Seq No : 1
+Call Stack : UnknownFtn -> main -> initVecs
+Writes to Object5 : 400
+Writes to Object6 : 400
+
+Printing Calls to sumVecs
+Total Calls : 1
+Call No : 0
+Call Seq No : 2
+Call Stack : UnknownFtn -> main -> sumVecs
+Reads from Object5 : 400
+Reads from Object6 : 400
+Writes to Object7 : 400
+
+Printing Calls to diffVecs
+Total Calls : 1
+Call No : 0
+Call Seq No : 3
+Call Stack : UnknownFtn -> main -> diffVecs
+Reads from UnknownFtn : 3115
+Reads from Object5 : 400
+Reads from Object6 : 400
+Reads from Object7 : 4
+Reads from Object8 : 4
+Writes to UnknownFtn : 797
+Writes to Object8 : 400
+
+Printing Calls to main
+Total Calls : 1
+Call No : 0
+Call Seq No : 0
+Call Stack : UnknownFtn -> main
+Reads from UnknownFtn : 69368
+Writes to UnknownFtn : 3568
+\end{Verbatim}
+}
+
 
 %----------------------------------------------------------------------------------
 \section{Frequently Encountered Problems}
 \label{sec:faq}
 
-This section will cover some of the frequently encountered problems will setting-up/using
-\MCPROF{}.
+This section will cover some of the frequently encountered problems will
+setting-up/using \MCPROF{}.
 
 \subsection{Pin Injection Mode Error}
 
-On some systems if Pin (parent) injection mode is not enabled by default then you see
-an error as shown below.
+On some systems if Pin (parent) injection mode is not enabled by default then
+you see an error as shown below.
 
 {
 \small
@@ -241,8 +447,8 @@ E:  see Injection section in the Pin User Manual.
 \end{Verbatim}
 }
 
-Solution is also suggested in this message, which is to become root and enable this
-injection. This can be achieved by running the following two commands:
+Solution is also suggested in this message, which is to become root and enable
+this injection. This can be achieved by running the following two commands:
 
 {
 \small
@@ -259,8 +465,8 @@ exit
 \section{Contact}
 \label{sec:contact}
 
-In case you are interested in contributing to \MCPROF{}, or you have suggestions for
-improvements, or you want to report a bug, contact:
+In case you are interested in contributing to \MCPROF{}, or you have suggestions
+for improvements, or you want to report a bug, contact:
 
 \begin{itemize}
 \item Imran Ashraf < I.Ashraf@TUDelft.nl >

@@ -4,7 +4,7 @@ texfname = manual
 simple: $(texfname).tex
 	pdflatex $(texfname).tex
 
-pdf: $(texfname).tex
+all: $(texfname).tex
 	pdflatex $(texfname).tex
 	bibtex $(texfname).aux
 	pdflatex $(texfname).tex

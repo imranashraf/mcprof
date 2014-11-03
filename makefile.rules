@@ -86,7 +86,7 @@ endif
 # Test recipes
 #
 ##############################################################
-MCPROF_OPT:=-RecordStack 0 -SelectFunctions 0 -TrackObjects 1 -Engine 2
+MCPROF_OPT:=-RecordStack 0 -TrackObjects 1 -Engine 2
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
@@ -150,6 +150,19 @@ clean: cleantemp
 cleantemp:
 	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps
 
+###### Special applications' build rules ######
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
+	$(APP_CC) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
+$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
+	$(APP_CXX) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
+$(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
+	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+
+$(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
+	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@
+
 
 format:
 	astyle --style=allman *.h *.cpp
@@ -165,7 +178,7 @@ open:
 	pintrace.h pintrace.cpp \
 	mcprof.cpp &> /dev/null &
 
-openvim:
+vimopen:
 	vim -p makefile.rules globals.h globals.cpp \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
@@ -174,15 +187,8 @@ openvim:
 	pintrace.h pintrace.cpp \
 	mcprof.cpp
 
-###### Special applications' build rules ######
-$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
-	$(APP_CC) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
-	$(APP_CXX) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+tarball:
+	cd ..; tar -czf mcprof.tar.gz  --exclude='mcprof/doc/latex' --exclude='mcprof/.git*' mcprof
+	mv ../mcprof.tar.gz .
 
-$(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
-	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
-
-$(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
-	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@
