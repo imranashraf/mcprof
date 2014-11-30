@@ -51,9 +51,12 @@ public:
     }
     void UpdateTotal()
     {
-for(auto& pair : _Accesses)
+    //for(auto& pair : _Accesses)
+    map<IDNoType,Access>::iterator iter;
+    for( iter = _Accesses.begin(); iter != _Accesses.end(); iter++)
+//     for(Access& pair : _Accesses)
         {
-            auto& elem = pair.second;
+            auto& elem = iter->second;
             elem.Total = elem.Reads + elem.Writes;
         }
     }
@@ -68,10 +71,13 @@ for(auto& pair : _Accesses)
     void Print(ofstream& fout)
     {
         fout << setw(35) << "Function" << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes"<<endl;
-for(auto& pair : _Accesses)
+
+        //for(auto& pair : _Accesses)
+        map<IDNoType,Access>::iterator iter;
+        for( iter = _Accesses.begin(); iter != _Accesses.end(); iter++)
         {
-            auto& id = pair.first;
-            auto& elem = pair.second;
+            auto& id = iter->first;
+            auto& elem = iter->second;
             fout << setw(35) << symTable.GetSymName(id)
                  << setw(14) << elem.Total
                  << setw(14) << elem.Reads

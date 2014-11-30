@@ -6,7 +6,8 @@
 #include "pin.H"
 
 #include <vector>
-#include <unordered_map>
+// #include <unordered_map>
+#include <tr1/unordered_map>
 #include <string>
 #include <fstream>
 #include <algorithm>
@@ -26,7 +27,7 @@ struct Location
     Location(u32 l, string f) : lineNo(l), fileName(f) {}
     string toString()
     {
-        return fileName + ":" + to_string(lineNo);
+        return fileName + ":" + to_string((long long)lineNo);
     }
 
     bool operator==(const Location& loc) const
@@ -187,7 +188,7 @@ public:
     string GetLocation()
     {
         string f = Locations.GetLocation(symLocIndex).fileName + ":";
-        f += to_string(Locations.GetLocation(symLocIndex).lineNo );
+        f += to_string( (long long) (Locations.GetLocation(symLocIndex).lineNo) );
         return f;
     }
 };
@@ -195,7 +196,7 @@ public:
 class Symbols
 {
 private:
-    unordered_map<IDNoType,Symbol> _Symbols;
+    std::tr1::unordered_map<IDNoType,Symbol> _Symbols;
 
 public:
     Symbols() {}

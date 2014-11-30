@@ -6,13 +6,13 @@
 ##############################################################
 TESTDIR := ./tests/
 
-ASTYLE := $(shell which astyle)
-ifeq ($(ASTYLE),)
-$(info command <astyle> not found! \
-Install it to get advantage of automatic code formatting.\
-After installation, run <make format> to format all the files to
-allman style code formatting.)
-endif
+# ASTYLE := $(shell which astyle)
+# ifeq ($(ASTYLE),)
+# $(info command <astyle> not found! )
+# $(info Install it to get advantage of automatic code formatting.)
+# $(info After installation, run <make format> to format all the files to)
+# $(info allman style code formatting.)
+# endif
 
 ##############################################################
 #
@@ -70,7 +70,8 @@ endif
 
 # Linux
 ifeq ($(TARGET_OS),linux)
-	TOOL_CXXFLAGS+= -MD -std=c++11
+#	TOOL_CXXFLAGS+= -MD -std=c++11
+	TOOL_CXXFLAGS+= -MD -std=c++0x
 # 	TOOL_LDFLAGS+= -pg
 # 	TOOL_LIBS+= -pg
 	APP_CXXFLAGS+= -fno-inline -g

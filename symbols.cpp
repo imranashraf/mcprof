@@ -68,10 +68,10 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     {
         // Assign some name to this object symbol
         // TODO following can be done later at the end when names are really needed
-        string name( "Object" + to_string(id) );
+        string name( "Object" + to_string((long long)id) );
         Symbol newsym(id, saddr, size, name, SymType::OBJ, lastCallLocIndex, CallSiteStack);
 
-        //ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
+        D1ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
         _Symbols[id] = newsym;
     }
     // we also need to set the object ids in the shadow table/mem for this object
@@ -234,13 +234,18 @@ void Symbol::Print(ostream& fout)
     fout << symCallSite.GetCallSitesString() << " -> "
          << Locations.GetLocation(symLocIndex).toString() << endl;
 
-for(auto& pair : startAddr2Size)
+    //for(auto& pair : startAddr2Size)
+    map<uptr,vector<u32>>::iterator iter;
+    for(iter=startAddr2Size.begin(); iter!=startAddr2Size.end(); iter++)
     {
-        auto& saddr = pair.first;
-        auto& sizes = pair.second;
+        auto& saddr = iter->first;
+        auto& sizes = iter->second;
         fout << "    " << ADDR(saddr) << "(";
-for(auto& size : sizes)
-            fout << " " << size;
+
+        //for(auto& size : sizes)
+        vector<u32>::iterator iter;
+        for(iter=sizes.begin(); iter!=sizes.end(); iter++)
+            fout << " " << *iter;
         fout << ")" << endl;
     }
 }
@@ -255,9 +260,11 @@ void Symbols::Print()
         ofstream fout;
         OpenOutFile(fname.c_str(), fout);
         ECHO("Printing Symbol Table to " << fname );
-for ( auto& entry : _Symbols)
+        //for ( auto& entry : _Symbols)
+        std::tr1::unordered_map<IDNoType,Symbol>::iterator iter;
+        for(iter=_Symbols.begin(); iter!=_Symbols.end(); iter++)
         {
-            auto& sym = entry.second;
+            auto& sym = iter->second;
             sym.Print(fout);
         }
         fout.close();

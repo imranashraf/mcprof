@@ -94,16 +94,20 @@ void PrintCall(Call& call, ofstream& fout)
 {
     fout << "Call Seq No : " << call.SeqNo << "\n" ;
     call.CallPath.Print(fout);
-for ( auto& readPair : call.Reads)
+    //for ( auto& readPair : call.Reads)
+    map<IDNoType,float>::iterator iter;
+    for( iter = call.Reads.begin(); iter != call.Reads.end(); iter++)
     {
-        IDNoType oid = readPair.first;
-        fout << "Reads from " << symTable.GetSymName(oid) << " : " << readPair.second << "\n" ;
+        IDNoType oid = iter->first;
+        fout << "Reads from " << symTable.GetSymName(oid) << " : " << iter->second << "\n" ;
     }
 
-for ( auto& writePair : call.Writes)
+    //for ( auto& writePair : call.Writes)
+    //map<IDNoType,float>::iterator iter;
+    for( iter = call.Writes.begin(); iter != call.Writes.end(); iter++)
     {
-        IDNoType oid = writePair.first;
-        fout << "Writes to " << symTable.GetSymName(oid) << " : " << writePair.second << "\n" ;
+        IDNoType oid = iter->first;
+        fout << "Writes to " << symTable.GetSymName(oid) << " : " << iter->second << "\n" ;
     }
 }
 
@@ -113,10 +117,13 @@ void PrintCalls(AllCalls2OneFtnType& calls, ofstream& fout)
     u32 totalCalls = calls.size();
     fout <<"Total Calls : " << totalCalls << "\n";
     u32 cno=0;
-for ( auto& call : calls)
+
+    vector<Call>::iterator iter;
+    //for ( auto& call : calls)
+    for(iter=calls.begin(); iter!=calls.end(); iter++)
     {
         fout << "Call No : " << cno << "\n";
-        PrintCall(call, fout);
+        PrintCall(*iter, fout);
         cno++;
     }
 }
@@ -128,11 +135,13 @@ void PrintAllCalls()
     OpenOutFile(perCallFileName, fout);
 
     fout << "Printing All Calls\n";
-for ( auto& callpair :AllCalls)
+    //for ( auto& callpair :AllCalls)
+    AllCalls2AllFtnsType::iterator iter;
+    for(iter=AllCalls.begin(); iter!=AllCalls.end(); iter++)
     {
-        IDNoType fid = callpair.first;
+        IDNoType fid = iter->first;
         fout << "Printing Calls to " << symTable.GetSymName(fid) << "\n";
-        PrintCalls(callpair.second, fout);
+        PrintCalls(iter->second, fout);
     }
 
     fout.close();

@@ -28,7 +28,8 @@ static const u64 L1ENTRIES = (1ULL << L1BITS);
 static const u64 L2ENTRIES = (1ULL << L2BITS);
 static const u64 L3ENTRIES = (1ULL << L3BITS);
 
-#define UNACCESSED nullptr
+// #define UNACCESSED nullptr
+#define UNACCESSED NULL
 
 void SetProducer(IDNoType fid, uptr addr);
 IDNoType GetProducer(uptr addr);
