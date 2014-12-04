@@ -24,7 +24,9 @@ struct Call
     // each function call has a unique sequence no
 };
 
-void SetCurrCall(string& fname);
+// void SetCurrCall(string& fname);
+void SetCurrCall();
+void SetCurrCallOnRet();
 
 void RecordWriteEngine3(uptr addr, u32 size);
 void RecordReadEngine3(uptr addr, u32 size);

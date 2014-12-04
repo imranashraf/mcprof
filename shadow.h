@@ -34,7 +34,7 @@ static const u64 L3ENTRIES = (1ULL << L3BITS);
 void SetProducer(IDNoType fid, uptr addr);
 IDNoType GetProducer(uptr addr);
 IDNoType GetObjectID(uptr addr);
-void InitObjectIDs(uptr saddr, u32 size, IDNoType id);
+void SetObjectIDs(uptr saddr, u32 size, IDNoType id);
 void SetProducers(uptr saddr, u32 size, IDNoType fid);
 
 struct Entry

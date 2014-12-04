@@ -158,6 +158,7 @@ do { \
 #define DCHECK_GE(a, b)
 #endif
 
+void PrintLogo();
 bool isEmpty(std::ifstream& fin);
 void OpenInFile(const std::string& fileName, std::ifstream& fin);
 void OpenOutFile(const std::string& fileName, std::ofstream& fout);

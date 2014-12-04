@@ -29,6 +29,8 @@ map <u32,IDNoType> CallSites2ID;
 
 int main(int argc, char *argv[])
 {
+    PrintLogo();
+
 #if (DEBUG>0)
     PrintShadowMap();
 #endif

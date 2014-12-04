@@ -215,17 +215,19 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname );
     CallStack.Push(FuncName2ID[rname]);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
-    // CallStack.Print();
-    // CallSiteStack.Print();
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
 
-    // In engine 3, to save time, the curr call is selected only at func entry,
-    // so that it does not need to be determined on each access
+    // In engine 3, to save time, the curr call is selected only at
+    // func entry/exit, so that it does not need to be determined on each access
     if (KnobEngine.Value() == 3)
     {
         D1ECHO ("Setting Current Call for : " << rname );
-        string str(rname);
-        SetCurrCall( str );
+        SetCurrCall();
     }
+
     D1ECHO ("End of Entering Routine : " << rname );
 }
 
@@ -251,8 +253,18 @@ VOID RecordRoutineExit(VOID *ip)
 
             CallStack.Pop();
             CallSiteStack.Pop();
-            // CallStack.Print();
-            // CallSiteStack.Print();
+            #if (DEBUG>0)
+            CallStack.Print();
+            CallSiteStack.Print();
+            #endif
+
+            // In engine 3, to save time, the curr call is selected only at func entry/exit,
+            // so that it does not need to be determined on each access
+            if (KnobEngine.Value() == 3)
+            {
+                D1ECHO("Setting Current Call for : " << rname );
+                SetCurrCallOnRet();
+            }
         }
     }
 
@@ -261,7 +273,8 @@ VOID RecordRoutineExit(VOID *ip)
 
 VOID SetCallSite(u32 locIndex)
 {
-    D2ECHO("setting last function call locIndex to " << locIndex << " " << Locations.GetLocation(locIndex).toString());
+    D2ECHO("setting last function call locIndex to " << locIndex << " "
+                        << Locations.GetLocation(locIndex).toString());
     lastCallLocIndex=locIndex;
 }
 
@@ -375,7 +388,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(allocaRtn))
         {
             RTN_Open(allocaRtn);
-            ECHO("Instrumenting alloca");
+            D1ECHO("Instrumenting alloca");
             // Instrument malloc() to print the input argument value and the return value.
             RTN_InsertCall(allocaRtn, IPOINT_BEFORE, (AFUNPTR)MallocAllocaBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);

@@ -49,7 +49,7 @@ void SetProducer(IDNoType prod, uptr addr)
 #endif
 
 #if (MODE==TABLES)
-void InitObjectIDs(uptr saddr, u32 size, IDNoType id)
+void SetObjectIDs(uptr saddr, u32 size, IDNoType id)
 {
     //TODO we need to use memset, secondly we need to take care if
     // addr does not lie in this table (in current non-optimal way its not a problem)
