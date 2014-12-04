@@ -11,7 +11,11 @@ extern LocationList Locations;
 void CallStackType::Print()
 {
     string stackftns("");
-    if( !stack.empty()) stackftns += symTable.GetSymName(stack[0]);
+    if( !stack.empty() )
+    {
+        stackftns += symTable.GetSymName(stack[0]);
+    }
+
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
         stackftns += " -> " + symTable.GetSymName(stack[ftn]);
     cout << "Call Stack : " << stackftns << "\n";
@@ -21,7 +25,11 @@ void CallStackType::Print()
 void CallStackType::Print(ofstream& fout)
 {
     string stackftns("");
-    if( !stack.empty()) stackftns += symTable.GetSymName(stack[0]);
+    if( !stack.empty() )
+    {
+        stackftns += symTable.GetSymName(stack[0]);
+    }
+
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
         stackftns += " -> " + symTable.GetSymName(stack[ftn]);
     fout << "Call Stack : " << stackftns << "\n";
@@ -41,7 +49,10 @@ u32 CallSiteStackType::GetCallSites()
 string CallSiteStackType::GetCallSitesString()
 {
     string callsites("");
-    if( !sites.empty()) callsites += Locations.GetLocation(sites[0]).toString();
+    if( !sites.empty() )
+    {
+        callsites += Locations.GetLocation(sites[0]).toString();
+    }
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
     return callsites;
@@ -50,7 +61,11 @@ string CallSiteStackType::GetCallSitesString()
 void CallSiteStackType::Print()
 {
     string callsites("");
-    if( !sites.empty()) callsites += Locations.GetLocation(sites[0]).toString();
+    if( !sites.empty() )
+    {
+        callsites += Locations.GetLocation(sites[0]).toString();
+    }
+
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
     cout << "Call sites : " << callsites << "\n";
@@ -59,7 +74,11 @@ void CallSiteStackType::Print()
 void CallSiteStackType::Print(ofstream& fout)
 {
     string callsites("");
-    if( !sites.empty()) callsites += Locations.GetLocation(sites[0]).toString();
+    if( !sites.empty() )
+    {
+        callsites += Locations.GetLocation(sites[0]).toString();
+    }
+
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
     fout << "Call sites : " << callsites << "\n";

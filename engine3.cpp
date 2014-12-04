@@ -21,21 +21,21 @@ AllCalls2AllFtnsType AllCalls;
 Call tempCall;  // To avoid seg fault for info stored b4 calling main
 Call* currCall=&tempCall; // pointer to current call
 /*
-whenever a func is entered, a new call is created.
-This pointer then points to that new call, which is
-update only at function enty. Hence
-it is not required to determine the right Call
-on each record read/write access.
+whenever a func is entered, a new call is created. "currCall" pointer then
+points to this new call, which is updated only at function enty/exit. Hence it
+is not required to determine the right Call per read/write access.
 */
 
-// This is used to assign sequence numbers to all calls globaly. Based on this
-// seq no, temporal orders of calls can be obtained
+/*
+GlobalCallSeqNo is used to assign sequence numbers to all calls globaly.
+Based on this seq no, temporal orders of calls can be obtained
+*/
 static u64 GlobalCallSeqNo=0;
 
-// TODO optimize fname to funcid
-void SetCurrCall(string& fname)
+void SetCurrCall()
 {
-    IDNoType funcid = FuncName2ID[fname];
+    IDNoType funcid = CallStack.Top();
+
     D2ECHO("Setting currCall for " << FUNC(funcid) );
 
     auto it = AllCalls.find(funcid);
@@ -53,6 +53,15 @@ void SetCurrCall(string& fname)
     currCall->SeqNo = GlobalCallSeqNo++;
 }
 
+void SetCurrCallOnRet()
+{
+    IDNoType funcid = CallStack.Top();
+    if(funcid != UnknownID)
+    {
+        currCall = &( AllCalls[funcid].back() );
+    }
+}
+
 void RecordWriteEngine3(uptr addr, u32 size)
 {
     IDNoType prod = CallStack.Top();
@@ -60,11 +69,6 @@ void RecordWriteEngine3(uptr addr, u32 size)
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-
-    // TODO check weather we need to some thing special for unknown objects
-//     if(objid != UnknownID)
-//     {
-//     }
 
     CHECK(currCall);
     currCall->Writes[objid]+=size;
@@ -76,8 +80,6 @@ void RecordWriteEngine3(uptr addr, u32 size)
 
 void RecordReadEngine3(uptr addr, u32 size)
 {
-//     IDNoType cons = CallStack.Top(); // TODO remove it if not needed
-//     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     D2ECHO("Recording Read " << VAR(size) << " at " << ADDR(addr) << dec);
 
     IDNoType objid = GetObjectID(addr);

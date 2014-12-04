@@ -76,7 +76,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     }
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
-    InitObjectIDs(saddr, size, id);
+    SetObjectIDs(saddr, size, id);
 }
 
 void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 size)
@@ -87,7 +87,7 @@ void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 s
 
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
-    InitObjectIDs(saddr, size, id);
+    SetObjectIDs(saddr, size, id);
 }
 
 void Symbols::InsertFunction(const string& ftnname)
@@ -150,7 +150,7 @@ void Symbols::Remove(uptr saddr)
 
     // Clear the obj ids for this object, which is same as setting it to UnknownID
     D2ECHO("Clearing object ID to " << UnknownID << " on a size " << size);
-    InitObjectIDs(saddr, size, UnknownID);
+    SetObjectIDs(saddr, size, UnknownID);
 }
 
 bool Symbols::SymIsObj(IDNoType id)
@@ -235,17 +235,17 @@ void Symbol::Print(ostream& fout)
          << Locations.GetLocation(symLocIndex).toString() << endl;
 
     //for(auto& pair : startAddr2Size)
-    map<uptr,vector<u32>>::iterator iter;
-    for(iter=startAddr2Size.begin(); iter!=startAddr2Size.end(); iter++)
+    map<uptr,vector<u32>>::iterator mIter;
+    for(mIter=startAddr2Size.begin(); mIter!=startAddr2Size.end(); mIter++)
     {
-        auto& saddr = iter->first;
-        auto& sizes = iter->second;
+        auto& saddr = mIter->first;
+        auto& sizes = mIter->second;
         fout << "    " << ADDR(saddr) << "(";
 
         //for(auto& size : sizes)
-        vector<u32>::iterator iter;
-        for(iter=sizes.begin(); iter!=sizes.end(); iter++)
-            fout << " " << *iter;
+        vector<u32>::iterator vIter;
+        for(vIter=sizes.begin(); vIter!=sizes.end(); vIter++)
+            fout << " " << *vIter;
         fout << ")" << endl;
     }
 }
