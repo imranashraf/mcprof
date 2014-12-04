@@ -12,6 +12,8 @@
 #include <fstream>
 #include <algorithm>
 
+extern bool RecordAllAllocations;
+
 using namespace std;
 
 static string selectFtnFileName("selectedfunctions.in");
@@ -92,12 +94,18 @@ class Symbol
 {
 private:
     IDNoType id;
+
     // Following map is used to record multiple allocations from
     // same location (which will have same id). Secondly, multiple
     // allocations can have same address but the size can be different.
     // so a vector is used to preserve the allocation, where the last
     // element in the vector to store size with be the one currently used
     map<uptr,vector<u32>>startAddr2Size;
+
+    // startAddr and size are used when all allocations are not recorded
+    uptr startAddr; // start address of the symbol
+    u32 size;       // size of the symbol
+
     string name;
     SymType symType;
     u32 symLocIndex;
@@ -119,13 +127,29 @@ public:
     Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx) :
         id(id1), name(n), symType(typ), symLocIndex(locidx)
     {
-        startAddr2Size[saddr].push_back(size1);
+        if(RecordAllAllocations)
+        {
+            startAddr2Size[saddr].push_back(size1);
+        }
+        else
+        {
+            startAddr=saddr;
+            size=size1;
+        }
     }
 
     Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx, CallSiteStackType& callsitestack) :
         id(id1), name(n), symType(typ), symLocIndex(locidx), symCallSite(callsitestack)
     {
-        startAddr2Size[saddr].push_back(size1);
+        if(RecordAllAllocations)
+        {
+            startAddr2Size[saddr].push_back(size1);
+        }
+        else
+        {
+            startAddr=saddr;
+            size=size1;
+        }
     }
 
     void SetLocIndex(u32 idx)
@@ -140,17 +164,33 @@ public:
     {
         return Locations.GetLocation(symLocIndex).lineNo;
     }
-    void SetSize(uptr saddr, u32 size)
+
+    void SetSize(uptr saddr, u32 size1)
     {
-        startAddr2Size[saddr].push_back(size);
+        if(RecordAllAllocations)
+        {
+            startAddr2Size[saddr].push_back(size1);
+        }
+        else
+        {
+            startAddr=saddr;
+            size=size1;
+        }
     }
     u32 GetSize(uptr saddr)
     {
-        auto& sizeVec = startAddr2Size[saddr];
-        if( sizeVec.size() )
-            return sizeVec.back();
+        if(RecordAllAllocations)
+        {
+            auto& sizeVec = startAddr2Size[saddr];
+            if( sizeVec.size() )
+                return sizeVec.back();
+            else
+                return 0;
+        }
         else
-            return 0;
+        {
+            return size;
+        }
     }
     bool isSameLine( u32 l)
     {

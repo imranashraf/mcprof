@@ -46,11 +46,6 @@ int main()
 {
     nElem = 10;
 
-//     TYPE* dummy1 = new TYPE[nElem];
-//     delete[] dummy1;
-//     TYPE* dummy2 = new TYPE;
-//     delete dummy2;
-
     printf("Vector Operations Test.\n");
 
     vector<TYPE> srcArr1;

@@ -234,19 +234,26 @@ void Symbol::Print(ostream& fout)
     fout << symCallSite.GetCallSitesString() << " -> "
          << Locations.GetLocation(symLocIndex).toString() << endl;
 
-    //for(auto& pair : startAddr2Size)
-    map<uptr,vector<u32>>::iterator mIter;
-    for(mIter=startAddr2Size.begin(); mIter!=startAddr2Size.end(); mIter++)
+    if(RecordAllAllocations)
     {
-        auto& saddr = mIter->first;
-        auto& sizes = mIter->second;
-        fout << "    " << ADDR(saddr) << "(";
+        //for(auto& pair : startAddr2Size)
+        map<uptr,vector<u32>>::iterator mIter;
+        for(mIter=startAddr2Size.begin(); mIter!=startAddr2Size.end(); mIter++)
+        {
+            auto& saddr = mIter->first;
+            auto& sizes = mIter->second;
+            fout << "    " << ADDR(saddr) << "(";
 
-        //for(auto& size : sizes)
-        vector<u32>::iterator vIter;
-        for(vIter=sizes.begin(); vIter!=sizes.end(); vIter++)
-            fout << " " << *vIter;
-        fout << ")" << endl;
+            //for(auto& size : sizes)
+            vector<u32>::iterator vIter;
+            for(vIter=sizes.begin(); vIter!=sizes.end(); vIter++)
+                fout << " " << *vIter;
+            fout << ")" << endl;
+        }
+    }
+    else
+    {
+        fout << "    " << ADDR(startAddr) << "("<< size <<")" << endl;
     }
 }
 

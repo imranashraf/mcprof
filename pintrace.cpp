@@ -40,6 +40,7 @@ void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 
 bool TrackObjects;
+bool RecordAllAllocations;
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -75,6 +76,10 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   "MainExecOnly","1",
                                   "Trace functions that are contained only in the\
                                   executable image");
+
+KNOB<BOOL> KnobRecordAllAllocations(KNOB_MODE_WRITEONCE, "pintool",
+                                  "RecordAllAllocations","0",
+                                  "Record all allocation sizes of objects");
 
 /* ===================================================================== */
 // Utilities
@@ -817,6 +822,7 @@ void SetupPin(int argc, char *argv[])
     }
 
     TrackObjects = KnobTrackObjects.Value();
+    RecordAllAllocations=KnobRecordAllAllocations.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
