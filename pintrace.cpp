@@ -42,6 +42,7 @@ void (*ReadRecorder)(uptr, u32);
 
 bool TrackObjects;
 bool RecordAllAllocations;
+bool FlushCalls;
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -85,6 +86,13 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobRecordAllAllocations(KNOB_MODE_WRITEONCE, "pintool",
                                   "RecordAllAllocations","0",
                                   "Record all allocation sizes of objects");
+
+KNOB<BOOL> KnobFlushCalls(KNOB_MODE_WRITEONCE, "pintool",
+                                  "FlushCalls","1",
+                                  "Flush calls at intermediate intervals. \
+                                  Calls to a function in Engine 3 are flushed to \
+                                  output file when they become greater than a \
+                                  certain LIMIT(for now 1000) ) ");
 
 /* ===================================================================== */
 // Utilities
@@ -830,6 +838,7 @@ void SetupPin(int argc, char *argv[])
 
     TrackObjects = KnobTrackObjects.Value();
     RecordAllAllocations=KnobRecordAllAllocations.Value();
+    FlushCalls=KnobFlushCalls.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");

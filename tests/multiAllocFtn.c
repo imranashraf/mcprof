@@ -110,9 +110,9 @@ int main()
     printf("Multi Allocation Test.\n");
 
     int i=1;
-    for(; i<=10; i++)
+    for(; i<=1000; i++)
     {
-        nElem = i*10;
+        nElem = 100;
         process();
     }
 

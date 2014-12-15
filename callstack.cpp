@@ -17,9 +17,9 @@ void CallStackType::Print()
     }
 
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
-        stackftns += " -> " + symTable.GetSymName(stack[ftn]);
+        stackftns += " > " + symTable.GetSymName(stack[ftn]);
 
-    D1ECHO("Call Stack : " << stackftns);
+    D1ECHO("Call Stack: " << stackftns);
 }
 
 void CallStackType::Print(ofstream& fout)
@@ -30,10 +30,29 @@ void CallStackType::Print(ofstream& fout)
         stackftns += symTable.GetSymName(stack[0]);
     }
 
-    for ( u16 ftn=1; ftn < stack.size(); ftn++)
-        stackftns += " -> " + symTable.GetSymName(stack[ftn]);
-    fout << "Call Stack : " << stackftns << "\n";
-    D1ECHO("Call Stack : " << stackftns);
+    u16 ftn=1;
+    while( ftn < stack.size() )
+    {
+        if( stack[ftn] == stack[ftn + 1] )
+        {
+            stackftns += " > " + symTable.GetSymName(stack[ftn]) + " > ... > ";
+            while( stack[ftn] == stack[ftn + 1]) // do not print all functions.
+                                                 // simply increment to skip
+            {
+                ftn++;
+            }
+            stackftns += symTable.GetSymName(stack[ftn]);
+            ftn++;
+        }
+        else
+        {
+            stackftns += " > " + symTable.GetSymName(stack[ftn]);
+            ftn++;
+        }
+    }
+
+    fout << "Call Stack: " << stackftns << "\n";
+    D1ECHO("Call Stack: " << stackftns);
 }
 
 u32 CallSiteStackType::GetCallSites()
@@ -54,7 +73,7 @@ string CallSiteStackType::GetCallSitesString()
         callsites += Locations.GetLocation(sites[0]).toString();
     }
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
+        callsites += " > " + Locations.GetLocation(sites[loc]).toString();
     return callsites;
 }
 
@@ -67,8 +86,8 @@ void CallSiteStackType::Print()
     }
 
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
-    D1ECHO("Call sites : " << callsites);
+        callsites += " > " + Locations.GetLocation(sites[loc]).toString();
+    D1ECHO("Call sites: " << callsites);
 }
 
 void CallSiteStackType::Print(ofstream& fout)
@@ -80,6 +99,6 @@ void CallSiteStackType::Print(ofstream& fout)
     }
 
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
-    fout << "Call sites : " << callsites << "\n";
+        callsites += " > " + Locations.GetLocation(sites[loc]).toString();
+    fout << "Call sites: " << callsites << "\n";
 }

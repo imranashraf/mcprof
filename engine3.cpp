@@ -8,6 +8,7 @@ extern CallStackType CallStack; // main call stack
 extern std::map <std::string,IDNoType> FuncName2ID;
 extern Symbols symTable;
 extern std::ofstream pcout;
+extern bool FlushCalls;
 
 // all calls to a single func, index is call no
 typedef vector<Call> AllCalls2OneFtnType;
@@ -56,23 +57,28 @@ void SetCurrCallOnEntry()
 
 void SetCurrCallOnExit(IDNoType lastCallID)
 {
-    if( lastCallID != UnknownID )
-    {
-        AllCalls2OneFtnType& callVector = AllCalls[lastCallID];
-        int size = callVector.size();
-        ECHO("SIZE : " << size );
-        if (size > 5 )
-        {
-            ECHO( "Flushing calls for " << FUNC(lastCallID) );
-            PrintCalls(callVector, pcout);
-            callVector.clear();
-        }
-    }
-
     IDNoType funcid = CallStack.Top();
     if( funcid != UnknownID )
     {
         currCall = &( AllCalls[funcid].back() );
+    }
+
+    if(
+        ( FlushCalls ) &&
+        ( lastCallID != UnknownID ) &&
+        ( lastCallID != funcid    )     // do not flush recursive calls. These
+                                        // are flushed at the end of recursion
+      )
+    {
+        AllCalls2OneFtnType& callVector = AllCalls[lastCallID];
+        int size = callVector.size();
+        D2ECHO("Call vector size: " << size );
+        if (size > 1000 )
+        {
+            D2ECHO( "Flushing calls for " << FUNC(lastCallID) );
+            PrintCalls(callVector, pcout);
+            callVector.clear();
+        }
     }
 }
 
@@ -108,14 +114,14 @@ void RecordReadEngine3(uptr addr, u32 size)
 // print a single call to a single function
 void PrintCall(Call& call, ofstream& fout)
 {
-    fout << "Call Seq No : " << call.SeqNo << "\n" ;
+    fout << "Call Seq No: " << call.SeqNo << "\n" ;
     call.CallPath.Print(fout);
     //for ( auto& readPair : call.Reads)
     map<IDNoType,float>::iterator iter;
     for( iter = call.Reads.begin(); iter != call.Reads.end(); iter++)
     {
         IDNoType oid = iter->first;
-        fout << "Reads from " << symTable.GetSymName(oid) << " : " << iter->second << "\n" ;
+        fout << "Reads from " << symTable.GetSymName(oid) << ": " << iter->second << "\n" ;
     }
 
     //for ( auto& writePair : call.Writes)
@@ -123,7 +129,7 @@ void PrintCall(Call& call, ofstream& fout)
     for( iter = call.Writes.begin(); iter != call.Writes.end(); iter++)
     {
         IDNoType oid = iter->first;
-        fout << "Writes to " << symTable.GetSymName(oid) << " : " << iter->second << "\n" ;
+        fout << "Writes to " << symTable.GetSymName(oid) << ": " << iter->second << "\n" ;
     }
 }
 
