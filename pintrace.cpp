@@ -32,6 +32,7 @@ extern Matrix2D ComMatrix;
 
 std::ofstream dotout;
 std::ofstream mout;
+std::ofstream pcout;
 
 CallStackType CallStack;
 CallSiteStackType CallSiteStack;
@@ -51,6 +52,10 @@ KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
 KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
                          "DotFile", "communication.dot",
                          "specify file name for output in dot");
+
+KNOB<string> KnobPerCallFile(KNOB_MODE_WRITEONCE,  "pintool",
+                         "PerCallFile", "percallaccesses.out",
+                         "specify file name for per call output file");
 
 KNOB<BOOL> KnobRecordStack(KNOB_MODE_WRITEONCE, "pintool",
                            "RecordStack","0", "Include Stack Accesses");
@@ -230,10 +235,10 @@ VOID RecordRoutineEntry(CHAR* rname)
     if (KnobEngine.Value() == 3)
     {
         D1ECHO ("Setting Current Call for : " << rname );
-        SetCurrCall();
+        SetCurrCallOnEntry();
     }
 
-    D1ECHO ("End of Entering Routine : " << rname );
+    D1ECHO ("Entering Routine : " << rname << " Done" );
 }
 
 
@@ -246,15 +251,16 @@ VOID RecordRoutineExit(VOID *ip)
     // check first if map has entry for this ftn
     if (FuncName2ID.find(rname) != FuncName2ID.end() )
     {
+        IDNoType lastCallID = CallStack.Top();
         // check if the top ftn is the current one
-        if ( CallStack.Top() == FuncName2ID[rname] )
+        if ( lastCallID == FuncName2ID[rname] )
         {
             D1ECHO("Routine ID: " << FuncName2ID[rname]
-                   << " Call stack top id " << CallStack.Top() );
+                   << " Call stack top id " << lastCallID );
 
             D1ECHO("Leaving Routine : " << rname
                    << " Popping call stack top is "
-                   << symTable.GetSymName( CallStack.Top() ) );
+                   << symTable.GetSymName( lastCallID ) );
 
             CallStack.Pop();
             CallSiteStack.Pop();
@@ -268,12 +274,12 @@ VOID RecordRoutineExit(VOID *ip)
             if (KnobEngine.Value() == 3)
             {
                 D1ECHO("Setting Current Call for : " << rname );
-                SetCurrCallOnRet();
+                SetCurrCallOnExit(lastCallID);
             }
         }
     }
 
-    D1ECHO ("End of Exiting Routine : " << rname );
+    D1ECHO ("Exiting Routine : " << rname << " Done");
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -765,10 +771,11 @@ VOID TheEnd(INT32 code, VOID *v)
             ComMatrix.PrintDot(dotout);
             mout.close();
             dotout.close();
-            break;
         }
+        break;
     case 3:
-        PrintAllCalls();
+        PrintAllCalls(pcout);
+        pcout.close();
         break;
     default:
         ECHO("Specify a valid Engine number to be used");
@@ -831,6 +838,11 @@ void SetupPin(int argc, char *argv[])
 
     D1ECHO("Selecting Analysis Engine ...");
     SelectAnalysisEngine();
+
+    if ( KnobEngine.Value() == 3 )
+    {
+        OpenOutFile(KnobPerCallFile.Value(), pcout);
+    }
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);

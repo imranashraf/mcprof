@@ -7,9 +7,7 @@
 extern CallStackType CallStack; // main call stack
 extern std::map <std::string,IDNoType> FuncName2ID;
 extern Symbols symTable;
-
-// all calls written to this file
-static string perCallFileName("percallaccesses.out");
+extern std::ofstream pcout;
 
 // all calls to a single func, index is call no
 typedef vector<Call> AllCalls2OneFtnType;
@@ -20,6 +18,8 @@ typedef map<u16,AllCalls2OneFtnType> AllCalls2AllFtnsType;
 AllCalls2AllFtnsType AllCalls;
 Call tempCall;  // To avoid seg fault for info stored b4 calling main
 Call* currCall=&tempCall; // pointer to current call
+// TODO This can also be achieved by adding a call for UnknownID
+
 /*
 whenever a func is entered, a new call is created. "currCall" pointer then
 points to this new call, which is updated only at function enty/exit. Hence it
@@ -32,10 +32,12 @@ Based on this seq no, temporal orders of calls can be obtained
 */
 static u64 GlobalCallSeqNo=0;
 
-void SetCurrCall()
+// only used in this file
+void PrintCalls(AllCalls2OneFtnType& calls, ofstream& fout);
+
+void SetCurrCallOnEntry()
 {
     IDNoType funcid = CallStack.Top();
-
     D2ECHO("Setting currCall for " << FUNC(funcid) );
 
     auto it = AllCalls.find(funcid);
@@ -44,8 +46,7 @@ void SetCurrCall()
         AllCalls[funcid] = AllCalls2OneFtnType();
     }
 
-    Call newCall;
-    AllCalls[funcid].push_back(newCall); // add a new call
+    AllCalls[funcid].push_back( Call() ); // insert a new call
     currCall = &( AllCalls[funcid].back() );
 
     //set callpath of currCall by traversing call stack
@@ -53,10 +54,23 @@ void SetCurrCall()
     currCall->SeqNo = GlobalCallSeqNo++;
 }
 
-void SetCurrCallOnRet()
+void SetCurrCallOnExit(IDNoType lastCallID)
 {
+    if( lastCallID != UnknownID )
+    {
+        AllCalls2OneFtnType& callVector = AllCalls[lastCallID];
+        int size = callVector.size();
+        ECHO("SIZE : " << size );
+        if (size > 5 )
+        {
+            ECHO( "Flushing calls for " << FUNC(lastCallID) );
+            PrintCalls(callVector, pcout);
+            callVector.clear();
+        }
+    }
+
     IDNoType funcid = CallStack.Top();
-    if(funcid != UnknownID)
+    if( funcid != UnknownID )
     {
         currCall = &( AllCalls[funcid].back() );
     }
@@ -116,35 +130,30 @@ void PrintCall(Call& call, ofstream& fout)
 // print all calls to a single function
 void PrintCalls(AllCalls2OneFtnType& calls, ofstream& fout)
 {
-    u32 totalCalls = calls.size();
-    fout <<"Total Calls : " << totalCalls << "\n";
+    //u32 totalCalls = calls.size();
+    //fout <<"Total Calls : " << totalCalls << "\n";
     u32 cno=0;
 
     vector<Call>::iterator iter;
     //for ( auto& call : calls)
     for(iter=calls.begin(); iter!=calls.end(); iter++)
     {
-        fout << "Call No : " << cno << "\n";
+        //fout << "Call No : " << cno << "\n";
         PrintCall(*iter, fout);
         cno++;
     }
 }
 
 // print all call to all functions
-void PrintAllCalls()
+void PrintAllCalls(ofstream& fout)
 {
-    ofstream fout;
-    OpenOutFile(perCallFileName, fout);
-
-    fout << "Printing All Calls\n";
+    //fout << "Printing All Calls\n";
     //for ( auto& callpair :AllCalls)
     AllCalls2AllFtnsType::iterator iter;
     for(iter=AllCalls.begin(); iter!=AllCalls.end(); iter++)
     {
-        IDNoType fid = iter->first;
-        fout << "Printing Calls to " << symTable.GetSymName(fid) << "\n";
+        //IDNoType fid = iter->first;
+        //fout << "Printing Calls to " << symTable.GetSymName(fid) << "\n";
         PrintCalls(iter->second, fout);
     }
-
-    fout.close();
 }

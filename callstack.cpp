@@ -18,7 +18,7 @@ void CallStackType::Print()
 
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
         stackftns += " -> " + symTable.GetSymName(stack[ftn]);
-    cout << "Call Stack : " << stackftns << "\n";
+
     D1ECHO("Call Stack : " << stackftns);
 }
 
@@ -68,7 +68,7 @@ void CallSiteStackType::Print()
 
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += " -> " + Locations.GetLocation(sites[loc]).toString();
-    cout << "Call sites : " << callsites << "\n";
+    D1ECHO("Call sites : " << callsites);
 }
 
 void CallSiteStackType::Print(ofstream& fout)
