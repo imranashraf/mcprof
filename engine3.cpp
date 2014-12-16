@@ -9,6 +9,7 @@ extern std::map <std::string,IDNoType> FuncName2ID;
 extern Symbols symTable;
 extern std::ofstream pcout;
 extern bool FlushCalls;
+extern u32 FlushCallsLimit;
 
 // all calls to a single func, index is call no
 typedef vector<Call> AllCalls2OneFtnType;
@@ -39,8 +40,7 @@ void PrintCalls(AllCalls2OneFtnType& calls, ofstream& fout);
 void SetCurrCallOnEntry()
 {
     IDNoType funcid = CallStack.Top();
-    D2ECHO("Setting currCall for " << FUNC(funcid) );
-
+    D2ECHO("Setting currCall on Entry for " << FUNC(funcid) );
     auto it = AllCalls.find(funcid);
     if( it == AllCalls.end() )
     {
@@ -53,13 +53,16 @@ void SetCurrCallOnEntry()
     //set callpath of currCall by traversing call stack
     currCall->CallPath = CallStack;
     currCall->SeqNo = GlobalCallSeqNo++;
+    D2ECHO("Setting currCall on Entry for " << FUNC(funcid) << " Done" );
 }
 
 void SetCurrCallOnExit(IDNoType lastCallID)
 {
     IDNoType funcid = CallStack.Top();
+    D2ECHO("Setting currCall on Exit for " << FUNC(funcid) );
     if( funcid != UnknownID )
     {
+        CHECK(currCall); // TODO Remove these checks
         currCall = &( AllCalls[funcid].back() );
     }
 
@@ -71,15 +74,14 @@ void SetCurrCallOnExit(IDNoType lastCallID)
       )
     {
         AllCalls2OneFtnType& callVector = AllCalls[lastCallID];
-        int size = callVector.size();
-        D2ECHO("Call vector size: " << size );
-        if (size > 1000 )
+        u32 size = callVector.size();
+        if (size > FlushCallsLimit )
         {
-            D2ECHO( "Flushing calls for " << FUNC(lastCallID) );
             PrintCalls(callVector, pcout);
             callVector.clear();
         }
     }
+    D2ECHO("Setting currCall on Exit for " << FUNC(funcid) << " Done" );
 }
 
 void RecordWriteEngine3(uptr addr, u32 size)
@@ -90,7 +92,7 @@ void RecordWriteEngine3(uptr addr, u32 size)
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
 
-    CHECK(currCall);
+    CHECK(currCall); // TODO Remove these checks
     currCall->Writes[objid]+=size;
     for(u32 i=0; i<size; i++)
     {
@@ -104,6 +106,7 @@ void RecordReadEngine3(uptr addr, u32 size)
 
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
+    CHECK(currCall); // TODO Remove these checks
     currCall->Reads[objid]+=size;
 
     //     IDNoType prod;
@@ -114,14 +117,17 @@ void RecordReadEngine3(uptr addr, u32 size)
 // print a single call to a single function
 void PrintCall(Call& call, ofstream& fout)
 {
-    fout << "Call Seq No: " << call.SeqNo << "\n" ;
+    // fout << "Call Seq No: " << call.SeqNo << "\n" ;
+    fout << call.SeqNo << "," ;
     call.CallPath.Print(fout);
+
     //for ( auto& readPair : call.Reads)
     map<IDNoType,float>::iterator iter;
     for( iter = call.Reads.begin(); iter != call.Reads.end(); iter++)
     {
         IDNoType oid = iter->first;
-        fout << "Reads from " << symTable.GetSymName(oid) << ": " << iter->second << "\n" ;
+        //fout << "Reads from " << symTable.GetSymName(oid) << ": " << iter->second << "\n" ;
+        fout << ",R:" << symTable.GetSymName(oid) << ":" << iter->second;
     }
 
     //for ( auto& writePair : call.Writes)
@@ -129,8 +135,10 @@ void PrintCall(Call& call, ofstream& fout)
     for( iter = call.Writes.begin(); iter != call.Writes.end(); iter++)
     {
         IDNoType oid = iter->first;
-        fout << "Writes to " << symTable.GetSymName(oid) << ": " << iter->second << "\n" ;
+        //fout << "Writes to " << symTable.GetSymName(oid) << ": " << iter->second << "\n" ;
+        fout << ",W:" << symTable.GetSymName(oid) << ":" << iter->second;
     }
+    fout << "\n" ;
 }
 
 // print all calls to a single function
@@ -138,15 +146,12 @@ void PrintCalls(AllCalls2OneFtnType& calls, ofstream& fout)
 {
     //u32 totalCalls = calls.size();
     //fout <<"Total Calls : " << totalCalls << "\n";
-    u32 cno=0;
 
     vector<Call>::iterator iter;
     //for ( auto& call : calls)
     for(iter=calls.begin(); iter!=calls.end(); iter++)
     {
-        //fout << "Call No : " << cno << "\n";
         PrintCall(*iter, fout);
-        cno++;
     }
 }
 

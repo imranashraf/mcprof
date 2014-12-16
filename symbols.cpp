@@ -40,9 +40,6 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     if( CallSiteStack.Top() != lastCallLocIndex )
         callsites += lastCallLocIndex;
 
-//     CallSiteStack.Print();
-//     ECHO( "last call site : " Locations.GetLocation(lastCallLocIndex).toString() );
-
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
         // use existing id as this call site is already seen
@@ -56,8 +53,8 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     }
 
     // To check if symbol is already in the table. This is possible because of:
-    //  * the list of selected objects provided as input
-    //  * multiple allocations from same line
+    //      - the list of selected objects provided as input
+    //      - multiple allocations from same line
     if(_Symbols.find(id) != _Symbols.end() )
     {
         D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
@@ -68,7 +65,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     {
         // Assign some name to this object symbol
         // TODO following can be done later at the end when names are really needed
-        string name( "Object" + to_string((long long)id) );
+        string name( "Obj" + to_string((long long)id) );
         Symbol newsym(id, saddr, size, name, SymType::OBJ, lastCallLocIndex, CallSiteStack);
 
         D1ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");

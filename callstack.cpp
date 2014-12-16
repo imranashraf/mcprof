@@ -24,7 +24,16 @@ void CallStackType::Print()
 
 void CallStackType::Print(ofstream& fout)
 {
+    #if 1
     string stackftns("");
+    if( !stack.empty() )
+    {
+        stackftns += symTable.GetSymName( stack[ stack.size()-1 ] );
+    }
+    fout << stackftns;
+
+    #else
+    // The following is the detailed printing of callstack
     if( !stack.empty() )
     {
         stackftns += symTable.GetSymName(stack[0]);
@@ -33,15 +42,15 @@ void CallStackType::Print(ofstream& fout)
     u16 ftn=1;
     while( ftn < stack.size() )
     {
-        if( stack[ftn] == stack[ftn + 1] )
+        if( stack[ftn] == stack[ftn-1] ) // check for recursion
         {
             stackftns += " > " + symTable.GetSymName(stack[ftn]) + " > ... > ";
-            while( stack[ftn] == stack[ftn + 1]) // do not print all functions.
-                                                 // simply increment to skip
+            // do not print all functions in recursion.
+            while( stack[ftn] == stack[ftn-1] && ftn < stack.size() )
             {
-                ftn++;
+                ftn++;  // simply increment to skip
             }
-            stackftns += symTable.GetSymName(stack[ftn]);
+            stackftns += symTable.GetSymName(stack[ftn-1]);
             ftn++;
         }
         else
@@ -53,6 +62,7 @@ void CallStackType::Print(ofstream& fout)
 
     fout << "Call Stack: " << stackftns << "\n";
     D1ECHO("Call Stack: " << stackftns);
+    #endif
 }
 
 u32 CallSiteStackType::GetCallSites()
