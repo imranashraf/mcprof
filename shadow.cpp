@@ -11,6 +11,17 @@
 // #define MODE TABLES
 #define MODE HYBRID
 
+// In hybrid mode ONLY, setting for stack/heap or both should be coverage
+#define HYBRID4STACK    0
+#define HYBRID4HEAP     1
+#define HYBRID4BOTH     2
+// Un-comment *ONLY ONE* of the following three to select Mode
+#define HYBRIDTYPE HYBRID4STACK
+// #define HYBRIDTYPE HYBRID4HEAP
+// #define HYBRIDTYPE HYBRID4BOTH
+
+
+
 #if (MODE==HYBRID)
 // MemMap  ShadowMem;
 MemMap1to4 ShadowMem;
@@ -131,10 +142,16 @@ IDNoType GetObjectID(uptr addr)
 void SetProducer(IDNoType pid, uptr addr)
 {
     D2ECHO("Setting " << FUNC(pid) << " as producer of " << ADDR(addr));
-    //TODO check this condition again
-//     if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
-//     if ( (addr < MemMap1to4::M0H) ) // ONLY HEAP
+
+    #if(HYBRIDTYPE == HYBRID4STACK)
     if ( addr > MemMap1to4::M1L ) // ONLY STACK
+    #endif
+    #if(HYBRIDTYPE == HYBRID4HEAP)
+    if ( (addr < MemMap1to4::M0H) ) // ONLY HEAP
+    #endif
+    #if(HYBRIDTYPE == HYBRID4BOTH)
+    if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
+    #endif
     {
         uptr shadowAddr = ShadowMem.Mem2Shadow(addr);
         D3ECHO(  ADDR(addr) << " -> " << ADDR(shadowAddr));
@@ -151,9 +168,15 @@ void SetProducer(IDNoType pid, uptr addr)
 #if (MODE==HYBRID)
 void SetProducers(uptr saddr, u32 size, IDNoType pid)
 {
-//     if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
-//     if ( (saddr < MemMap1to4::M0H) ) // ONLY HEAP
+    #if(HYBRIDTYPE == HYBRID4STACK)
     if ( saddr > MemMap1to4::M1L ) // ONLY STACK
+    #endif
+    #if(HYBRIDTYPE == HYBRID4HEAP)
+    if ( (saddr < MemMap1to4::M0H) ) // ONLY HEAP
+    #endif
+    #if(HYBRIDTYPE == HYBRID4BOTH)
+    if ( (saddr < MemMap1to4::M0H) || (saddr > MemMap1to4::M1L) ) // HEAP+STACK
+    #endif
     {
         for(uptr addr = saddr; addr < saddr+size; addr++)
         {
@@ -175,9 +198,15 @@ void SetProducers(uptr saddr, u32 size, IDNoType pid)
 #if (MODE==HYBRID)
 void SetObjectIDs(uptr saddr, u32 size, IDNoType oid)
 {
-//     if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
-//     if ( (saddr < MemMap1to4::M0H) ) // ONLY HEAP
+    #if(HYBRIDTYPE == HYBRID4STACK)
     if ( saddr > MemMap1to4::M1L ) // ONLY STACK
+    #endif
+    #if(HYBRIDTYPE == HYBRID4HEAP)
+    if ( (saddr < MemMap1to4::M0H) ) // ONLY HEAP
+    #endif
+    #if(HYBRIDTYPE == HYBRID4BOTH)
+    if ( (saddr < MemMap1to4::M0H) || (saddr > MemMap1to4::M1L) ) // HEAP+STACK
+    #endif
     {
         for(uptr addr = saddr; addr < saddr+size; addr++)
         {
@@ -200,9 +229,16 @@ void SetObjectIDs(uptr saddr, u32 size, IDNoType oid)
 IDNoType GetObjectID(uptr addr)
 {
     IDNoType oid;
-//     if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
-//     if ( (addr < MemMap1to4::M0H) ) // ONLY HEAP
+
+    #if(HYBRIDTYPE == HYBRID4STACK)
     if ( addr > MemMap1to4::M1L ) // ONLY STACK
+    #endif
+    #if(HYBRIDTYPE == HYBRID4HEAP)
+    if ( (addr < MemMap1to4::M0H) ) // ONLY HEAP
+    #endif
+    #if(HYBRIDTYPE == HYBRID4BOTH)
+    if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
+    #endif
     {
         memmapCounter++;
         uptr shadowAddr = ShadowMem.Mem2Shadow(addr);        
@@ -224,9 +260,16 @@ IDNoType GetProducer(uptr addr)
 {
     IDNoType pid;
     D2ECHO(ADDR(addr) << ADDR(MemMap1to4::M0H) << ADDR(MemMap1to4::M1L) );
-//     if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
-//     if ( (addr < MemMap1to4::M0H) ) // ONLY HEAP
+
+    #if(HYBRIDTYPE == HYBRID4STACK)
     if ( addr > MemMap1to4::M1L ) // ONLY STACK
+    #endif
+    #if(HYBRIDTYPE == HYBRID4HEAP)
+    if ( (addr < MemMap1to4::M0H) ) // ONLY HEAP
+    #endif
+    #if(HYBRIDTYPE == HYBRID4BOTH)
+    if ( (addr < MemMap1to4::M0H) || (addr > MemMap1to4::M1L) ) // HEAP+STACK
+    #endif
     {
         uptr shadowAddr = ShadowMem.Mem2Shadow(addr);        
         pid = *( (u16*) (shadowAddr));        

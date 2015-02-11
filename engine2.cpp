@@ -44,7 +44,7 @@ void RecordReadEngine2(uptr addr, u32 size)
     IDNoType prod=0;
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-
+//     cout << addr/4096 << endl; // for address tracing
     if( objid == UnknownID )
     {
         for(u32 i=0; i<size; i++)
