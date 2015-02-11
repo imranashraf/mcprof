@@ -986,6 +986,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 VOID TheEnd(INT32 code, VOID *v)
 {
     symTable.Print();
+    PrintShadowMap();
 #if (DEBUG>0)
     // Print Symbol Table to output file
     symTable.Print();

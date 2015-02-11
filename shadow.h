@@ -36,6 +36,7 @@ IDNoType GetProducer(uptr addr);
 IDNoType GetObjectID(uptr addr);
 void SetObjectIDs(uptr saddr, u32 size, IDNoType id);
 void SetProducers(uptr saddr, u32 size, IDNoType fid);
+void PrintShadowMap();
 
 struct Entry
 {
@@ -109,9 +110,104 @@ public:
 
 
 /**
+ * ***************
+ **/
+// 1-4 mapping
+class MemMap1to4
+{
+// private:
+public:    
+    static const uptr SCALE = 4;
+    static const uptr LOGSCALE = log2(SCALE);
+    
+    static const uptr M0SIZE = 2*GB;
+    static const uptr M0L = 0ULL;
+    static const uptr M0H = M0L + M0SIZE -1;
+    //Following May obtained at runtime !!!
+    static const uptr SM0SIZE = M0SIZE*SCALE;
+    static const uptr SM0L = 0x400000000000ULL;
+    static const uptr SM0H = SM0L + SM0SIZE -1;
+    
+    static const uptr M1SIZE = 2*GB;
+    static const uptr M1H = (1ULL<<47) -1;
+    static const uptr M1L = M1H - M1SIZE +1;
+    //Following May obtained at runtime !!!
+    static const uptr SM1SIZE = M1SIZE*SCALE;
+    static const uptr SM1L = 0x600000000000ULL;
+    static const uptr SM1H = SM1L + SM1SIZE -1;
+    
+public:
+    MemMap1to4()
+    {
+        uptr *retAddr;
+        uptr startAddr;
+        uptr length;
+        
+        startAddr = SM0L; length = SM0SIZE;
+        retAddr = (uptr *)mmap((void *)startAddr,
+                               length,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+                               -1, 0);
+        if (retAddr == MAP_FAILED)
+            cout<<"mmap Failed"<<endl;
+        
+        startAddr = SM1L; length = SM1SIZE;
+        retAddr = (uptr *)mmap((void *)startAddr,
+                               length,
+                               PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+                               -1, 0);
+        if (retAddr == MAP_FAILED)
+            cout<<"mmap Failed"<<endl;
+    }
+    
+    void Print()
+    {
+        cout << hex;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M1H << endl;
+        cout << dec << "| M1 = "<< M1SIZE/GB <<" GB    |" <<endl << hex;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M1L << endl<<endl<<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM1H << endl;
+        cout << dec << "| SM1 = "<< SM1SIZE/MB <<" MB   |" <<endl << hex;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM1L << endl<<endl<<endl<<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM0H << endl;
+        cout << dec << "| SM0 = "<< SM0SIZE/MB <<" MB   |" <<endl << hex;
+        cout << "================ 0x" << setw(12) << setfill ('0') << SM0L << endl<<endl<<endl;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M0H << endl;
+        cout << dec <<"| M0 = "<< M0SIZE/GB <<" GB    |" <<endl << hex;
+        cout << "================ 0x" << setw(12) << setfill ('0') << M0L << endl;
+        cout << dec;
+    }
+    uptr inline Mem2Shadow(uptr addr)
+    {
+        return ( ((addr & M0H)<<LOGSCALE) + (addr & (SM1L + SM0L)) + SM0L);    
+    }
+    
+    ~MemMap1to4()
+    {
+        int retVal;
+        uptr startAddr;
+        uptr length;
+
+        startAddr = SM0L; length = SM0SIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            cout<<"munmap Failed"<<endl;
+
+        startAddr = SM1L; length = SM1SIZE;
+        retVal = munmap((void *)startAddr, length);
+        if( retVal == -1)
+            cout<<"munmap Failed"<<endl;
+    }
+};
+
+
+
+/**
  ****************
  **/
-
+// 1-1 mapping
 class MemMap
 {
 private:
@@ -202,7 +298,6 @@ public:
     }
 };
 
-void PrintShadowMap();
 /**
  ****************
  **/
@@ -221,7 +316,7 @@ void PrintShadowMap();
 #define SHADOW_GRANULARITY (8)
 #define SHADOW_OFFSET (0x00007fff8000ULL)
 #define MEM2SHADOW(mem) (((mem) >> SHADOW_SCALE) + (SHADOW_OFFSET))
-
+// 8-1 mapping
 class MemMap8th
 {
 private:
@@ -360,5 +455,6 @@ public:
 /**
  ****************
  **/
+
 
 #endif
