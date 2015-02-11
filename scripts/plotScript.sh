@@ -1,4 +1,4 @@
-#!/usr/local/bin/gnuplot -persist
+#!/usr/bin/gnuplot -persist
 
 set autoscale
 

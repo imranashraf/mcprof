@@ -491,7 +491,7 @@ VOID InstrumentImages(IMG img, VOID * v)
             KnobMainExecutableOnly.Value() == true
        )
     {
-        ECHO("Skipping Image "<< imgname<< " for function calls instrumentationa as it is not main executable");
+        ECHO("Skipping Image "<< imgname<< " for function calls instrumentation as it is not main executable");
         return;
     }
     else

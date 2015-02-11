@@ -8,8 +8,6 @@
 #include <iomanip>
 
 extern CallStackType CallStack;
-// extern Matrix2D ComMatrix;   // not needed in this engine
-
 extern Symbols symTable;
 
 class Access

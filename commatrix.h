@@ -25,10 +25,20 @@ private:
 public:
     Matrix2D();
     Matrix2D(IDNoType size);
-    void RecordCommunication(IDNoType prod, IDNoType cons, u32 size);
+    //void RecordCommunication(IDNoType prod, IDNoType cons, u32 size);
+    void inline RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
+    {
+        D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
+            << FUNC(cons) << " of size: " << size );
+
+        if( prod < Matrix.size() && cons < Matrix.size() )
+            Matrix[prod][cons] += size;
+    }
+
     float MaxCommunication();
     void Print(ostream &fout);
     void PrintMatrix(ostream &fout);
+//     void PrintMatrixFancy(ostream &fout);
     void PrintDot(ostream &dotout);
 };
 

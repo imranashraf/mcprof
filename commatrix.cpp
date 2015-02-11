@@ -18,14 +18,14 @@ Matrix2D::Matrix2D(IDNoType size)
     Matrix.resize( cols , vector<float>( rows , value) );
 }
 
-void Matrix2D::RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
-{
-    D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
-           << FUNC(cons) << " of size: " << size );
-
-    if( prod < Matrix.size() && cons < Matrix.size() )
-        Matrix[prod][cons] += size;
-}
+// void Matrix2D::RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
+// {
+//     D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
+//            << FUNC(cons) << " of size: " << size );
+// 
+//     if( prod < Matrix.size() && cons < Matrix.size() )
+//         Matrix[prod][cons] += size;
+// }
 
 float Matrix2D::MaxCommunication()
 {
@@ -56,33 +56,42 @@ void Matrix2D::Print(ostream &fout)
     }
 }
 
+// Use the following for properly aligned matrix print for visual inspection
+// This can be problematic of width not set properly to be processed by gnuplot script
+// #define ALIGNMENT (setw(25))
+
+// Use the following to print tabs which will not be visually appealing but it will
+// generate the columns properly for further processing by other tools
+#define ALIGNMENT ("\t")
+
 void Matrix2D::PrintMatrix(ostream &fout)
 {
-    ECHO("Printing communication matrix as table in text");
+    ECHO("Printing communication matrix as table for processing by tool");
     IDNoType TotalSymbols = symTable.TotalSymbolCount();
     CHECK_LT(TotalSymbols, Matrix.size());
 
     IDNoType Start = 0; //use this if you want to print unknown
 //     IDNoType Start = 1; //use this if you dont want to print unknown
 
-    fout << setw(25) << " ";
+    fout << ALIGNMENT << " ";
     for (IDNoType c=Start; c<TotalSymbols; c++)
     {
-        fout << setw(25) << symTable.GetSymName(c);
+        fout << ALIGNMENT << symTable.GetSymName(c);
     }
     fout << endl;
 
     for (IDNoType p=Start; p<TotalSymbols; p++)
     {
-        fout << setw(25) << symTable.GetSymName(p);
+        fout << ALIGNMENT << symTable.GetSymName(p);
 
         for (IDNoType c=Start; c<TotalSymbols; c++)
         {
-            fout << setw(25) << Matrix[p][c];
+            fout << ALIGNMENT << Matrix[p][c];
         }
         fout<<endl;
     }
 }
+#undef ALIGNMENT 
 
 void Matrix2D::PrintDot(ostream &dotout)
 {
