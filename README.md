@@ -1,19 +1,18 @@
 # mcprof #
 
-`mcprof` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions. The information is obtained by
-performing dynamic binary instrumentation by utilizing [Intel Pin](www.pintool.org) framework. This README file briefly explains the process of setting up `mcprof` and using it.
+`mcprof` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions. The information is obtained by performing dynamic binary instrumentation by utilizing [Intel Pin](www.pintool.org) framework. This README file briefly explains the process of setting up `mcprof` and using it.
 
 ## Download
 
-`mcprof` can be downloaded [from]().
+`mcprof` can be downloaded [from](https://bitbucket.org/imranashraf/mcprof/downloads).
 
 ## Required Packages
 
 In order to setup and use `mcprof` the following two packages are required:
 
 * [Intel Pin DBI framework](www.pintool.org) Revision 62732 or higher
-* g++ compiler with support for C++11X
-* graphviz Dot utility for converting the generated communication graphs
+* g++ compiler
+* graphviz Dot utility for converting the generated communication graphs from dot to pdf, png etc
 
 ## Setup
 
@@ -57,4 +56,3 @@ Detailed documentation of `mcprof` with input options and outputs generated can 
 In case you are interested in contributing to `mcprof`, or you have suggestions for improvements, or you want to report a bug, contact:
 
 * Imran Ashraf [I.Ashraf@TUDelft.nl](I.Ashraf@TUDelft.nl)
-
