@@ -12,10 +12,18 @@ extern Symbols symTable;
 extern bool TrackObjects;
 extern bool NoseDown;
 
+// un-comment the following to print read/write address trace to output
+// #define GENRATE_TRACES
+
 void RecordWriteEngine2(uptr addr, u32 size)
 {
     IDNoType prod = CallStack.Top();
     IDNoType objid = GetObjectID(addr);
+
+    #ifdef GENRATE_TRACES
+    for(u32 i=0; i<size; i++)
+        cout << "W " << addr+i << endl;
+    #endif
 
     D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
     if( objid == UnknownID )
@@ -44,7 +52,12 @@ void RecordReadEngine2(uptr addr, u32 size)
     IDNoType prod=0;
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-//     cout << addr/4096 << endl; // for address tracing
+
+    #ifdef GENRATE_TRACES
+    for(u32 i=0; i<size; i++)
+        cout << "R " << addr+i << endl;
+    #endif
+
     if( objid == UnknownID )
     {
         for(u32 i=0; i<size; i++)
