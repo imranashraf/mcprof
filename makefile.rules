@@ -174,7 +174,7 @@ format:
 # 	astyle --style=kr *.h *.cpp
 	rm -f *.orig
 
-openingFileOrder=makefile.rules globals.h globals.cpp pinmagic.h \
+openingFileOrder=makefile.rules globals.h globals.cpp markers.h \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
 	callstack.h callstack.cpp \

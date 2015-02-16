@@ -104,7 +104,8 @@ private:
 
     // startAddr and size are used when all allocations are not recorded
     uptr startAddr; // start address of the symbol
-    u32 size;       // size of the symbol
+    u32 size;       // size of the symbol. In case of multiple allocations,
+                    // this holds the size of last allocation
 
     string name;
     SymType symType;
@@ -170,6 +171,7 @@ public:
         if(RecordAllAllocations)
         {
             startAddr2Size[saddr].push_back(size1);
+            size=size1; // size then only holds the last size value
         }
         else
         {
@@ -192,6 +194,12 @@ public:
             return size;
         }
     }
+    //size of the last allocation only in the case of multiple allocations
+    u32 GetSize()
+    {
+        return size;
+    }
+
     bool isSameLine( u32 l)
     {
         return (Locations.GetLocation(symLocIndex).lineNo == l);
@@ -245,6 +253,7 @@ public:
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
+    u32 GetSymSize(IDNoType idno);
     string GetSymLocation(IDNoType idno);
     bool IsSeenFunctionName(string& ftnName);
     bool IsSeenLocation(Location& loc, u32& locIndex);

@@ -23,6 +23,13 @@ u32 Symbols::GetSymSize(uptr saddr)
     return ( _Symbols[id].GetSize(saddr) );
 }
 
+u32 Symbols::GetSymSize(IDNoType id)
+{
+    D2ECHO("Getting size of symbol with id: " << id );
+    Symbol& sym = _Symbols[id];
+    return ( sym.GetSize() );
+}
+
 string Symbols::GetSymLocation(IDNoType id)
 {
     string loc;
@@ -200,7 +207,6 @@ void Symbols::InitFromFtnFile()
         ECHO("No function inserted in the symbol table.");
         Die();
     }
-
 }
 
 void Symbols::InitFromObjFile()

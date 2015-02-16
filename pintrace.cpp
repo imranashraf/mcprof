@@ -46,6 +46,7 @@ bool RecordAllAllocations;
 bool FlushCalls;
 u32 FlushCallsLimit;
 bool TrackMagic;
+bool ShowUnknown;
 
 /* ===================================================================== */
 // Command line switches
@@ -104,6 +105,9 @@ KNOB<UINT32> KnobFlushCallsLimit(KNOB_MODE_WRITEONCE,  "pintool",
 
 KNOB<BOOL> KnobTrackMagic(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackMagic", "0", "Track magic instructions");
+
+KNOB<BOOL> KnobShowUnknown(KNOB_MODE_WRITEONCE, "pintool",
+                            "ShowUnknown", "0", "Show Unknown function in the output graphs");
 
 /* ===================================================================== */
 // Utilities
@@ -790,7 +794,6 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                     string rtnName = RTN_Name(rtn);
                     D2ECHO("Instrumenting XCHG/Magic instruction in " << rtnName << "()" );
                     INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Magic,
-                                             //IARG_THREAD_ID,
                                              IARG_REG_VALUE, REG_EAX,
                                              IARG_REG_VALUE, REG_ECX,
                                              IARG_REG_VALUE, REG_EDX,
@@ -979,6 +982,7 @@ void SetupPin(int argc, char *argv[])
     FlushCalls=KnobFlushCalls.Value();
     FlushCallsLimit=KnobFlushCallsLimit.Value();
     TrackMagic = KnobTrackMagic.Value();
+    ShowUnknown = KnobShowUnknown.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
