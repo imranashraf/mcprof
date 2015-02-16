@@ -98,6 +98,20 @@ void Symbols::InsertFunction(const string& ftnname)
     _Symbols[id] = sym;
 }
 
+// void Symbols::InsertZoneIfNotAvailable(const string& zoneName)
+// {
+//     D2ECHO("Inserting Zone " << zoneName << " if it is not available" );
+//     if ( IsSeenFunctionName(zoneName) == false)
+//     {
+//         IDNoType zid = GlobalID++;
+//         FuncName2ID[zoneName] = zid;
+//         Symbol sym(zid, zoneName, SymType::FUNC); // TODO separate type for zones???
+//         D1ECHO("Adding Zone Symbol: " << zoneName << " with id: " << int(zid) << " to Symbol Table");
+//         _Symbols[zid] = sym;
+//     }
+// }
+
+
 // TODO is searching in this map fast enough or do we need different/separate
 // data structure for seen function names
 bool Symbols::IsSeenFunctionName(string& ftnName)
@@ -122,7 +136,7 @@ u16 Symbols::TotalSymbolCount()
 }
 
 // only the function count
-// NOTE only function symbols are also added in FuncName2ID map
+// NOTE only function symbols are added in FuncName2ID map
 // so size of this map gives total function count
 u16 Symbols::TotalFunctionCount()
 {

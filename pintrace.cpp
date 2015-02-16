@@ -5,6 +5,7 @@
  */
 
 #include "pin.H"
+#include "markers.h"
 #include "globals.h"
 #include "symbols.h"
 #include "pintrace.h"
@@ -44,6 +45,7 @@ bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
 u32 FlushCallsLimit;
+bool TrackMagic;
 
 /* ===================================================================== */
 // Command line switches
@@ -99,6 +101,9 @@ KNOB<BOOL> KnobFlushCalls(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<UINT32> KnobFlushCallsLimit(KNOB_MODE_WRITEONCE,  "pintool",
                         "FlushCallsLimit", "5000",
                         "specify LIMIT to be used for flushing calls.");
+
+KNOB<BOOL> KnobTrackMagic(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackMagic", "0", "Track magic instructions");
 
 /* ===================================================================== */
 // Utilities
@@ -255,6 +260,41 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname << " Done" );
 }
 
+VOID RecordZoneEntry(INT32 zoneNo)
+{
+    IDNoType fid = CallStack.Top();
+    string zoneName = symTable.GetSymName(fid) + to_string((long long)zoneNo);
+    D1ECHO("Entring zone " << zoneName );
+
+    // enter the zone in the symbole table if seeing for first time.
+    // This cannot be done at instrumentation time as we dont know 
+    // what kind of magic instruction it is at that time, we know that
+    // only at analysis time
+    if( !symTable.IsSeenFunctionName(zoneName) )
+    {
+        symTable.InsertFunction(zoneName);
+    }
+
+    // push it on to stack so that communication is associated with it
+    CallStack.Push(FuncName2ID[zoneName]);
+
+    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
+
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
+
+    // In engine 3, to save time, the curr call is selected only at
+    // func entry/exit, so that it does not need to be determined on each access
+    if (KnobEngine.Value() == 3)
+    {
+        D1ECHO ("Setting Current Call for : " << zoneName );
+        SetCurrCallOnEntry();
+    }
+
+    D1ECHO("Entering Zone " << zoneName << " Done" );
+}
 
 VOID RecordRoutineExit(VOID *ip)
 {
@@ -263,7 +303,7 @@ VOID RecordRoutineExit(VOID *ip)
     D1ECHO ("Exiting Routine : " << rname );
 
     // check first if map has entry for this ftn
-    if (FuncName2ID.find(rname) != FuncName2ID.end() )
+    if ( symTable.IsSeenFunctionName(rname) )
     {
         IDNoType lastCallID = CallStack.Top();
         // check if the top ftn is the current one
@@ -294,6 +334,45 @@ VOID RecordRoutineExit(VOID *ip)
     }
 
     D1ECHO ("Exiting Routine : " << rname << " Done");
+}
+
+VOID RecordZoneExit(INT32 zoneNo)
+{
+    IDNoType lastCallID = CallStack.Top();
+    string zoneName = symTable.GetSymName(lastCallID);
+    D1ECHO ("Exiting Zone : " << zoneName );
+
+    // check first if map has entry for this zone
+    if( symTable.IsSeenFunctionName(zoneName) )
+    {
+        // check if the top ftn is the current one
+        if ( lastCallID == FuncName2ID[zoneName] )
+        {
+            D1ECHO("Zone ID: " << FuncName2ID[zoneName]
+                   << " Call stack top id " << lastCallID );
+
+            D1ECHO("Leaving Zone : " << zoneName
+                   << " Popping call stack top is "
+                   << symTable.GetSymName( lastCallID ) );
+
+            CallStack.Pop();
+            CallSiteStack.Pop();
+            #if (DEBUG>0)
+            CallStack.Print();
+            CallSiteStack.Print();
+            #endif
+
+            // In engine 3, to save time, the curr call is selected only at func entry/exit,
+            // so that it does not need to be determined on each access
+            if (KnobEngine.Value() == 3)
+            {
+                D1ECHO("Setting Current Call for : " << zoneName );
+                SetCurrCallOnExit(lastCallID);
+            }
+        }
+    }
+
+    D1ECHO ("Exiting Zone : " << zoneName << " Done");
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -562,6 +641,43 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
+VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
+{
+    int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
+    int val = arg & __PIN_ID_MASK;
+
+    D2ECHO("Recieved MAGIC " << VAR(cmd) << VAR(val) << VAR(arg) << VAR(arg1) );
+
+    switch(cmd)
+    {
+    case __PIN_MAGIC_CMD_NOARG:
+        switch (val)
+        {
+            case __PIN_MAGIC_START:
+                D1ECHO("__PIN_MAGIC_START");
+            break;
+            case __PIN_MAGIC_STOP:
+                D1ECHO("__PIN_MAGIC_STOP");
+            break;
+            default:
+                ECHO("Unknown NOARG MAGIC " << val);
+            break;
+        }
+    break;
+    case __PIN_MAGIC_ZONE_ENTER:
+        D1ECHO("__PIN_MAGIC_ZONE_ENTER");
+        RecordZoneEntry(val);
+    break;
+    case __PIN_MAGIC_ZONE_EXIT:
+        D1ECHO("__PIN_MAGIC_ZONE_EXIT");
+        RecordZoneExit(val);
+    break;
+    default:
+        ECHO("Unknown ARG MAGIC " << cmd);
+    break;
+    }
+}
+
 VOID InstrumentTraces(TRACE trace, VOID *v)
 {
     for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
@@ -663,6 +779,22 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                         //IARG_UINT32, INS_IsPrefetch(ins),
                         IARG_END
                     );
+                }
+            }
+
+            if(TrackMagic) // If magic instruction tracking is enabled
+            {
+                if (INS_Disassemble(ins) == "xchg bx, bx") // track the magic instruction
+                {
+                    RTN rtn = INS_Rtn(ins);
+                    string rtnName = RTN_Name(rtn);
+                    D2ECHO("Instrumenting XCHG/Magic instruction in " << rtnName << "()" );
+                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Magic,
+                                             //IARG_THREAD_ID,
+                                             IARG_REG_VALUE, REG_EAX,
+                                             IARG_REG_VALUE, REG_ECX,
+                                             IARG_REG_VALUE, REG_EDX,
+                                             IARG_END);
                 }
             }
         } // ins
@@ -846,6 +978,7 @@ void SetupPin(int argc, char *argv[])
     RecordAllAllocations=KnobRecordAllAllocations.Value();
     FlushCalls=KnobFlushCalls.Value();
     FlushCallsLimit=KnobFlushCallsLimit.Value();
+    TrackMagic = KnobTrackMagic.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
