@@ -10,9 +10,12 @@ extern Matrix2D ComMatrix;
 
 extern Symbols symTable;
 extern bool TrackObjects;
+extern bool NoseDown;
 
 void RecordWriteEngine2(uptr addr, u32 size)
 {
+    //if(NoseDown == false) return; // dont do any thing if Nose is not Down
+
     IDNoType prod = CallStack.Top();
     IDNoType objid = GetObjectID(addr);
 
@@ -38,6 +41,8 @@ void RecordWriteEngine2(uptr addr, u32 size)
 
 void RecordReadEngine2(uptr addr, u32 size)
 {
+    //if(NoseDown == false) return; // dont do any thing if Nose is not Down
+
     IDNoType cons = CallStack.Top();
     D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
     IDNoType prod=0;

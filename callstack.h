@@ -60,7 +60,7 @@ public:
     {
         return sites.back();
     }
-    u32 GetCallSites();
+    u32 GetCallSites(u32 lastCallLocIndex);
     string GetCallSitesString();
     void Print();
     void Print(ofstream& fout);

@@ -75,8 +75,6 @@ void sumdiffVecs()
 
 int main()
 {
-    MCPROF_START();
-
     nbytes = SIZE*sizeof(TYPE);
     printf("Vector Operations Test.\n");
     printf("Total bytes : %d\n",nbytes);
@@ -96,6 +94,7 @@ int main()
     prodArr = malloc(nbytes);
     printf("prodArr addr after malloc : %p\n",prodArr);
 
+    MCPROF_START();
     initVecs();
 
     #if 0
@@ -107,6 +106,7 @@ int main()
     prodVecs();
 
     printf("output : %d\n", sumArr[1]+diffArr[1]+prodArr[1]);
+    MCPROF_START();
 
     free(srcArr1);
     free(srcArr2);

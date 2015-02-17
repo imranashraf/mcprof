@@ -23,6 +23,7 @@
 #include <map>
 #include <deque>
 #include <algorithm>
+#include <cstring> 
 
 /* ================================================================== */
 // Global variables
@@ -47,6 +48,7 @@ bool FlushCalls;
 u32 FlushCallsLimit;
 bool TrackMagic;
 bool ShowUnknown;
+// bool NoseDown;
 
 /* ===================================================================== */
 // Command line switches
@@ -246,6 +248,9 @@ uptr currStartAddress;
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
+    // enable tracing memory R/W in engines only after main
+    //if( strcmp(rname, "main") == 0) NoseDown=true;
+
     CallStack.Push(FuncName2ID[rname]);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
     #if (DEBUG>0)
@@ -337,6 +342,9 @@ VOID RecordRoutineExit(VOID *ip)
         }
     }
 
+    // disable tracing memory R/W in engines after main
+    // if( rname == "main")    NoseDown=false;
+
     D1ECHO ("Exiting Routine : " << rname << " Done");
 }
 
@@ -386,22 +394,28 @@ VOID SetCallSite(u32 locIndex)
     lastCallLocIndex=locIndex;
 }
 
-VOID MallocAllocaBefore(u32 size)
+VOID MallocBefore(u32 size)
 {
-    D1ECHO("setting malloc/calloc size " << size );
+    D1ECHO("setting malloc size " << size );
+    currSize = size;
+}
+
+VOID AllocaBefore(u32 size)
+{
+    D1ECHO("setting alloca size " << size );
     currSize = size;
 }
 
 VOID CallocBefore(u32 n, u32 size)
 {
-    D2ECHO("setting malloc/calloc size " << size );
+    D2ECHO("setting calloc size " << size );
     currSize = n*size;
 }
 
 // This is used for malloc, calloc and alloca
 VOID MallocCallocAllocaAfter(uptr addr)
 {
-    D1ECHO("setting malloc/calloc/alloca start address " << ADDR(addr) );
+    D2ECHO("setting malloc/calloc/alloca start address " << ADDR(addr) << " and size " << currSize);
     currStartAddress = addr;
 
     symTable.InsertMallocCalloc(currStartAddress, lastCallLocIndex, currSize);
@@ -482,9 +496,9 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(mallocRtn))
         {
             RTN_Open(mallocRtn);
-
+            D1ECHO("Instrumenting malloc");
             // Instrument malloc() to print the input argument value and the return value.
-            RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocAllocaBefore,
+            RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocCallocAllocaAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
@@ -498,7 +512,7 @@ VOID InstrumentImages(IMG img, VOID * v)
             RTN_Open(allocaRtn);
             D1ECHO("Instrumenting alloca");
             // Instrument malloc() to print the input argument value and the return value.
-            RTN_InsertCall(allocaRtn, IPOINT_BEFORE, (AFUNPTR)MallocAllocaBefore,
+            RTN_InsertCall(allocaRtn, IPOINT_BEFORE, (AFUNPTR)AllocaBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(allocaRtn, IPOINT_AFTER, (AFUNPTR)MallocCallocAllocaAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
@@ -510,7 +524,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(callocRtn))
         {
             RTN_Open(callocRtn);
-
+            D1ECHO("Instrumenting calloc");
             // Instrument calloc() to print the input argument value and the return value.
             RTN_InsertCall(callocRtn, IPOINT_BEFORE, (AFUNPTR)CallocBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -527,7 +541,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(reallocRtn))
         {
             RTN_Open(reallocRtn);
-
+            D1ECHO("Instrumenting realloc");
             // Instrument calloc() to print the input argument value and the return value.
             // for now  using same callback ftns as for malloc
             RTN_InsertCall(reallocRtn, IPOINT_BEFORE, (AFUNPTR)ReallocBefore,
@@ -545,6 +559,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(freeRtn))
         {
             RTN_Open(freeRtn);
+            D1ECHO("Instrumenting free");
             // Instrument free() to print the input argument value.
             RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)FreeBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
@@ -556,7 +571,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(strdupRtn))
         {
             RTN_Open(strdupRtn);
-
+            D1ECHO("Instrumenting strdup");
             // Instrument strdup() to print the input argument value and the return value.
             RTN_InsertCall(strdupRtn, IPOINT_BEFORE, (AFUNPTR)StrdupBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
@@ -645,6 +660,8 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
+VOID dummyRecorder(uptr a, u32 b){}
+
 VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
 {
     int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
@@ -659,9 +676,15 @@ VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
         {
             case __PIN_MAGIC_START:
                 D1ECHO("__PIN_MAGIC_START");
+                //NoseDown = true;
+                //ReadRecorder = RecordReadEngine2;
+                //WriteRecorder = RecordWriteEngine2;
             break;
             case __PIN_MAGIC_STOP:
                 D1ECHO("__PIN_MAGIC_STOP");
+                //NoseDown = false;
+                //ReadRecorder = dummyRecorder;
+                //WriteRecorder = dummyRecorder;
             break;
             default:
                 ECHO("Unknown NOARG MAGIC " << val);
@@ -983,6 +1006,7 @@ void SetupPin(int argc, char *argv[])
     FlushCallsLimit=KnobFlushCallsLimit.Value();
     TrackMagic = KnobTrackMagic.Value();
     ShowUnknown = KnobShowUnknown.Value();
+    //NoseDown = false;
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
@@ -991,6 +1015,9 @@ void SetupPin(int argc, char *argv[])
 
     D1ECHO("Selecting Analysis Engine ...");
     SelectAnalysisEngine();
+    // should be used when NoseDown utilized
+//     ReadRecorder = dummyRecorder;
+//     WriteRecorder = dummyRecorder;
 
     if ( KnobEngine.Value() == 3 )
     {

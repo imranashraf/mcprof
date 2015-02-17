@@ -63,21 +63,24 @@ void Matrix2D::PrintMatrix(ostream &fout)
     IDNoType TotalSymbols = symTable.TotalSymbolCount();
     CHECK_LT(TotalSymbols, Matrix.size());
 
-    IDNoType Start = 0; //use this if you want to print unknown
-//     IDNoType Start = 1; //use this if you dont want to print unknown
+    u16 StartID;
+    if(ShowUnknown)
+        StartID = 0; //use this if you want to print unknown
+    else
+        StartID = 1; //use this if you dont want to print unknown
 
     fout << ALIGNMENT << " ";
-    for (IDNoType c=Start; c<TotalSymbols; c++)
+    for (IDNoType c=StartID; c<TotalSymbols; c++)
     {
         fout << ALIGNMENT << symTable.GetSymName(c);
     }
     fout << endl;
 
-    for (IDNoType p=Start; p<TotalSymbols; p++)
+    for (IDNoType p=StartID; p<TotalSymbols; p++)
     {
         fout << ALIGNMENT << symTable.GetSymName(p);
 
-        for (IDNoType c=Start; c<TotalSymbols; c++)
+        for (IDNoType c=StartID; c<TotalSymbols; c++)
         {
             fout << ALIGNMENT << Matrix[p][c];
         }
@@ -115,7 +118,7 @@ void Matrix2D::PrintDot(ostream &dotout)
         if( !symname.empty() )
         {
             if ( symTable.SymIsObj(c) )
-                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n"<< symTable.GetSymSize(c) << " Bytes\"" << objNodeStyle << "];" << endl;
+                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n"<< hBytes(symTable.GetSymSize(c)) << "\"" << objNodeStyle << "];" << endl;
             else
                 dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << " \"" << ftnNodeStyle << "];" << endl;
         }
@@ -136,7 +139,7 @@ void Matrix2D::PrintDot(ostream &dotout)
                        << "->"
                        << "\"" << (u16)c << "\""
                        << "[label=\""
-                       << comm <<" Bytes\""
+                       << hBytes(comm) <<"\""
                        << "color = \"#"
                        << hex
                        << setw(2) << setfill('0') << max(0, color-768)

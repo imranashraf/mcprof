@@ -131,6 +131,7 @@ public:
         if(RecordAllAllocations)
         {
             startAddr2Size[saddr].push_back(size1);
+            size=size1;
         }
         else
         {
@@ -145,6 +146,7 @@ public:
         if(RecordAllAllocations)
         {
             startAddr2Size[saddr].push_back(size1);
+            size=size1;
         }
         else
         {
