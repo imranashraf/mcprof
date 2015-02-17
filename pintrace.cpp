@@ -46,9 +46,9 @@ bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
 u32 FlushCallsLimit;
-bool TrackMagic;
 bool ShowUnknown;
-// bool NoseDown;
+bool TrackMagic;
+bool UseStartStop;
 
 /* ===================================================================== */
 // Command line switches
@@ -105,11 +105,16 @@ KNOB<UINT32> KnobFlushCallsLimit(KNOB_MODE_WRITEONCE,  "pintool",
                         "FlushCallsLimit", "5000",
                         "specify LIMIT to be used for flushing calls.");
 
+KNOB<BOOL> KnobShowUnknown(KNOB_MODE_WRITEONCE, "pintool",
+                            "ShowUnknown", "0", "Show Unknown function in the output graphs");
+
 KNOB<BOOL> KnobTrackMagic(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackMagic", "0", "Track magic instructions");
 
-KNOB<BOOL> KnobShowUnknown(KNOB_MODE_WRITEONCE, "pintool",
-                            "ShowUnknown", "0", "Show Unknown function in the output graphs");
+KNOB<BOOL> KnobUseStartStop(KNOB_MODE_WRITEONCE, "pintool",
+                            "UseStartStop", "0", "Use start/stop markers in \
+                            the code to start/stop profiling \
+                            instead of starting from main()");
 
 /* ===================================================================== */
 // Utilities
@@ -149,6 +154,13 @@ void SelectAnalysisEngine()
         Die();
         break;
     }
+}
+
+VOID dummyRecorder(uptr a, u32 b){}
+void SelectDummyAnalysisEngine()
+{
+    ReadRecorder = dummyRecorder;
+    WriteRecorder = dummyRecorder;
 }
 
 /* ===================================================================== */
@@ -249,7 +261,7 @@ VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
     // enable tracing memory R/W in engines only after main
-    //if( strcmp(rname, "main") == 0) NoseDown=true;
+    //if( strcmp(rname, "main") == 0) NoseDown=true; // SelectAnalysisEngine();
 
     CallStack.Push(FuncName2ID[rname]);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
@@ -343,7 +355,7 @@ VOID RecordRoutineExit(VOID *ip)
     }
 
     // disable tracing memory R/W in engines after main
-    // if( rname == "main")    NoseDown=false;
+    // if( rname == "main")    NoseDown=false; // SelectDummyAnalysisEngine();
 
     D1ECHO ("Exiting Routine : " << rname << " Done");
 }
@@ -660,8 +672,6 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
-VOID dummyRecorder(uptr a, u32 b){}
-
 VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
 {
     int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
@@ -677,14 +687,12 @@ VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
             case __PIN_MAGIC_START:
                 D1ECHO("__PIN_MAGIC_START");
                 //NoseDown = true;
-                //ReadRecorder = RecordReadEngine2;
-                //WriteRecorder = RecordWriteEngine2;
+                SelectAnalysisEngine();
             break;
             case __PIN_MAGIC_STOP:
                 D1ECHO("__PIN_MAGIC_STOP");
                 //NoseDown = false;
-                //ReadRecorder = dummyRecorder;
-                //WriteRecorder = dummyRecorder;
+                SelectDummyAnalysisEngine();
             break;
             default:
                 ECHO("Unknown NOARG MAGIC " << val);
@@ -1006,6 +1014,7 @@ void SetupPin(int argc, char *argv[])
     FlushCallsLimit=KnobFlushCallsLimit.Value();
     TrackMagic = KnobTrackMagic.Value();
     ShowUnknown = KnobShowUnknown.Value();
+    UseStartStop = KnobUseStartStop.Value();
     //NoseDown = false;
 
 #if (DEBUG>0)
@@ -1014,10 +1023,17 @@ void SetupPin(int argc, char *argv[])
 #endif
 
     D1ECHO("Selecting Analysis Engine ...");
-    SelectAnalysisEngine();
-    // should be used when NoseDown utilized
-//     ReadRecorder = dummyRecorder;
-//     WriteRecorder = dummyRecorder;
+    if(UseStartStop)
+    {
+        // start dummy so that actual profiling starts when start is seen
+        SelectDummyAnalysisEngine();
+        TrackMagic = true; // TrackMagic is required in this case
+    }
+    else
+    {
+        // start profiling right away
+        SelectAnalysisEngine();
+    }
 
     if ( KnobEngine.Value() == 3 )
     {
