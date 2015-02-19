@@ -130,7 +130,7 @@ multiAllocClass.test: $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
 
 markers.test: $(OBJDIR)markers$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -TrackMagic 1 -- $(OBJDIR)markers$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -TrackZones 1 -TrackStartStop 1 -- $(OBJDIR)markers$(EXE_SUFFIX)
 
 ##############################################################
 #
@@ -142,7 +142,7 @@ markers.test: $(OBJDIR)markers$(EXE_SUFFIX)
 
 CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
 		engine1.cpp engine2.cpp engine3.cpp \
-		symbols.cpp\
+		symbols.cpp instrcount.cpp \
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
 
@@ -177,6 +177,7 @@ format:
 openingFileOrder=makefile.rules globals.h globals.cpp markers.h \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
+	instrcount.h instrcount.cpp \
 	callstack.h callstack.cpp \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
 	pintrace.h pintrace.cpp \

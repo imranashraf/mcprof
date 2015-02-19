@@ -106,7 +106,7 @@ int main()
     prodVecs();
 
     printf("output : %d\n", sumArr[1]+diffArr[1]+prodArr[1]);
-    MCPROF_START();
+    MCPROF_STOP();
 
     free(srcArr1);
     free(srcArr2);
@@ -114,6 +114,5 @@ int main()
     free(diffArr);
     free(prodArr);
 
-    MCPROF_STOP();
     return 0;
 }

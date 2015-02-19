@@ -12,7 +12,7 @@ fi
 if [ -f "$dotfile" ]
 then
     pdffile=${dotfile%%.dot}.pdf
-    gvpr -c 'N[$.degree==0]{delete(0,$);}' communication.dot > temp.dot
+    gvpr -c 'N[$.degree==0]{delete(0,$);}' $dotfile > temp.dot
     dot -Tpdf temp.dot -o $pdffile
     rm temp.dot
     echo "[SUCCESS] Generated $pdffile"

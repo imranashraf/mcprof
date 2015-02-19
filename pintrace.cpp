@@ -15,6 +15,7 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
+#include "instrcount.h"
 
 #include <iostream>
 #include <fstream>
@@ -41,14 +42,17 @@ CallSiteStackType CallSiteStack;
 
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
+void (*InstrCounter)(ADDRINT);
 
 bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
 u32 FlushCallsLimit;
 bool ShowUnknown;
-bool TrackMagic;
-bool UseStartStop;
+bool TrackZones;
+bool TrackStartStop;
+
+extern map<IDNoType,u64> instrCounts;
 
 /* ===================================================================== */
 // Command line switches
@@ -108,13 +112,13 @@ KNOB<UINT32> KnobFlushCallsLimit(KNOB_MODE_WRITEONCE,  "pintool",
 KNOB<BOOL> KnobShowUnknown(KNOB_MODE_WRITEONCE, "pintool",
                             "ShowUnknown", "0", "Show Unknown function in the output graphs");
 
-KNOB<BOOL> KnobTrackMagic(KNOB_MODE_WRITEONCE, "pintool",
-                            "TrackMagic", "0", "Track magic instructions");
-
-KNOB<BOOL> KnobUseStartStop(KNOB_MODE_WRITEONCE, "pintool",
-                            "UseStartStop", "0", "Use start/stop markers in \
+KNOB<BOOL> KnobTrackStartStop(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackStartStop", "0", "Track start/stop markers in \
                             the code to start/stop profiling \
                             instead of starting from main()");
+
+KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackZones", "0", "Track zone markers to profile per zones");
 
 /* ===================================================================== */
 // Utilities
@@ -132,9 +136,20 @@ VOID Usage()
 /* ===================================================================== */
 // Analysis routines
 /* ===================================================================== */
+// This function is called for each basic block
+// Use the fast linkage for calls
+VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
+{
+    IDNoType fid = CallStack.Top();
+    instrCounts[fid] += c;
+}
+
+VOID dummyRecorder(uptr a, u32 b){}
+VOID dummyInstrCounter(ADDRINT c){}
 
 void SelectAnalysisEngine()
 {
+    InstrCounter = doInstrCount;
     switch( KnobEngine.Value() )
     {
     case 1:
@@ -156,11 +171,11 @@ void SelectAnalysisEngine()
     }
 }
 
-VOID dummyRecorder(uptr a, u32 b){}
 void SelectDummyAnalysisEngine()
 {
     ReadRecorder = dummyRecorder;
     WriteRecorder = dummyRecorder;
+    InstrCounter = dummyInstrCounter;
 }
 
 /* ===================================================================== */
@@ -261,7 +276,6 @@ VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
     // enable tracing memory R/W in engines only after main
-    //if( strcmp(rname, "main") == 0) NoseDown=true; // SelectAnalysisEngine();
 
     CallStack.Push(FuncName2ID[rname]);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
@@ -353,9 +367,6 @@ VOID RecordRoutineExit(VOID *ip)
             }
         }
     }
-
-    // disable tracing memory R/W in engines after main
-    // if( rname == "main")    NoseDown=false; // SelectDummyAnalysisEngine();
 
     D1ECHO ("Exiting Routine : " << rname << " Done");
 }
@@ -672,7 +683,7 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
-VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
+VOID Markers( INT32 arg, INT32 arg1, INT32 arg2)
 {
     int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
     int val = arg & __PIN_ID_MASK;
@@ -685,14 +696,18 @@ VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
         switch (val)
         {
             case __PIN_MAGIC_START:
-                D1ECHO("__PIN_MAGIC_START");
-                //NoseDown = true;
-                SelectAnalysisEngine();
+                if(TrackStartStop)
+                {
+                    D1ECHO("__PIN_MAGIC_START");
+                    SelectAnalysisEngine();
+                }
             break;
             case __PIN_MAGIC_STOP:
-                D1ECHO("__PIN_MAGIC_STOP");
-                //NoseDown = false;
-                SelectDummyAnalysisEngine();
+                if(TrackStartStop)
+                {
+                    D1ECHO("__PIN_MAGIC_STOP");
+                    SelectDummyAnalysisEngine();
+                }
             break;
             default:
                 ECHO("Unknown NOARG MAGIC " << val);
@@ -700,12 +715,18 @@ VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
         }
     break;
     case __PIN_MAGIC_ZONE_ENTER:
-        D1ECHO("__PIN_MAGIC_ZONE_ENTER");
-        RecordZoneEntry(val);
+        if(TrackZones)
+        {
+            D1ECHO("__PIN_MAGIC_ZONE_ENTER");
+            RecordZoneEntry(val);
+        }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
-        D1ECHO("__PIN_MAGIC_ZONE_EXIT");
-        RecordZoneExit(val);
+        if(TrackZones)
+        {
+            D1ECHO("__PIN_MAGIC_ZONE_EXIT");
+            RecordZoneExit(val);
+        }
     break;
     default:
         ECHO("Unknown ARG MAGIC " << cmd);
@@ -715,8 +736,20 @@ VOID Magic( INT32 arg, INT32 arg1, INT32 arg2)
 
 VOID InstrumentTraces(TRACE trace, VOID *v)
 {
+//     RTN rtn = TRACE_Rtn (trace);
+//     if (! RTN_Valid (rtn))
+//         return;
+//     ECHO( "This trace belongs to routine:" << RTN_Name(rtn) );
+
     for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
     {
+        // Insert a call to InstrCounter for every bbl, passing the number of instructions.
+        // IPOINT_ANYWHERE allows Pin to schedule the call anywhere in the bbl to obtain best performance.
+        // Use a fast linkage for the call.
+        BBL_InsertCall(bbl, IPOINT_ANYWHERE, AFUNPTR(InstrCounter), IARG_FAST_ANALYSIS_CALL,
+                       IARG_UINT32, BBL_NumIns(bbl),
+                       IARG_END);
+
         for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
         {
             D2ECHO("Dissassembled ins : " << INS_Disassemble(ins) );
@@ -817,14 +850,14 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 }
             }
 
-            if(TrackMagic) // If magic instruction tracking is enabled
+            if( TrackZones || TrackStartStop ) // If marker tracking is requested
             {
                 if (INS_Disassemble(ins) == "xchg bx, bx") // track the magic instruction
                 {
-                    RTN rtn = INS_Rtn(ins);
-                    string rtnName = RTN_Name(rtn);
-                    D2ECHO("Instrumenting XCHG/Magic instruction in " << rtnName << "()" );
-                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Magic,
+                    // RTN rtn = INS_Rtn(ins);
+                    // string rtnName = RTN_Name(rtn);
+                    D2ECHO("Instrumenting XCHG/Markers instruction in " << RTN_Name(INS_Rtn(ins)) << "()" );
+                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Markers,
                                              IARG_REG_VALUE, REG_EAX,
                                              IARG_REG_VALUE, REG_ECX,
                                              IARG_REG_VALUE, REG_EDX,
@@ -963,6 +996,8 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
+    //PrintInstrCount();
+    //PrintInstrPercents();
 }
 
 /*!
@@ -1012,10 +1047,9 @@ void SetupPin(int argc, char *argv[])
     RecordAllAllocations=KnobRecordAllAllocations.Value();
     FlushCalls=KnobFlushCalls.Value();
     FlushCallsLimit=KnobFlushCallsLimit.Value();
-    TrackMagic = KnobTrackMagic.Value();
     ShowUnknown = KnobShowUnknown.Value();
-    UseStartStop = KnobUseStartStop.Value();
-    //NoseDown = false;
+    TrackStartStop = KnobTrackStartStop.Value();
+    TrackZones = KnobTrackZones.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
@@ -1023,15 +1057,14 @@ void SetupPin(int argc, char *argv[])
 #endif
 
     D1ECHO("Selecting Analysis Engine ...");
-    if(UseStartStop)
+    if(TrackStartStop)
     {
         // start dummy so that actual profiling starts when start is seen
         SelectDummyAnalysisEngine();
-        TrackMagic = true; // TrackMagic is required in this case
     }
     else
     {
-        // start profiling right away
+        // else start profiling right away
         SelectAnalysisEngine();
     }
 

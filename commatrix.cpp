@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "commatrix.h"
+#include "instrcount.h"
 
 extern bool ShowUnknown;
 
@@ -118,9 +119,9 @@ void Matrix2D::PrintDot(ostream &dotout)
         if( !symname.empty() )
         {
             if ( symTable.SymIsObj(c) )
-                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n"<< hBytes(symTable.GetSymSize(c)) << "\"" << objNodeStyle << "];" << endl;
+                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n" << hBytes(symTable.GetSymSize(c)) << "\"" << objNodeStyle << "];" << endl;
             else
-                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << " \"" << ftnNodeStyle << "];" << endl;
+                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n" << GetInstrCountPercent(c) << "%\"" << ftnNodeStyle << "];" << endl;
         }
     }
 
