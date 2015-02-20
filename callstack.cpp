@@ -65,13 +65,16 @@ void CallStackType::Print(ofstream& fout)
     #endif
 }
 
-u32 CallSiteStackType::GetCallSites()
+u32 CallSiteStackType::GetCallSites(u32 lastCallLocIndex)
 {
     u32 callsites=0;
-    for ( u32 loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
+    u32 loc;
+    for ( loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
     {
         callsites += loc*sites[loc];    // arbitrary formula to combine call sites
     }
+    callsites += loc*lastCallLocIndex; // also add the effect of lastCallLocIndex
+
     return callsites;
 }
 

@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
 #if (DEBUG>0)
     PrintShadowMap();
 #endif
-
     SetupPin(argc,argv);
 
     // Start the program, never returns

@@ -168,5 +168,6 @@ uptr RoundDownTo(uptr x, uptr boundary);
 bool IsAligned(uptr a, uptr alignment);
 const std::string& Target2RtnName(uptr target);
 const std::string& Target2LibName(uptr target);
+const std::string& hBytes(u64 bytes);
 
 #endif

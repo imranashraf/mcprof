@@ -10,6 +10,7 @@ extern Matrix2D ComMatrix;
 
 extern Symbols symTable;
 extern bool TrackObjects;
+extern bool NoseDown;
 
 void RecordWriteEngine2(uptr addr, u32 size)
 {

@@ -35,10 +35,9 @@ public:
             Matrix[prod][cons] += size;
     }
 
-    float MaxCommunication();
+    float MaxCommunication(u16 StartID);
     void Print(ostream &fout);
     void PrintMatrix(ostream &fout);
-//     void PrintMatrixFancy(ostream &fout);
     void PrintDot(ostream &dotout);
 };
 

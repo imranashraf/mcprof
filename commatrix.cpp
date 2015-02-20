@@ -1,5 +1,8 @@
 #include "globals.h"
 #include "commatrix.h"
+#include "instrcount.h"
+
+extern bool ShowUnknown;
 
 Matrix2D::Matrix2D()
 {
@@ -18,22 +21,13 @@ Matrix2D::Matrix2D(IDNoType size)
     Matrix.resize( cols , vector<float>( rows , value) );
 }
 
-// void Matrix2D::RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
-// {
-//     D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
-//            << FUNC(cons) << " of size: " << size );
-// 
-//     if( prod < Matrix.size() && cons < Matrix.size() )
-//         Matrix[prod][cons] += size;
-// }
-
-float Matrix2D::MaxCommunication()
+float Matrix2D::MaxCommunication(u16 StartID)
 {
     float currmax=0.0f;
     // Following iterations can be optimized to TotalSymbols instead of size
-    for (IDNoType p=0; p<Matrix.size(); p++)
+    for (IDNoType p=StartID; p<Matrix.size(); p++)
     {
-        for (IDNoType c=0; c<Matrix.size(); c++)
+        for (IDNoType c=StartID; c<Matrix.size(); c++)
         {
             currmax = std::max(currmax, Matrix[p][c]);
         }
@@ -70,21 +64,24 @@ void Matrix2D::PrintMatrix(ostream &fout)
     IDNoType TotalSymbols = symTable.TotalSymbolCount();
     CHECK_LT(TotalSymbols, Matrix.size());
 
-    IDNoType Start = 0; //use this if you want to print unknown
-//     IDNoType Start = 1; //use this if you dont want to print unknown
+    u16 StartID;
+    if(ShowUnknown)
+        StartID = 0; //use this if you want to print unknown
+    else
+        StartID = 1; //use this if you dont want to print unknown
 
     fout << ALIGNMENT << " ";
-    for (IDNoType c=Start; c<TotalSymbols; c++)
+    for (IDNoType c=StartID; c<TotalSymbols; c++)
     {
         fout << ALIGNMENT << symTable.GetSymName(c);
     }
     fout << endl;
 
-    for (IDNoType p=Start; p<TotalSymbols; p++)
+    for (IDNoType p=StartID; p<TotalSymbols; p++)
     {
         fout << ALIGNMENT << symTable.GetSymName(p);
 
-        for (IDNoType c=Start; c<TotalSymbols; c++)
+        for (IDNoType c=StartID; c<TotalSymbols; c++)
         {
             fout << ALIGNMENT << Matrix[p][c];
         }
@@ -105,26 +102,34 @@ void Matrix2D::PrintDot(ostream &dotout)
            << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
            << endl;
 
-    string objNodeStyle("fontcolor=black, shape=box, fontsize=20");
-    string ftnNodeStyle("fontcolor=black, style=filled, fontsize=20");
-    for (u16 c=0; c<TotalSymbols; c++)
+    string objNodeStyle(" fontcolor=black, shape=box, fontsize=20");
+    string ftnNodeStyle(" fontcolor=black, style=filled, fontsize=20");
+
+    u16 StartID;
+    if(ShowUnknown)
+        StartID = 0; // as 0 is reserved for unknown id
+    else
+        StartID = 1;
+
+    float maxComm = MaxCommunication(StartID);
+
+    for (u16 c=StartID; c<TotalSymbols; c++)
     {
         string symname = symTable.GetSymName(c);
         if( !symname.empty() )
         {
             if ( symTable.SymIsObj(c) )
-                dotout << "\"" << (u16)c << "\"" << " [label=\"" << symname << "\"" << objNodeStyle << "];" << endl;
+                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n" << hBytes(symTable.GetSymSize(c)) << "\"" << objNodeStyle << "];" << endl;
             else
-                dotout << "\"" << (u16)c << "\"" << " [label=\"" << symname << "\"" << ftnNodeStyle << "];" << endl;
+                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n" << GetInstrCountPercent(c) << "%\"" << ftnNodeStyle << "];" << endl;
         }
     }
 
     int color;
-    float maxComm = MaxCommunication();
 
-    for (u16 p=0; p<TotalSymbols; p++)
+    for (u16 p=StartID; p<TotalSymbols; p++)
     {
-        for (u16 c=0; c<TotalSymbols; c++)
+        for (u16 c=StartID; c<TotalSymbols; c++)
         {
             float comm = Matrix[p][c];
             if(comm > 0 )
@@ -135,7 +140,7 @@ void Matrix2D::PrintDot(ostream &dotout)
                        << "->"
                        << "\"" << (u16)c << "\""
                        << "[label=\""
-                       << comm <<" Bytes\""
+                       << hBytes(comm) <<"\""
                        << "color = \"#"
                        << hex
                        << setw(2) << setfill('0') << max(0, color-768)

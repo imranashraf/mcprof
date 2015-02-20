@@ -118,3 +118,33 @@ inline bool IsAligned(uptr a, uptr alignment)
 {
     return (a & (alignment - 1)) == 0;
 }
+
+const std::string& humanReadableByteCount(u64 bytes, bool si)
+{
+    string hBytes;
+    char cBytes[100];
+    u16 unit = si ? 1000 : 1024;
+    string punits1 = (si ? "kMGTPE" : "KMGTPE");
+    char punits2 = (si ? '\0' : 'i');
+    char pre[3];
+
+    if (bytes < unit)
+        hBytes = to_string((long long)bytes) + " B";
+    else
+    {
+        int exp = (int) (log(bytes) / log(unit));
+        pre[0] = punits1[exp-1];
+        pre[1] = punits2;
+        pre[2] = '\0';
+        float val = bytes / pow(unit, exp);
+        sprintf(cBytes, "%.1f %sB", val, pre);
+        hBytes = cBytes;
+    }
+
+    return *new string(hBytes);
+}
+
+const std::string& hBytes(u64 bytes)
+{
+    return humanReadableByteCount(bytes, true);
+}

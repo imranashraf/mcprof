@@ -5,6 +5,7 @@
  */
 
 #include "pin.H"
+#include "markers.h"
 #include "globals.h"
 #include "symbols.h"
 #include "pintrace.h"
@@ -14,6 +15,7 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
+#include "instrcount.h"
 
 #include <iostream>
 #include <fstream>
@@ -22,6 +24,7 @@
 #include <map>
 #include <deque>
 #include <algorithm>
+#include <cstring> 
 
 /* ================================================================== */
 // Global variables
@@ -39,11 +42,17 @@ CallSiteStackType CallSiteStack;
 
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
+void (*InstrCounter)(ADDRINT);
 
 bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
 u32 FlushCallsLimit;
+bool ShowUnknown;
+bool TrackZones;
+bool TrackStartStop;
+
+extern map<IDNoType,u64> instrCounts;
 
 /* ===================================================================== */
 // Command line switches
@@ -100,6 +109,17 @@ KNOB<UINT32> KnobFlushCallsLimit(KNOB_MODE_WRITEONCE,  "pintool",
                         "FlushCallsLimit", "5000",
                         "specify LIMIT to be used for flushing calls.");
 
+KNOB<BOOL> KnobShowUnknown(KNOB_MODE_WRITEONCE, "pintool",
+                            "ShowUnknown", "0", "Show Unknown function in the output graphs");
+
+KNOB<BOOL> KnobTrackStartStop(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackStartStop", "0", "Track start/stop markers in \
+                            the code to start/stop profiling \
+                            instead of starting from main()");
+
+KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackZones", "0", "Track zone markers to profile per zones");
+
 /* ===================================================================== */
 // Utilities
 /* ===================================================================== */
@@ -116,9 +136,20 @@ VOID Usage()
 /* ===================================================================== */
 // Analysis routines
 /* ===================================================================== */
+// This function is called for each basic block
+// Use the fast linkage for calls
+VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
+{
+    IDNoType fid = CallStack.Top();
+    instrCounts[fid] += c;
+}
+
+VOID dummyRecorder(uptr a, u32 b){}
+VOID dummyInstrCounter(ADDRINT c){}
 
 void SelectAnalysisEngine()
 {
+    InstrCounter = doInstrCount;
     switch( KnobEngine.Value() )
     {
     case 1:
@@ -138,6 +169,13 @@ void SelectAnalysisEngine()
         Die();
         break;
     }
+}
+
+void SelectDummyAnalysisEngine()
+{
+    ReadRecorder = dummyRecorder;
+    WriteRecorder = dummyRecorder;
+    InstrCounter = dummyInstrCounter;
 }
 
 /* ===================================================================== */
@@ -237,6 +275,8 @@ uptr currStartAddress;
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
+    // enable tracing memory R/W in engines only after main
+
     CallStack.Push(FuncName2ID[rname]);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
     #if (DEBUG>0)
@@ -255,6 +295,41 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname << " Done" );
 }
 
+VOID RecordZoneEntry(INT32 zoneNo)
+{
+    IDNoType fid = CallStack.Top();
+    string zoneName = symTable.GetSymName(fid) + to_string((long long)zoneNo);
+    D1ECHO("Entring zone " << zoneName );
+
+    // enter the zone in the symbole table if seeing for first time.
+    // This cannot be done at instrumentation time as we dont know 
+    // what kind of magic instruction it is at that time, we know that
+    // only at analysis time
+    if( !symTable.IsSeenFunctionName(zoneName) )
+    {
+        symTable.InsertFunction(zoneName);
+    }
+
+    // push it on to stack so that communication is associated with it
+    CallStack.Push(FuncName2ID[zoneName]);
+
+    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
+
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
+
+    // In engine 3, to save time, the curr call is selected only at
+    // func entry/exit, so that it does not need to be determined on each access
+    if (KnobEngine.Value() == 3)
+    {
+        D1ECHO ("Setting Current Call for : " << zoneName );
+        SetCurrCallOnEntry();
+    }
+
+    D1ECHO("Entering Zone " << zoneName << " Done" );
+}
 
 VOID RecordRoutineExit(VOID *ip)
 {
@@ -263,7 +338,7 @@ VOID RecordRoutineExit(VOID *ip)
     D1ECHO ("Exiting Routine : " << rname );
 
     // check first if map has entry for this ftn
-    if (FuncName2ID.find(rname) != FuncName2ID.end() )
+    if ( symTable.IsSeenFunctionName(rname) )
     {
         IDNoType lastCallID = CallStack.Top();
         // check if the top ftn is the current one
@@ -296,6 +371,45 @@ VOID RecordRoutineExit(VOID *ip)
     D1ECHO ("Exiting Routine : " << rname << " Done");
 }
 
+VOID RecordZoneExit(INT32 zoneNo)
+{
+    IDNoType lastCallID = CallStack.Top();
+    string zoneName = symTable.GetSymName(lastCallID);
+    D1ECHO ("Exiting Zone : " << zoneName );
+
+    // check first if map has entry for this zone
+    if( symTable.IsSeenFunctionName(zoneName) )
+    {
+        // check if the top ftn is the current one
+        if ( lastCallID == FuncName2ID[zoneName] )
+        {
+            D1ECHO("Zone ID: " << FuncName2ID[zoneName]
+                   << " Call stack top id " << lastCallID );
+
+            D1ECHO("Leaving Zone : " << zoneName
+                   << " Popping call stack top is "
+                   << symTable.GetSymName( lastCallID ) );
+
+            CallStack.Pop();
+            CallSiteStack.Pop();
+            #if (DEBUG>0)
+            CallStack.Print();
+            CallSiteStack.Print();
+            #endif
+
+            // In engine 3, to save time, the curr call is selected only at func entry/exit,
+            // so that it does not need to be determined on each access
+            if (KnobEngine.Value() == 3)
+            {
+                D1ECHO("Setting Current Call for : " << zoneName );
+                SetCurrCallOnExit(lastCallID);
+            }
+        }
+    }
+
+    D1ECHO ("Exiting Zone : " << zoneName << " Done");
+}
+
 VOID SetCallSite(u32 locIndex)
 {
     D2ECHO("setting last function call locIndex to " << locIndex << " "
@@ -303,22 +417,28 @@ VOID SetCallSite(u32 locIndex)
     lastCallLocIndex=locIndex;
 }
 
-VOID MallocAllocaBefore(u32 size)
+VOID MallocBefore(u32 size)
 {
-    D1ECHO("setting malloc/calloc size " << size );
+    D1ECHO("setting malloc size " << size );
+    currSize = size;
+}
+
+VOID AllocaBefore(u32 size)
+{
+    D1ECHO("setting alloca size " << size );
     currSize = size;
 }
 
 VOID CallocBefore(u32 n, u32 size)
 {
-    D2ECHO("setting malloc/calloc size " << size );
+    D2ECHO("setting calloc size " << size );
     currSize = n*size;
 }
 
 // This is used for malloc, calloc and alloca
 VOID MallocCallocAllocaAfter(uptr addr)
 {
-    D1ECHO("setting malloc/calloc/alloca start address " << ADDR(addr) );
+    D2ECHO("setting malloc/calloc/alloca start address " << ADDR(addr) << " and size " << currSize);
     currStartAddress = addr;
 
     symTable.InsertMallocCalloc(currStartAddress, lastCallLocIndex, currSize);
@@ -399,9 +519,9 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(mallocRtn))
         {
             RTN_Open(mallocRtn);
-
+            D1ECHO("Instrumenting malloc");
             // Instrument malloc() to print the input argument value and the return value.
-            RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocAllocaBefore,
+            RTN_InsertCall(mallocRtn, IPOINT_BEFORE, (AFUNPTR)MallocBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(mallocRtn, IPOINT_AFTER, (AFUNPTR)MallocCallocAllocaAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
@@ -415,7 +535,7 @@ VOID InstrumentImages(IMG img, VOID * v)
             RTN_Open(allocaRtn);
             D1ECHO("Instrumenting alloca");
             // Instrument malloc() to print the input argument value and the return value.
-            RTN_InsertCall(allocaRtn, IPOINT_BEFORE, (AFUNPTR)MallocAllocaBefore,
+            RTN_InsertCall(allocaRtn, IPOINT_BEFORE, (AFUNPTR)AllocaBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
             RTN_InsertCall(allocaRtn, IPOINT_AFTER, (AFUNPTR)MallocCallocAllocaAfter,
                            IARG_FUNCRET_EXITPOINT_VALUE, IARG_END);
@@ -427,7 +547,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(callocRtn))
         {
             RTN_Open(callocRtn);
-
+            D1ECHO("Instrumenting calloc");
             // Instrument calloc() to print the input argument value and the return value.
             RTN_InsertCall(callocRtn, IPOINT_BEFORE, (AFUNPTR)CallocBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -444,7 +564,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(reallocRtn))
         {
             RTN_Open(reallocRtn);
-
+            D1ECHO("Instrumenting realloc");
             // Instrument calloc() to print the input argument value and the return value.
             // for now  using same callback ftns as for malloc
             RTN_InsertCall(reallocRtn, IPOINT_BEFORE, (AFUNPTR)ReallocBefore,
@@ -462,6 +582,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(freeRtn))
         {
             RTN_Open(freeRtn);
+            D1ECHO("Instrumenting free");
             // Instrument free() to print the input argument value.
             RTN_InsertCall(freeRtn, IPOINT_BEFORE, (AFUNPTR)FreeBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
@@ -473,7 +594,7 @@ VOID InstrumentImages(IMG img, VOID * v)
         if (RTN_Valid(strdupRtn))
         {
             RTN_Open(strdupRtn);
-
+            D1ECHO("Instrumenting strdup");
             // Instrument strdup() to print the input argument value and the return value.
             RTN_InsertCall(strdupRtn, IPOINT_BEFORE, (AFUNPTR)StrdupBefore,
                            IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
@@ -562,10 +683,73 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
+VOID Markers( INT32 arg, INT32 arg1, INT32 arg2)
+{
+    int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
+    int val = arg & __PIN_ID_MASK;
+
+    D2ECHO("Recieved MAGIC " << VAR(cmd) << VAR(val) << VAR(arg) << VAR(arg1) );
+
+    switch(cmd)
+    {
+    case __PIN_MAGIC_CMD_NOARG:
+        switch (val)
+        {
+            case __PIN_MAGIC_START:
+                if(TrackStartStop)
+                {
+                    D1ECHO("__PIN_MAGIC_START");
+                    SelectAnalysisEngine();
+                }
+            break;
+            case __PIN_MAGIC_STOP:
+                if(TrackStartStop)
+                {
+                    D1ECHO("__PIN_MAGIC_STOP");
+                    SelectDummyAnalysisEngine();
+                }
+            break;
+            default:
+                ECHO("Unknown NOARG MAGIC " << val);
+            break;
+        }
+    break;
+    case __PIN_MAGIC_ZONE_ENTER:
+        if(TrackZones)
+        {
+            D1ECHO("__PIN_MAGIC_ZONE_ENTER");
+            RecordZoneEntry(val);
+        }
+    break;
+    case __PIN_MAGIC_ZONE_EXIT:
+        if(TrackZones)
+        {
+            D1ECHO("__PIN_MAGIC_ZONE_EXIT");
+            RecordZoneExit(val);
+        }
+    break;
+    default:
+        ECHO("Unknown ARG MAGIC " << cmd);
+    break;
+    }
+}
+
 VOID InstrumentTraces(TRACE trace, VOID *v)
 {
+//     RTN rtn = TRACE_Rtn (trace);
+//     if (! RTN_Valid (rtn))
+//         return;
+//     ECHO( "This trace belongs to routine:" << RTN_Name(rtn) );
+
     for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
     {
+        // Insert a call to InstrCounter for every bbl, passing the number of instructions.
+        // IPOINT_ANYWHERE allows Pin to schedule the call anywhere in the bbl to obtain best performance.
+        // Use a fast linkage for the call.
+        BBL_InsertCall(bbl, IPOINT_ANYWHERE, AFUNPTR(InstrCounter), IARG_FAST_ANALYSIS_CALL,
+                       IARG_UINT32, BBL_NumIns(bbl),
+                       IARG_END);
+
         for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
         {
             D2ECHO("Dissassembled ins : " << INS_Disassemble(ins) );
@@ -663,6 +847,21 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                         //IARG_UINT32, INS_IsPrefetch(ins),
                         IARG_END
                     );
+                }
+            }
+
+            if( TrackZones || TrackStartStop ) // If marker tracking is requested
+            {
+                if (INS_Disassemble(ins) == "xchg bx, bx") // track the magic instruction
+                {
+                    // RTN rtn = INS_Rtn(ins);
+                    // string rtnName = RTN_Name(rtn);
+                    D2ECHO("Instrumenting XCHG/Markers instruction in " << RTN_Name(INS_Rtn(ins)) << "()" );
+                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Markers,
+                                             IARG_REG_VALUE, REG_EAX,
+                                             IARG_REG_VALUE, REG_ECX,
+                                             IARG_REG_VALUE, REG_EDX,
+                                             IARG_END);
                 }
             }
         } // ins
@@ -797,6 +996,8 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
+    //PrintInstrCount();
+    //PrintInstrPercents();
 }
 
 /*!
@@ -846,6 +1047,9 @@ void SetupPin(int argc, char *argv[])
     RecordAllAllocations=KnobRecordAllAllocations.Value();
     FlushCalls=KnobFlushCalls.Value();
     FlushCallsLimit=KnobFlushCallsLimit.Value();
+    ShowUnknown = KnobShowUnknown.Value();
+    TrackStartStop = KnobTrackStartStop.Value();
+    TrackZones = KnobTrackZones.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");
@@ -853,7 +1057,16 @@ void SetupPin(int argc, char *argv[])
 #endif
 
     D1ECHO("Selecting Analysis Engine ...");
-    SelectAnalysisEngine();
+    if(TrackStartStop)
+    {
+        // start dummy so that actual profiling starts when start is seen
+        SelectDummyAnalysisEngine();
+    }
+    else
+    {
+        // else start profiling right away
+        SelectAnalysisEngine();
+    }
 
     if ( KnobEngine.Value() == 3 )
     {

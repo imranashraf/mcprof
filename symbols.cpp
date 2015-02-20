@@ -23,6 +23,13 @@ u32 Symbols::GetSymSize(uptr saddr)
     return ( _Symbols[id].GetSize(saddr) );
 }
 
+u32 Symbols::GetSymSize(IDNoType id)
+{
+    D2ECHO("Getting size of symbol with id: " << id );
+    Symbol& sym = _Symbols[id];
+    return ( sym.GetSize() );
+}
+
 string Symbols::GetSymLocation(IDNoType id)
 {
     string loc;
@@ -34,22 +41,29 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
 {
     D2ECHO("Inserting Malloc/Calloc/Realloc ");
 
+    u32 callsites;
     IDNoType id;
-    u32 callsites = CallSiteStack.GetCallSites();
-    // combining with the last lastCallLocIndex
+
+    // get callsites combined with the last lastCallLocIndex
     if( CallSiteStack.Top() != lastCallLocIndex )
-        callsites += lastCallLocIndex;
+        callsites = CallSiteStack.GetCallSites(lastCallLocIndex);
+    else
+        callsites = CallSiteStack.GetCallSites(0);
+
+    D2ECHO(" callsites " << callsites );
 
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
         // use existing id as this call site is already seen
         id = CallSites2ID[callsites];
+        D2ECHO(" callsites " << callsites << " using existing id" << id);
     }
     else
     {
         // use a new id for this call site
         id = GlobalID++;
         CallSites2ID[callsites] = id;
+        D2ECHO(" callsites " << callsites << " using new id" << id);
     }
 
     // To check if symbol is already in the table. This is possible because of:
@@ -57,7 +71,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     //      - multiple allocations from same line
     if(_Symbols.find(id) != _Symbols.end() )
     {
-        D1ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
+        D2ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
         Symbol& availSym = _Symbols[id];
         availSym.SetSize(saddr, size);
     }
@@ -68,9 +82,10 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
         string name( "Obj" + to_string((long long)id) );
         Symbol newsym(id, saddr, size, name, SymType::OBJ, lastCallLocIndex, CallSiteStack);
 
-        D1ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
+        D2ECHO("Adding New Object Symbol with id : " << int(id) << " to Symbol Table");
         _Symbols[id] = newsym;
     }
+
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     SetObjectIDs(saddr, size, id);
@@ -98,6 +113,20 @@ void Symbols::InsertFunction(const string& ftnname)
     _Symbols[id] = sym;
 }
 
+// void Symbols::InsertZoneIfNotAvailable(const string& zoneName)
+// {
+//     D2ECHO("Inserting Zone " << zoneName << " if it is not available" );
+//     if ( IsSeenFunctionName(zoneName) == false)
+//     {
+//         IDNoType zid = GlobalID++;
+//         FuncName2ID[zoneName] = zid;
+//         Symbol sym(zid, zoneName, SymType::FUNC); // TODO separate type for zones???
+//         D1ECHO("Adding Zone Symbol: " << zoneName << " with id: " << int(zid) << " to Symbol Table");
+//         _Symbols[zid] = sym;
+//     }
+// }
+
+
 // TODO is searching in this map fast enough or do we need different/separate
 // data structure for seen function names
 bool Symbols::IsSeenFunctionName(string& ftnName)
@@ -122,7 +151,7 @@ u16 Symbols::TotalSymbolCount()
 }
 
 // only the function count
-// NOTE only function symbols are also added in FuncName2ID map
+// NOTE only function symbols are added in FuncName2ID map
 // so size of this map gives total function count
 u16 Symbols::TotalFunctionCount()
 {
@@ -186,7 +215,6 @@ void Symbols::InitFromFtnFile()
         ECHO("No function inserted in the symbol table.");
         Die();
     }
-
 }
 
 void Symbols::InitFromObjFile()
