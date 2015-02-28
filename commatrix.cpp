@@ -2,6 +2,7 @@
 #include "commatrix.h"
 #include "instrcount.h"
 
+extern map <string,IDNoType> FuncName2ID;
 extern bool ShowUnknown;
 
 Matrix2D::Matrix2D()
@@ -88,8 +89,12 @@ void Matrix2D::PrintMatrix(ostream &fout)
         fout<<endl;
     }
 }
-#undef ALIGNMENT 
+#undef ALIGNMENT
 
+#define UNORDERED 0
+#define ORDERED 1
+#define NODE ORDERED
+// #define NODE UNORDERED
 void Matrix2D::PrintDot(ostream &dotout)
 {
     ECHO("Printing communication in DOT");
@@ -113,15 +118,67 @@ void Matrix2D::PrintDot(ostream &dotout)
 
     float maxComm = MaxCommunication(StartID);
 
+    #if (NODE == ORDERED)
+    // this sorting of functions is done in the order of insertion to map
+    // to print them in order in the graph
+    vector<IDNoType> allFunIDs;
+    map<IDNoType,string> ID2FunctionName;
+    map<string,IDNoType>::iterator iter1;
+    for( iter1 = FuncName2ID.begin(); iter1 != FuncName2ID.end(); iter1++)
+    {
+        const string& symname = iter1->first;
+        IDNoType& fid = iter1->second;
+        allFunIDs.push_back(fid); // insert in vector
+        ID2FunctionName[fid] = symname; // make reverse map
+    }
+
+    //sort vector
+    sort(allFunIDs.begin(), allFunIDs.end());
+
+    // now print functions in order
+    vector<IDNoType>::iterator iter2;
+    for( iter2 = allFunIDs.begin(); iter2 != allFunIDs.end(); iter2++)
+    {
+        IDNoType& fid = *iter2;
+
+        const string& symname = ID2FunctionName[fid];
+
+        if( !symname.empty() && fid >= StartID )
+        {
+            dotout  << "\"" << (u16)fid << "\""
+                    << " [label=\" " << symname
+                    << " \\n" << GetInstrCountPercent(fid) << "%"
+                    << ", " << GetCallCount(fid) << "\""
+                    << ftnNodeStyle 
+                    << "];" << endl;
+        }
+    }
+    #endif
+
+    // now print the objects
     for (u16 c=StartID; c<TotalSymbols; c++)
     {
         string symname = symTable.GetSymName(c);
         if( !symname.empty() )
         {
             if ( symTable.SymIsObj(c) )
-                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n" << hBytes(symTable.GetSymSize(c)) << "\"" << objNodeStyle << "];" << endl;
+            {
+                dotout  << "\"" << (u16)c << "\"" << " [label=\" " << symname 
+                        << " \\n" << hBytes(symTable.GetSymSize(c)) << "\"" 
+                        << objNodeStyle 
+                        << "];" << endl;
+            }
+            #if (NODE == UNORDERED)
             else
-                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname << "\\n" << GetInstrCountPercent(c) << "%\"" << ftnNodeStyle << "];" << endl;
+            {
+                dotout  << "\"" << (u16)c << "\""
+                        << " [label=\" " << symname
+                        << " \\n" << GetInstrCountPercent(c) << "%"
+                        << ", " << GetCallCount(c) << "\""
+                        << ftnNodeStyle 
+                        << "];" << endl;
+            }
+            #endif
         }
     }
 
@@ -139,9 +196,9 @@ void Matrix2D::PrintDot(ostream &dotout)
                        << "\"" << (u16)p << "\""
                        << "->"
                        << "\"" << (u16)c << "\""
-                       << "[label=\""
+                       << "[ label=\""
                        << hBytes(comm) <<"\""
-                       << "color = \"#"
+                       << " color = \"#"
                        << hex
                        << setw(2) << setfill('0') << max(0, color-768)
                        << setw(2) << setfill('0') << min(255, 512-(int)abs(color-512))

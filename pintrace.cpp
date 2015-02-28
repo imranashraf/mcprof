@@ -53,6 +53,7 @@ bool TrackZones;
 bool TrackStartStop;
 
 extern map<IDNoType,u64> instrCounts;
+extern map<IDNoType,u64> callCounts;
 
 /* ===================================================================== */
 // Command line switches
@@ -272,17 +273,35 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
+#define UNORDERED 0
+#define ORDERED 1
+#define NODE ORDERED
+// #define NODE UNORDERED
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
-    // enable tracing memory R/W in engines only after main
 
-    CallStack.Push(FuncName2ID[rname]);
+    #if (NODE == ORDERED)
+    // enter the function in the symbole table if seeing for first time.
+    // This CAN be done at instrumentation time as we know functions
+    // doing at analysis time will have overhead but functions will
+    // be added in the order of appearance
+    string srname(rname);
+    if( !symTable.IsSeenFunctionName( srname ) )
+    {
+        symTable.InsertFunction(rname);
+    }
+    #endif
+
+    IDNoType fid = FuncName2ID[rname];
+    callCounts[fid] += 1;
+    CallStack.Push(fid);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
     #if (DEBUG>0)
     CallStack.Print();
     CallSiteStack.Print();
     #endif
+
 
     // In engine 3, to save time, the curr call is selected only at
     // func entry/exit, so that it does not need to be determined on each access
@@ -302,7 +321,7 @@ VOID RecordZoneEntry(INT32 zoneNo)
     D1ECHO("Entring zone " << zoneName );
 
     // enter the zone in the symbole table if seeing for first time.
-    // This cannot be done at instrumentation time as we dont know 
+    // This CANNOT be done at instrumentation time as we dont know 
     // what kind of magic instruction it is at that time, we know that
     // only at analysis time
     if( !symTable.IsSeenFunctionName(zoneName) )
@@ -310,8 +329,11 @@ VOID RecordZoneEntry(INT32 zoneNo)
         symTable.InsertFunction(zoneName);
     }
 
+    IDNoType zid = FuncName2ID[zoneName];
+    callCounts[zid] += 1;
+
     // push it on to stack so that communication is associated with it
-    CallStack.Push(FuncName2ID[zoneName]);
+    CallStack.Push(zid);
 
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
 
@@ -905,11 +927,14 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                     return;
                 }
             }
+            #if (NODE == UNORDERED)
+            // comment the following to insert functions at runtime
             else
             {
                 // First time seeing this valid function name, save it in the list
                 symTable.InsertFunction(rname);
             }
+            #endif
 
             D1ECHO ("Instrumenting Routine : " << rname);
             RTN_Open(rtn);

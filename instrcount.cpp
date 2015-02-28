@@ -6,6 +6,7 @@
 #include "callstack.h"
 
 map<IDNoType,u64> instrCounts;
+map<IDNoType,u64> callCounts;
 extern Symbols symTable;
 
 void PrintInstrCount()
@@ -59,4 +60,11 @@ float GetInstrCountPercent(IDNoType fid)
 {
     u64 count = instrCounts[fid];
     return floor( 100.0 * count / TotalInstrCount() );
+}
+
+
+u64 GetCallCount(IDNoType fid)
+{
+    //TODO what if the entry for an fid does not exist?
+    return callCounts[fid];
 }
