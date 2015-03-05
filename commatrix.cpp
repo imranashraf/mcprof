@@ -1,6 +1,6 @@
 #include "globals.h"
 #include "commatrix.h"
-#include "instrcount.h"
+#include "counters.h"
 
 extern map <string,IDNoType> FuncName2ID;
 extern bool ShowUnknown;
@@ -91,10 +91,6 @@ void Matrix2D::PrintMatrix(ostream &fout)
 }
 #undef ALIGNMENT
 
-#define UNORDERED 0
-#define ORDERED 1
-#define NODE ORDERED
-// #define NODE UNORDERED
 void Matrix2D::PrintDot(ostream &dotout)
 {
     ECHO("Printing communication in DOT");
@@ -118,7 +114,7 @@ void Matrix2D::PrintDot(ostream &dotout)
 
     float maxComm = MaxCommunication(StartID);
 
-    #if (NODE == ORDERED)
+    #if (FUNCTION_ORDER == ORDERED)
     // this sorting of functions is done in the order of insertion to map
     // to print them in order in the graph
     vector<IDNoType> allFunIDs;
@@ -163,12 +159,12 @@ void Matrix2D::PrintDot(ostream &dotout)
         {
             if ( symTable.SymIsObj(c) )
             {
-                dotout  << "\"" << (u16)c << "\"" << " [label=\" " << symname 
-                        << " \\n" << hBytes(symTable.GetSymSize(c)) << "\"" 
+                dotout  << "\"" << (u16)c << "\"" << " [label=\" " << symname
+                        << " \\n" << hBytes(symTable.GetSymSize(c)) << "\""
                         << objNodeStyle 
                         << "];" << endl;
             }
-            #if (NODE == UNORDERED)
+            #if (FUNCTION_ORDER == UNORDERED)
             else
             {
                 dotout  << "\"" << (u16)c << "\""

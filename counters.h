@@ -1,5 +1,5 @@
-#ifndef INSTRCOUNT_H
-#define INSTRCOUNT_H
+#ifndef COUNTERS_H
+#define COUNTERS_H
 
 #include "globals.h"
 

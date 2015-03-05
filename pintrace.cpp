@@ -15,7 +15,7 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
-#include "instrcount.h"
+#include "counters.h"
 
 #include <iostream>
 #include <fstream>
@@ -273,15 +273,11 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
-#define UNORDERED 0
-#define ORDERED 1
-#define NODE ORDERED
-// #define NODE UNORDERED
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
 
-    #if (NODE == ORDERED)
+    #if (FUNCTION_ORDER == ORDERED)
     // enter the function in the symbole table if seeing for first time.
     // This CAN be done at instrumentation time as we know functions
     // doing at analysis time will have overhead but functions will
@@ -927,7 +923,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                     return;
                 }
             }
-            #if (NODE == UNORDERED)
+            #if (FUNCTION_ORDER == UNORDERED)
             // comment the following to insert functions at runtime
             else
             {
@@ -1021,8 +1017,8 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
-    //PrintInstrCount();
-    //PrintInstrPercents();
+//     PrintInstrCount();
+//     PrintInstrPercents();
 }
 
 /*!
