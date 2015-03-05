@@ -55,6 +55,9 @@ bool TrackStartStop;
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
+// Glocal running instruction counter
+//static UINT64 rInstrCount = 0;
+
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
@@ -143,6 +146,7 @@ VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
 {
     IDNoType fid = CallStack.Top();
     instrCounts[fid] += c;
+    //rInstrCount+=c; // add to global counter
 }
 
 VOID dummyRecorder(uptr a, u32 b){}
@@ -386,6 +390,8 @@ VOID RecordRoutineExit(VOID *ip)
         }
     }
 
+    // un-comment the following to enable printing running count of instructions executed so far
+    //ECHO("Instructions executed so far : " << rInstrCount );
     D1ECHO ("Exiting Routine : " << rname << " Done");
 }
 
