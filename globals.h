@@ -87,6 +87,7 @@ extern Symbols symTable;
 #define VARS3(first, second, third) VAR(first) << " - " << VARS2(second, third)
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
+#define HEXA(v) hex << "0x" << setw(12) << setfill ('0') << v << dec
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
 #define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
 
