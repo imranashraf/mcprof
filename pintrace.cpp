@@ -15,7 +15,7 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
-#include "instrcount.h"
+#include "counters.h"
 
 #include <iostream>
 #include <fstream>
@@ -53,6 +53,10 @@ bool TrackZones;
 bool TrackStartStop;
 
 extern map<IDNoType,u64> instrCounts;
+extern map<IDNoType,u64> callCounts;
+
+// Glocal running instruction counter
+//static UINT64 rInstrCount = 0;
 
 /* ===================================================================== */
 // Command line switches
@@ -142,6 +146,7 @@ VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
 {
     IDNoType fid = CallStack.Top();
     instrCounts[fid] += c;
+    //rInstrCount+=c; // add to global counter
 }
 
 VOID dummyRecorder(uptr a, u32 b){}
@@ -275,14 +280,28 @@ uptr currStartAddress;
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
-    // enable tracing memory R/W in engines only after main
 
-    CallStack.Push(FuncName2ID[rname]);
+    #if (FUNCTION_ORDER == ORDERED)
+    // enter the function in the symbole table if seeing for first time.
+    // This CAN be done at instrumentation time as we know functions
+    // doing at analysis time will have overhead but functions will
+    // be added in the order of appearance
+    string srname(rname);
+    if( !symTable.IsSeenFunctionName( srname ) )
+    {
+        symTable.InsertFunction(rname);
+    }
+    #endif
+
+    IDNoType fid = FuncName2ID[rname];
+    callCounts[fid] += 1;
+    CallStack.Push(fid);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
     #if (DEBUG>0)
     CallStack.Print();
     CallSiteStack.Print();
     #endif
+
 
     // In engine 3, to save time, the curr call is selected only at
     // func entry/exit, so that it does not need to be determined on each access
@@ -302,7 +321,7 @@ VOID RecordZoneEntry(INT32 zoneNo)
     D1ECHO("Entring zone " << zoneName );
 
     // enter the zone in the symbole table if seeing for first time.
-    // This cannot be done at instrumentation time as we dont know 
+    // This CANNOT be done at instrumentation time as we dont know 
     // what kind of magic instruction it is at that time, we know that
     // only at analysis time
     if( !symTable.IsSeenFunctionName(zoneName) )
@@ -310,8 +329,11 @@ VOID RecordZoneEntry(INT32 zoneNo)
         symTable.InsertFunction(zoneName);
     }
 
+    IDNoType zid = FuncName2ID[zoneName];
+    callCounts[zid] += 1;
+
     // push it on to stack so that communication is associated with it
-    CallStack.Push(FuncName2ID[zoneName]);
+    CallStack.Push(zid);
 
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
 
@@ -368,6 +390,8 @@ VOID RecordRoutineExit(VOID *ip)
         }
     }
 
+    // un-comment the following to enable printing running count of instructions executed so far
+    //ECHO("Instructions executed so far : " << rInstrCount );
     D1ECHO ("Exiting Routine : " << rname << " Done");
 }
 
@@ -905,11 +929,14 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                     return;
                 }
             }
+            #if (FUNCTION_ORDER == UNORDERED)
+            // comment the following to insert functions at runtime
             else
             {
                 // First time seeing this valid function name, save it in the list
                 symTable.InsertFunction(rname);
             }
+            #endif
 
             D1ECHO ("Instrumenting Routine : " << rname);
             RTN_Open(rtn);
@@ -959,6 +986,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 VOID TheEnd(INT32 code, VOID *v)
 {
     symTable.Print();
+    PrintShadowMap();
 #if (DEBUG>0)
     // Print Symbol Table to output file
     symTable.Print();
@@ -996,8 +1024,8 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
-    //PrintInstrCount();
-    //PrintInstrPercents();
+//     PrintInstrCount();
+//     PrintInstrPercents();
 }
 
 /*!

@@ -5,6 +5,7 @@
 extern map <string,IDNoType> FuncName2ID;
 extern map <u32,IDNoType> CallSites2ID;
 extern CallSiteStackType CallSiteStack;
+extern bool ShowUnknown;
 
 // List of all locations of symbols
 LocationList Locations;
@@ -252,11 +253,14 @@ void Symbols::InitFromObjFile()
 
 void Symbol::Print(ostream& fout)
 {
+    if(!ShowUnknown && id==UnknownID)
+        return;
+
     fout << "ID: " << id << " "
          << SymTypeName[symType] << " " << name << " "
          << VAR(symLocIndex) << " ";
 
-    fout << symCallSite.GetCallSitesString() << " -> "
+    fout << symCallSite.GetCallSitesString() << ">"
          << Locations.GetLocation(symLocIndex).toString() << endl;
 
     if(RecordAllAllocations)

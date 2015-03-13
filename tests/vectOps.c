@@ -48,10 +48,6 @@ int main()
     nBytes = nElem*sizeof(TYPE);
     printf("Total bytes : %d\n",nBytes);
 
-//     char *dummy = malloc(1);
-//     printf("Dummy malloc addr : %p\n", (void *)dummy );
-//     free(dummy);
-
     srcArr1 = malloc(nBytes);
     printf("srcArr1 addr : %p\n",srcArr1);
 

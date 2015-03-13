@@ -1,5 +1,5 @@
-#ifndef INSTRCOUNT_H
-#define INSTRCOUNT_H
+#ifndef COUNTERS_H
+#define COUNTERS_H
 
 #include "globals.h"
 
@@ -12,5 +12,7 @@ void PrintInstrCount();
 void PrintInstrPercents();
 u64 TotalInstrCount();
 float GetInstrCountPercent(IDNoType fid);
+
+u64 GetCallCount(IDNoType fid);
 
 #endif

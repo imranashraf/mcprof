@@ -87,6 +87,7 @@ extern Symbols symTable;
 #define VARS3(first, second, third) VAR(first) << " - " << VARS2(second, third)
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
+#define HEXA(v) hex << "0x" << setw(12) << setfill ('0') << v << dec
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
 #define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
 
@@ -169,5 +170,13 @@ bool IsAligned(uptr a, uptr alignment);
 const std::string& Target2RtnName(uptr target);
 const std::string& Target2LibName(uptr target);
 const std::string& hBytes(u64 bytes);
+
+// Ordering of functions in the communication graph
+// when selected as ORDERED, the functions are added based on
+// the order of execution
+#define UNORDERED 0
+#define ORDERED 1
+#define FUNCTION_ORDER ORDERED
+// #define FUNCTION_ORDER UNORDERED
 
 #endif

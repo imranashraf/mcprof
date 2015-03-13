@@ -1,3 +1,4 @@
+#include <cmath>
 #include "globals.h"
 #include "pin.H"
 
