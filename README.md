@@ -1,6 +1,39 @@
 # mcprof #
 
-`mcprof` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions. The information is obtained by performing dynamic binary instrumentation by utilizing [Intel Pin](www.pintool.org) framework. This README file briefly explains the process of setting up `mcprof` and using it.
+`mcprof` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions. The information is obtained by performing dynamic binary instrumentation by utilizing [Intel Pin](www.pintool.org) framework. An example application and the `mcprof` generated communication graph is shown in the figure below. This README file briefly explains the process of setting up `mcprof` and start generating such graphs for C/C++ applications.
+
+Input Code  | Output Graph
+------------- | -------------
+![code](https://bitbucket.org/imranashraf/mcprof/raw/master/doc/example/exampleCode.png) | ![graph](https://bitbucket.org/imranashraf/mcprof/raw/master/doc/example/exampleGraph.png)
+
+## Licensing
+
+Copyright (c) 2014-2015 TU Delft, The Netherlands.
+All rights reserved.
+
+MCPROF is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+MCPROF is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Reference
+
+**To cite MCPROF Tool:**
+```
+"MCProf: Open-source Memory and Communication Profiler"
+Imran Ashraf
+URL: https://bitbucket.org/imranashraf/mcprof
+```
+
+**To cite MCPROF Design OR MCPROF Shadow Memory Technique:**
+```
+"Intra-Application Data-Communication Characterization"
+Imran Ashraf, Vlad-Mihai Sima and Koen Bertels
+Technical report, Delft University of Technology, 2015
+```
+
 
 ## Download
 
@@ -48,7 +81,7 @@ As above, this will generate `communication.dot` file which can be converted to 
 
 ## Detailed Documentation
 
-Detailed documentation of `mcprof` with input options and outputs generated can be found in the `manual.pdf` in `doc` directory in `mcprof` *Comming soon*.
+Detailed documentation of `mcprof` with input options and outputs generated can be found in the [manual.pdf](https://bitbucket.org/imranashraf/mcprof/raw/master/doc/manual.pdf) in the  [doc](https://bitbucket.org/imranashraf/mcprof/raw/master/doc) directory.
 
 
 ## Who do I talk to?
