@@ -35,6 +35,7 @@
  */
 
 #include <cmath>
+#include <map>
 #include "globals.h"
 #include "pin.H"
 

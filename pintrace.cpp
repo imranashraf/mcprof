@@ -85,7 +85,7 @@ bool TrackStartStop;
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
-// Glocal running instruction counter
+// Global running instruction counter
 //static UINT64 rInstrCount = 0;
 
 /* ===================================================================== */
@@ -115,12 +115,12 @@ KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
 
 KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                                "SelectFunctions", "0",
-                               "Instrument only the selected functions. \
+                               "Instrument only the selected functions.\
                                 User provides functions in <SelectFunctions.txt> file");
 
 KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
                              "SelectObjects", "0",
-                             "Instrument only the selected objects. \
+                             "Instrument only the selected objects.\
                               User provides objects in <SelectObjects.txt> file");
 
 KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
@@ -147,8 +147,8 @@ KNOB<BOOL> KnobShowUnknown(KNOB_MODE_WRITEONCE, "pintool",
                             "ShowUnknown", "0", "Show Unknown function in the output graphs");
 
 KNOB<BOOL> KnobTrackStartStop(KNOB_MODE_WRITEONCE, "pintool",
-                            "TrackStartStop", "0", "Track start/stop markers in \
-                            the code to start/stop profiling \
+                            "TrackStartStop", "0", "Track start/stop markers in\
+                            the code to start/stop profiling\
                             instead of starting from main()");
 
 KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
@@ -245,6 +245,7 @@ BOOL ValidFtnName(string name)
             !name.compare("unnamedImageEntryPoint")
 #else
             !name.compare(".plt") ||
+            !name.compare(".gnu.version") ||
             !name.compare("_start") ||
             !name.compare("_init") ||
             !name.compare("_fini") ||
@@ -286,6 +287,7 @@ BOOL ValidFtnCallName(string name)
             !name.compare("failwithmessage") ||
             !name.compare("unnamedImageEntryPoint")
 #else
+            !name.compare(".gnu.version") ||
             !name.compare("_start") ||
             !name.compare("_init") ||
             !name.compare("_fini") ||
@@ -317,7 +319,7 @@ VOID RecordRoutineEntry(CHAR* rname)
     // doing at analysis time will have overhead but functions will
     // be added in the order of appearance
     string srname(rname);
-    if( !symTable.IsSeenFunctionName( srname ) )
+    if( ValidFtnName(srname) && !symTable.IsSeenFunctionName(srname) )
     {
         symTable.InsertFunction(rname);
     }
@@ -960,7 +962,9 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                 }
             }
             #if (FUNCTION_ORDER == UNORDERED)
-            // comment the following to insert functions at runtime
+            // functions are inserted at the instrumentation time. This implies that
+            // the functions will be in the order of how they are seen at the time of
+            // instrumentation and not in the order of execution
             else
             {
                 // First time seeing this valid function name, save it in the list
@@ -1054,8 +1058,8 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
-//     PrintInstrCount();
-//     PrintInstrPercents();
+    // PrintInstrCount();
+    PrintInstrPercents();
 }
 
 /*!

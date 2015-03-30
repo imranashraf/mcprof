@@ -207,12 +207,25 @@ const std::string& Target2RtnName(uptr target);
 const std::string& Target2LibName(uptr target);
 const std::string& hBytes(u64 bytes);
 
+// template <typename A, typename B>
+// std::multimap<B,A> flipMap(std::map<A,B> & src);
+template <typename A, typename B>
+std::multimap<B,A> flipMap(std::map<A,B> & src)
+{
+    std::multimap<B,A> dst;
+    typename std::map<A, B>::const_iterator it;
+    for(it = src.begin(); it != src.end(); ++it)
+        dst.insert(std::pair<B, A>(it -> second, it -> first));
+    return dst;
+}
+
+
 // Ordering of functions in the communication graph
 // when selected as ORDERED, the functions are added based on
 // the order of execution
 #define UNORDERED 0
 #define ORDERED 1
-#define FUNCTION_ORDER ORDERED
-// #define FUNCTION_ORDER UNORDERED
+// #define FUNCTION_ORDER ORDERED
+#define FUNCTION_ORDER UNORDERED
 
 #endif

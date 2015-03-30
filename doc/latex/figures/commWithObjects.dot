@@ -1,0 +1,23 @@
+digraph {
+graph [];
+edge [fontsize=14, arrowhead=vee, arrowsize=0.5];
+"1" [label=" initVecs \n1%, 1" fontcolor=black, style=filled, fontsize=20];
+"2" [label=" sumVecs \n1%, 1" fontcolor=black, style=filled, fontsize=20];
+"3" [label=" diffVecs \n1%, 1" fontcolor=black, style=filled, fontsize=20];
+"4" [label=" main \n95%, 1" fontcolor=black, style=filled, fontsize=20];
+"5" [label=" src1 \n400 B" fontcolor=black, shape=box, fontsize=20];
+"6" [label=" src2 \n400 B" fontcolor=black, shape=box, fontsize=20];
+"7" [label=" sumArr \n400 B" fontcolor=black, shape=box, fontsize=20];
+"8" [label=" diffArr \n400 B" fontcolor=black, shape=box, fontsize=20];
+"1"->"5"[ label="400 B" color = "#00ff00"]
+"1"->"6"[ label="400 B" color = "#00ff00"]
+"2"->"7"[ label="400 B" color = "#00ff00"]
+"3"->"8"[ label="400 B" color = "#00ff00"]
+"4"->"4"[ label="3.6 kB" color = "#ff0100"]
+"5"->"2"[ label="400 B" color = "#00ff00"]
+"5"->"3"[ label="400 B" color = "#00ff00"]
+"6"->"2"[ label="400 B" color = "#00ff00"]
+"6"->"3"[ label="400 B" color = "#00ff00"]
+"7"->"4"[ label="4 B" color = "#00acff"]
+"8"->"4"[ label="4 B" color = "#00acff"]
+}

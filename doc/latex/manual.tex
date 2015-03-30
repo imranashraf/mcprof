@@ -14,14 +14,10 @@
 \usepackage{dcolumn}
 \usepackage{flushend}
 \usepackage{capt-of}
-\usepackage[T1]{fontenc}
-\usepackage{libertine}
-\renewcommand*\oldstylenums[1]{{\fontfamily{fxlj}\selectfont #1}}
-\usepackage{tikz}
-\usetikzlibrary{positioning}
 \usepackage{arydshln}
 \usepackage{booktabs}
 \usepackage{rotating}
+\usepackage{textcomp}
 
 \usepackage{graphicx}
 \DeclareGraphicsExtensions{.pdf,.eps,.png,.jpg}
@@ -54,13 +50,7 @@
 \definecolor{citecol}   {rgb}{.5,0,0}
 \definecolor{urlcol}    {rgb}{0,0,1}
 
-\newcommand{\QTWO}{\emph{$Q^2$}}
-\newcommand{\Quipu}{\emph{Quipu}}
-\newcommand{\QUAD}{{\sc Quad}}
-\newcommand{\MAIP}{{\sc Maip}}
 \newcommand{\gprof}{\emph{gprof}}
-\newcommand{\DWB}{\emph{DWB}}
-\newcommand{\DelftWorkbench}{\emph{Delft Workbench}}
 \newcommand{\DWARV}{\emph{DWARV}}
 \newcommand{\TIMES}{$\times$}
 \newcommand{\MCPROF}{\emph{MCProf}}
@@ -68,7 +58,6 @@
 %-----------------------------------------------------------------------------------------
 \begin{document}
 
-% paper title
 \title{\MCPROF{}: Memory and Communication Profiler}
 \author{Imran Ashraf \\
     Computer Engineering Lab, TU Delft, The Netherlands\\
@@ -88,12 +77,63 @@ Pin_Download} framework.  This manual explains the process of setting up
 \MCPROF{} and using it.
 
 
+%----------------------------------------------------------------------------------
+\section{Licensing}
+
+{
+\scriptsize
+\begin{Verbatim}[frame=single, samepage=true]
+Copyright (c) 2014-2015 TU Delft, The Netherlands.
+All rights reserved.
+
+MCProf is free software: you can redistribute it and/or modify it under the
+terms of the GNU Lesser General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+MCProf is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License along
+with MCProf.  If not, see <http://www.gnu.org/licenses/>.
+\end{Verbatim}
+}
+
+
+%----------------------------------------------------------------------------------
+\section{Reference \MCPROF{}}
+
+
+\subsection{To cite MCProf Tool}
+
+{
+\scriptsize
+\begin{Verbatim}[frame=single, samepage=true]
+"MCProf: Open-source Memory and Communication Profiler"
+Imran Ashraf
+URL: https://bitbucket.org/imranashraf/mcprof
+\end{Verbatim}
+}
+
+\subsection{To cite MCProf Design OR MCProf Shadow Memory Technique}
+
+{
+\scriptsize
+\begin{Verbatim}[frame=single, samepage=true]
+"Intra-Application Data-Communication Characterization"
+Imran Ashraf, Vlad-Mihai Sima and Koen Bertels
+Technical report, Delft University of Technology, 2015
+\end{Verbatim}
+}
+
+
 
 %----------------------------------------------------------------------------------
 \section{Availability}
 \label{sec:availability}
 
-\MCPROF{} can be downloaded from ...
+\MCPROF{} can be downloaded from \cite{mcprofDownload}.
 
 
 %----------------------------------------------------------------------------------
@@ -135,14 +175,22 @@ export PIN_ROOT=/<absolute path to pin>
 \end{Verbatim}
 }
 
-\item You can also add this line, for instance, to your \textbf{.bashrc} in case
-    you are using \textbf{bash} to export the variable automatically on opening
+\item Add Pin to your path by the following command:
+{
+\small
+\begin{Verbatim}[frame=single]
+export PATH=$PIN_ROOT:$PATH
+\end{Verbatim}
+}
+
+\item You can also add these lines, for instance, to your \textbf{.bashrc} in case
+    you are using \textbf{bash} to export these variables automatically on opening
     a terminal.
 
 \item Download \MCPROF{} and copy and extract it to the directory where you want
     to compile it.
 
-\item Go the \MCPROF{} directory and run the following command to compile:
+\item Go the \MCPROF{} directory and run the following command to compile it:
 
 {
 \small
@@ -213,7 +261,8 @@ make vectOps.test
 }
 
 Similarly, other tests can also be executed by replacing the
-\textbf{<vectOps>.test} with the \textbf{<name of the test application>.test} as
+\textbf{\textlangle vectOps \textrangle.test} with the
+\textbf{\textlangle test application name \textrangle.test} as
 given in \textbf{tests} directory. This will generate the output information
 depending upon the selected engine. The details of the generated output are
 provided in Section \ref{sec:output}.
@@ -235,16 +284,25 @@ application. You need to make some changes before profiling this application.
 
 \end{itemize}
 
-It should be noted that the \MCPROF{} options are provided in \verb|MCPROF\_OPT|
+It should be noted that the \MCPROF{} options are provided in \verb|MCPROF_OPT|
 variable in \textbf{makefile}. You can modify these options as required. The
 details of these options are available in Section \ref{sec:inputopt}. Once these
-modifications are performed, this application can be compiled and profiled by
-the following command:
+modifications are performed, this application can be compiled by:
 
 {
 \small
 \begin{Verbatim}[frame=single]
-make mcprof
+make mcprof.compile
+\end{Verbatim}
+}
+
+The above command will generate the binary of the application. Next, to profile
+the application by \MCPROF{}, run the following command:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+make mcprof.execute
 \end{Verbatim}
 }
 
@@ -253,28 +311,36 @@ make mcprof
 \section{\MCPROF{} Input Options}
 \label{sec:inputopt}
 
-Follwing are the input options of \MCPROF{}.
+The complete list of the input options to \MCPROF{} can be obtained by running
+the following command:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+pin -t <Path to MCProf dir>/obj-intel64/mcprof.so -h -- ls
+\end{Verbatim}
+}
+
+Some of the important input options are detailed here.
 
 \begin{description}
 
-\item [-RecordStack] can be 0 or 1 to tell \MCPROF{} to include stack accesses or not.
+\item [-RecordStack] [0/1, default 0] to tell \MCPROF{} to include stack accesses or not.
 
-\item [-TrackObjects] can be 0 or 1 to tell \MCPROF{} if you want to track objects. If
+\item [-TrackObjects] [0/1, default 0] to tell \MCPROF{} if you want to track objects. If
 set 1, the calls to memory allocations functions (malloc, calloc, realloc,
 free, new, delete) will be instrumented to track the allocation and deallocation of
 objects at run-time in the application. The complete call-path with source
 file-name and line-no information will be recorded as well.
 
-\item [-Engine] can be 1,2 or 3. This selects the engine to be used in
+\item [-Engine] [1/2/3, default 2] This selects the engine to be used in
     \MCPROF{}.  Based on the selected engine, the desired output is generated as
     below:
 
     \begin{description}
 
-    \item [Engine 1]    provides the hot-functions and hot-objects (if
-        TrackObjects is 1) in the application based on the memory accesses. The
-        number of memory reads/writes performed by each function/object is also
-        reported.
+    \item [Engine 1]    provides the compute and memory intensive functions and
+        objects (if TrackObjects is 1) in the application.
 
     \item [Engine 2]    provides the data-communication information between
         functions. If TrackObjects is 1, the communication is also reported
@@ -285,6 +351,15 @@ file-name and line-no information will be recorded as well.
 
     \end{description}
 
+\item [-ShowUnknown]  [0/1, default 0] Show Unknown function in the output graphs.
+
+\item [-TrackStartStop] [0/1, default 0] Track start/stop markers in the code to
+    start/stop profiling instead of starting from main().
+
+\item [-TrackZones] [0/1, default 0] Track zone markers to profile per zone. See
+    \textbf{markers.c} example available in tests directory. Note \textbf{markers.h}
+    include. Also note how this test is compiled and executed in \textbf{makefile.rules}.
+    
 \end{description}
 
 %----------------------------------------------------------------------------------
@@ -300,24 +375,48 @@ also reported.
 
 \subsection{Engine 1 Output}
 
-The output of Engine 1 is a text-file \textbf{accesses.out} in the current
-directory. This file contains the information about the access performed by
-functions/objects in the application. An example output for the \textbf{vectOps}
-application is shown below:
+The output of Engine 1 are two text-files \textbf{execProfile.out} in the current
+directory.
+
+\textbf{execProfile.out} file contains the information about the
+execution profile of the application. This profile lists the compute intensive
+functions in the application by reporting the percentage of dynamically executed
+instructions. An example output for the \textbf{vectOps} application is shown below:
 
 {
 \scriptsize
-\begin{Verbatim}[frame=single]
-Function    Total   Reads   Writes  Location
-UnknownFtn  286562  232480  54082   :0
-initVecs    800     0       800     :0
-sumVecs     1200    800     400     :0
-diffVecs    1200    800     400     :0
-main        74974   70968   4006    :0
-Object5     1200    800     400     /<complete path>/vectOps.c:55
-Object6     1200    800     400     /<complete path>/vectOps.c:58
-Object7     404     4       400     /<complete path>/vectOps.c:61
-Object8     404     4       400     /<complete path>/vectOps.c:64
+\begin{Verbatim}[frame=single, samepage=true]
+%Exec.Instr.        Function Name
+==================================
+        95          main
+        1           diffVecs
+        1           sumVecs
+        1           initVecs
+\end{Verbatim}
+}
+
+\textbf{memProfile.out} file contains the information about the memory accesses
+performed by functions/objects in the application. An example output for the
+\textbf{vectOps} application is shown below:
+
+{
+\scriptsize
+\begin{Verbatim}[frame=single, samepage=true]
+This table can be sorted by Total Accesses (-k2) by using bash command:
+    tail -n +7 memProfile.out | sort -k2 -gr
+
+Function   ============ Accesses  ==========    Allocation
+ Name       Total         Reads        Writes      Path
+===============================================================
+UnknownFtn  287038        232876      54162     :0
+initVecs    800           0           800       :0
+sumVecs     1200          800         400       :0
+diffVecs    1200          800         400       :0
+main        74982         70976       4006      :0
+srcArr1     1200          800         400       /<complete path>/vectOps.c:51
+srcArr2     1200          800         400       /<complete path>/vectOps.c:54
+sumArr      404           4           400       /<complete path>/vectOps.c:57
+diffArr     404           4           400       /<complete path>/vectOps.c:60
 \end{Verbatim}
 }
 
@@ -325,7 +424,7 @@ The accesses reported against \textbf{UnknownFtn} are the accesses which cannot
 be associated to any function. For instance the accesses before starting the
 \textbf{main} function is called.
 
-In case of objects, there source-file and line-no information is also reported in
+In case of objects, their source-file and line-no information is also reported in
 the last column.
 
 \subsection{Engine 2 Output}
@@ -341,43 +440,92 @@ dot -Tpdf communication.dot -o communication.pdf
 \end{Verbatim}
 }
 
+A script \verb|dot2pdf.sh| is also provided in the \textbf{scripts} directory which can
+also be used to convert the graphs in \emph{dot} format to \emph{pdf} format. This script
+also performs some extra tasks, for instance, remove unconnected nodes in the
+graph. This script can be used as:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+<path to mcprof dir>/scripts/dot2pdf.sh
+\end{Verbatim}
+}
+
 Figure \ref{fig:comm} shows the data-communication graph generated by \MCPROF{}
-with TrackObjects as 0. Figure \ref{fig:comm} shows the same graph with
-TrackObjects as 1.
+with TrackObjects as 0.
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/comm.pdf}
-
+\includegraphics[width=0.55\linewidth]{figures/comm.pdf}
 \caption{Data-communication among functions in vectOps application as reported
     by \MCPROF{}. The Grey ovals represent functions. The arcs represent the
     communication with the number on the arc representing the amount of
-    data-communication in bytes.}
-
+    data-communication in bytes. The number inside the ovals with \% represent
+    the percentage of the dynamically executed instructions. The second number
+    is the total calls to this function.}
 \label{fig:comm}
 \end{figure}
 
+Another important format of the reported information is the data-communication
+matrix. In this format, the communication is reported in the form of a matrix in
+a \textbf{matrix.out} text file.
+This file can be converted to a graph by using \verb|plotScript.sh| script
+availble in \textbf{scripts} directory. This can be executed as:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+<path to mcprof dir>/scripts/plotScript.sh
+\end{Verbatim}
+}
+
+Figure \ref{fig:matrix} shows the resulting graph for vectOps application.
+
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/commWithObjects.pdf}
+\includegraphics[width=0.95\linewidth]{figures/matrix.pdf}
+\caption{Data-communication Matrix showing intensity of communication
+    among functions in vectOps application as reported by \MCPROF{}.}
+\label{fig:matrix}
+\end{figure}
 
+
+When TrackObjects is set to 1, then the object allocation (malloc/new) are
+also tracked and data-communication is reported through these objects. 
+Figure \ref{fig:comm} shows the same graph with TrackObjects as 1.
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=0.55\linewidth]{figures/commWithObjects.pdf}
 \caption{Data-communication among functions in vectOps application as reported
     by \MCPROF{}. The tracked objects and communication through these objects
     is also shown. The Grey ovals represent functions. The white rectangles
-    represent objects. The arcs represent the communication with the number on
-    the arc representing the amount of data-communication in bytes.}
-
+    represent objects. The number inside the boxes represent the size of this
+    object. The arcs represent the communication with the number on
+    the arc representing the amount of data-communication in bytes.The number
+    inside the ovals with \% represent the percentage of the dynamically
+    executed instructions. The second number is the total calls to this function.}
 \label{fig:commWithObjects}
 \end{figure}
 
+It is important to mention here that the names of the static objects are automatically
+detected by reading (ELF) header (will be available soon). However, the names of the
+dynamic objects are supplied by the user. \MCPROF{} provides the the complete path
+to the allocation of an object in the source-code. So user has to manually look at
+the source-code to specify what should be the name of this object. Hence, the user
+can insert these names directly in \textbf{communication.dot} file. A script will also be
+added soon to automate this process as much as possible.
+
 \subsection{Engine 3 Output}
 
-\MCPROF{} reports per function call accesses in Engine 3 in the text-file
-\textbf{percallaccesses.out} as shown below:
+\MCPROF{} reports per call accesses in Engine 3 in \textbf{percallaccesses.out}
+text file, as shown below:
 
 {
 \scriptsize
 \begin{Verbatim}[frame=single]
+
 Printing All Calls
 
 Printing Calls to initVecs
@@ -435,7 +583,7 @@ you see an error as shown below.
 
 {
 \small
-\begin{Verbatim}[frame=single]
+\begin{Verbatim}[frame=single, samepage=true]
 E:Attach to pid 13972 failed. 
 E:  The Operating System configuration prevents Pin
 E:  from using the default (parent) injection mode.
@@ -452,7 +600,7 @@ this injection. This can be achieved by running the following two commands:
 
 {
 \small
-\begin{Verbatim}[frame=single]
+\begin{Verbatim}[frame=single, samepage=true]
 sudo -i
 echo 0 > /proc/sys/kernel/yama/ptrace_scope
 exit
@@ -469,7 +617,7 @@ In case you are interested in contributing to \MCPROF{}, or you have suggestions
 for improvements, or you want to report a bug, contact:
 
 \begin{itemize}
-\item Imran Ashraf < I.Ashraf@TUDelft.nl >
+\item Imran Ashraf \textlangle I.Ashraf@TUDelft.nl \textrangle
 \end{itemize}
 
 %----------------------------------------------------------------------------------

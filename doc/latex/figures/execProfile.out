@@ -1,0 +1,6 @@
+%Exec.Instr.		Function Name
+==================================
+        95		    main
+        1		    diffVecs
+        1		    sumVecs
+        1		    initVecs

@@ -66,19 +66,47 @@ void PrintInstrCount()
 
 void PrintInstrPercents()
 {
-    map<IDNoType,u64>::iterator iter;
-    cout << setw(30) << "Function Name" << setw(12) << "% Instr." << endl;
-    for( iter = instrCounts.begin(); iter != instrCounts.end(); iter++ )
+    ofstream fout;
+    OpenOutFile("execProfile.out", fout);
+
+    multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
+    map<u64,IDNoType>::reverse_iterator iter;
+    fout << setw(15) << "%Exec.Instr." << "\t\t" << "Function Name" << endl;
+    fout << "  ===============================================" <<endl;
+
+    for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
     {
-        IDNoType fid =  iter->first;
+        IDNoType fid =  iter->second;
         if(!ShowUnknown && fid==UnknownID)
             continue;
         else
         {
-            cout << setw(30) << symTable.GetSymName(fid) << setw(10) << GetInstrCountPercent(fid) << endl;
+            fout << setw(15) << GetInstrCountPercent(fid) << "\t\t" << symTable.GetSymName(fid) << endl;
         }
     }
+    fout.close();
 }
+
+// The following prints the map without sorting
+// void PrintInstrPercents()
+// {
+//     ofstream fout;
+//     OpenOutFile("execProfile.out", fout);
+// 
+//     map<IDNoType,u64>::iterator iter;
+//     fout << setw(45) << "Function Name" << setw(12) << "% Instr." << endl;
+//     for( iter = instrCounts.begin(); iter != instrCounts.end(); iter++ )
+//     {
+//         IDNoType fid =  iter->first;
+//         if(!ShowUnknown && fid==UnknownID)
+//             continue;
+//         else
+//         {
+//             fout << setw(45) << symTable.GetSymName(fid) << setw(10) << GetInstrCountPercent(fid) << endl;
+//         }
+//     }
+//     fout.close();
+// }
 
 u64 TotalInstrCount()
 {

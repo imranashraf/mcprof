@@ -1,0 +1,15 @@
+This table can be sorted by Total Accesses (-k2) by using bash command:
+    sort -k2 -gr accesses.out 
+
+    Function Name 	 ================= Accesses  =============
+                            Total         Reads        Writes
+=================================================================
+        UnknownFtn        287038        232876         54162  :0
+            initVecs           800             0           800  :0
+            sumVecs          1200           800           400  :0
+            diffVecs          1200           800           400  :0
+                main         74982         70976          4006  :0
+            srcArr1          1200           800           400  /data/repositories/mcprof/tests/vectOps.c:51
+            srcArr2          1200           800           400  /data/repositories/mcprof/tests/vectOps.c:54
+            sumArr           404             4           400  /data/repositories/mcprof/tests/vectOps.c:57
+            diffArr           404             4           400  /data/repositories/mcprof/tests/vectOps.c:60

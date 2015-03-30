@@ -8,7 +8,7 @@
 LAST_SUPPORTED_REV := 62732
 ifdef PIN_ROOT
 AVAIL_REV := $(shell pin -version | awk '/Rev/{print $$3}')
-IS_CORRECT_VER := $(shell echo $(AVAIL_REV) \> $(LAST_SUPPORTED_REV) | bc )
+IS_CORRECT_VER := $(shell [ $(AVAIL_REV) -ge $(LAST_SUPPORTED_REV) ] && echo 1)
 ifneq ($(IS_CORRECT_VER), 1)
 $(info Pin Rev ${AVAIL_REV} )
 $(error Required Pin Rev above ${LAST_SUPPORTED_REV} )
