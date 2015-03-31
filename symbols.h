@@ -161,6 +161,21 @@ public:
     Symbol(string n, SymType typ, u16 locidx) :
         name(n), symType(typ), symLocIndex(locidx) {}
 
+    Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ) :
+        id(id1), name(n), symType(typ), symLocIndex(0)
+    {
+        if(RecordAllAllocations)
+        {
+            startAddr2Size[saddr].push_back(size1);
+            size=size1;
+        }
+        else
+        {
+            startAddr=saddr;
+            size=size1;
+        }
+    }
+
     Symbol(IDNoType id1, uptr saddr, u32 size1, string n, SymType typ, u32 locidx) :
         id(id1), name(n), symType(typ), symLocIndex(locidx)
     {
@@ -301,6 +316,7 @@ public:
     bool SymIsObj(IDNoType idno);
     bool SymIsFunc(IDNoType idno);
     void Print();
+    void InsertStaticSymbols(int argc, char **argv);
     void InitFromObjFile();
     void InitFromFtnFile();
 };

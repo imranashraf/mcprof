@@ -35,13 +35,15 @@
  */
 
 #include <cmath>
+#include <cstring>
 #include <map>
 #include "globals.h"
 #include "pin.H"
 
-IDNoType GlobalID=UnknownID;
-
 using namespace std;
+
+IDNoType GlobalID=UnknownID;
+char currDir[FILENAME_MAX];
 
 void PrintLogo()
 {
@@ -180,4 +182,34 @@ const std::string& humanReadableByteCount(u64 bytes, bool si)
 const std::string& hBytes(u64 bytes)
 {
     return humanReadableByteCount(bytes, true);
+}
+
+void SetCurrDir()
+{
+    if (!GetCurrentDir(currDir, sizeof(currDir)))
+    {
+        ECHO("Error setting current dir ");
+        Die();
+    }
+    //cCurrentPath[sizeof(cCurrentPath) - 1] = '\0';
+    strcat(currDir, "/");
+}
+
+void PrintCurrDir()
+{
+    ECHO("The current working directory is " << currDir);
+}
+
+void RemoveSubstrs(std::string& src, std::string& toRemove)
+{
+    int n = toRemove.length();
+    std::size_t i;
+    for( i = src.find(toRemove); i != string::npos; i = src.find(toRemove) )
+        src.erase(i, n);
+}
+
+void RemoveCurrDirFromName(std::string& src)
+{
+    std::string cdir(currDir);
+    RemoveSubstrs(src, cdir);
 }

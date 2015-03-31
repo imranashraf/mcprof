@@ -154,6 +154,9 @@ KNOB<BOOL> KnobTrackStartStop(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackZones", "0", "Track zone markers to profile per zones");
 
+KNOB<BOOL> KnobReadStaticObjects(KNOB_MODE_WRITEONCE, "pintool",
+                            "StaticSymbols", "1", "Read static symbols from the binary and show them in the graph");
+
 /* ===================================================================== */
 // Utilities
 /* ===================================================================== */
@@ -697,20 +700,23 @@ VOID InstrumentImages(IMG img, VOID * v)
                     string tname = PIN_UndecorateSymbolName( tname1, UNDECORATION_NAME_ONLY);
 
                     u32 locIndex =-1;
-                    string filename("");    // This will hold the source file name.
+                    string fileName("");    // This will hold the source file name.
                     INT32 line = 0;     // This will hold the line number within the file
-                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &filename);
-                    Location loc(line, filename);
+                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &fileName);
+                    // Remove the complete path of the filename
+                    RemoveCurrDirFromName(fileName);
+                    // create a temp Location loc, may be inserted in list of locations later
+                    Location loc(line, fileName);
 
-                    D1ECHO("  Routine Call found for " << tname << " at " << filename <<":"<< line);
-                    bool inStdHeaders = ( filename.find("/usr/include") != string::npos );
+                    D1ECHO("  Routine Call found for " << tname << " at " << fileName <<":"<< line);
+                    bool inStdHeaders = ( fileName.find("/usr/include") != string::npos );
                     if( (!inStdHeaders) && ( ValidFtnCallName(tname) ) )
                     {
                         bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                         if( !found )
                             locIndex = Locations.Insert(loc);
 
-                        D1ECHO("  Instrumenting call " << " at " << VAR(locIndex) << " " << filename <<":"<< line);
+                        D1ECHO("  Instrumenting call " << " at " << VAR(locIndex) << " " << fileName <<":"<< line);
 
                         INS_InsertCall(
                             ins,
@@ -1071,10 +1077,13 @@ VOID TheEnd(INT32 code, VOID *v)
  */
 void SetupPin(int argc, char *argv[])
 {
+    SetCurrDir();
+    PrintCurrDir();
+
     PIN_InitSymbols();
     // Initialize PIN library. Print help message if -h(elp) is specified
     // in the command line or the command line is invalid
-    if( PIN_Init(argc,argv) )
+    if( PIN_Init(argc, argv) )
     {
         Usage();
         Die();
@@ -1088,6 +1097,9 @@ void SetupPin(int argc, char *argv[])
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
     CallStack.Push(FuncName2ID[UnknownFtn]);
+
+    if( KnobReadStaticObjects.Value() )
+        symTable.InsertStaticSymbols(argc, argv);
 
     if(KnobSelectFunctions.Value())
     {

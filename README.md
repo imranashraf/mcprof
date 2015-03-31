@@ -84,6 +84,7 @@ In order to setup and use `MCProf` the following two packages are required:
 
 * [Intel Pin DBI framework](www.pintool.org) Revision 62732 or higher
 * g++ compiler
+* libelf library to read static symbols from the binary
 * graphviz Dot utility for converting the generated communication graphs from dot to pdf, png etc
 
 ## Setup

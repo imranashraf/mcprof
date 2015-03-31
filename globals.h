@@ -228,4 +228,23 @@ std::multimap<B,A> flipMap(std::map<A,B> & src)
 // #define FUNCTION_ORDER ORDERED
 #define FUNCTION_ORDER UNORDERED
 
+#ifdef WIN32
+#define DELIMITER_CHAR '\\'
+#else
+#define DELIMITER_CHAR '/'
+#endif
+
+#ifdef WIN32
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
+void SetCurrDir();
+void PrintCurrDir();
+void RemoveSubstrs(std::string& src, std::string& toRemove);
+void RemoveCurrDirFromName(std::string& src);
+
 #endif

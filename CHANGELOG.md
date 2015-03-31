@@ -4,10 +4,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [ Unreleased ] - [ Unreleased]
 ### Added
-- Better explanation.
+- Support for static symbols
 
 ### Changed
-- Improved arguments.
+- Simplified path printing in output files (e.g. symbol.out)
 
 ### Removed
 - Removed dash and dash.

@@ -34,6 +34,9 @@
  *
  */
 
+#include <gelf.h>
+// #include <libelf.h>
+#include <cstring>
 #include "shadow.h"
 #include "symbols.h"
 #include "callstack.h"
@@ -228,6 +231,96 @@ bool Symbols::SymIsFunc(IDNoType id)
     return ( _Symbols[id].GetType() == SymType::FUNC );
 }
 
+const char * StripPath(const char * path)
+{
+    const char * file = strrchr(path,DELIMITER_CHAR);
+    if (file)
+        return file+1;
+    else
+        return path;
+}
+
+void Symbols::InsertStaticSymbols(int argc, char **argv)
+{
+    char fullBinName[500];
+    char binName[500];
+    // parse the command line arguments for the binary name
+    for (int i=1; i<argc-1; i++)
+    {
+        if (!strcmp(argv[i],"--"))
+        {
+            strcpy(fullBinName,argv[i+1]);
+            break;
+        }
+    }
+    // strcpy(binName, StripPath(fullBinName));
+    strcpy(binName, fullBinName );
+    cout << "Binary Name = "<< binName << endl;
+
+    int elf_fd;
+    if (( elf_fd  = open( binName, O_RDONLY, 0)) < 0)
+    {
+        printf("ERROR: Failed to open binary file:\n");
+    }
+
+    Elf* elf;
+    if (elf_version(EV_CURRENT) == EV_NONE)
+    {
+        printf("ERROR: ELF library initialization failed: %s\n",elf_errmsg(-1));
+    }
+
+    elf = elf_begin(elf_fd, ELF_C_READ, NULL);
+
+    if(elf==NULL)
+    {
+        printf("ERROR: ELF loading failed: %s\n", elf_errmsg(-1));
+    }
+    else
+    {
+        Elf_Scn *scn;
+        int symbol_count, i;
+        Elf_Data *edata =NULL;
+        GElf_Shdr shdr;
+        GElf_Sym sym;
+        scn = NULL;
+
+        while ((scn = elf_nextscn(elf, scn)) != NULL)
+        {
+            if (gelf_getshdr(scn, &shdr) != &shdr)
+                printf( "getshdr() failed: %s.", elf_errmsg(-1));
+            if(shdr.sh_type == SHT_SYMTAB)
+            {
+                edata = elf_getdata(scn, edata);
+                symbol_count = shdr.sh_size / shdr.sh_entsize;
+
+                // loop through to grab all symbols
+                for(i = 0; i < symbol_count; i++)
+                {
+                    // libelf grabs the symbol data using gelf_getsym()
+                    gelf_getsym(edata, i, &sym);
+
+                    if(ELF32_ST_BIND(sym.st_info)==STB_GLOBAL &&
+                            ELF32_ST_TYPE(sym.st_info)==STT_OBJECT && sym.st_size>0)
+                    {
+                        string sName( elf_strptr(elf, shdr.sh_link, sym.st_name) );
+                        u64 sAddr = sym.st_value;
+                        u32 sSize = sym.st_size;
+                        IDNoType id = GlobalID++;
+                        // create a new symbol
+                        Symbol newsym(id, sAddr, sSize, sName, SymType::OBJ);
+                        // insert it in the symbol table
+                        D2ECHO ( "Adding ELF Symbol " << sName << " ID " << int(id) << " start address " << ADDR(sAddr) << " size " << sSize);                        
+                        _Symbols[id] = newsym;
+                        // we also need to set the object ids in the shadow table/mem for this object
+                        SetObjectIDs(sAddr, sSize, id);
+                    }
+                }
+            }
+        }
+    }
+    close(elf_fd);
+}
+
 // TODO May be the following two init methods may be combined together to read from
 // one file with same format
 void Symbols::InitFromFtnFile()
@@ -289,6 +382,7 @@ void Symbols::InitFromObjFile()
 
 void Symbol::Print(ostream& fout)
 {
+    D2ECHO("Printing Symbol with ID: " << id);
     if(!ShowUnknown && id==UnknownID)
         return;
 
