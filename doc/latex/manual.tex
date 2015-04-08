@@ -171,7 +171,7 @@ from sources on 32-bit / 64-bit Linux, the following steps can be performed.
 {
 \small
 \begin{Verbatim}[frame=single]
-export PIN_ROOT=/<absolute path to pin>
+export PIN_ROOT=/<absolute path to pin directory>
 \end{Verbatim}
 }
 
@@ -277,12 +277,21 @@ provided in this directory containing all the rules to compile and profile this
 application. You need to make some changes before profiling this application.
 
 \begin{itemize}
-
 \item Modify the path to Pin directory on line 1 in the makefile.
-
 \item Modify the path to \MCPROF{} directory on line 2 in the makefile.
-
 \end{itemize}
+
+In order to avoid these changes in each makefile, you can also add these paths
+in \verb|.bashrc| file as:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+export PIN_ROOT=/<absolute path to pin directory>
+export PATH=$PIN_ROOT:$PATH
+export MCPROF_ROOT=/<absolute path to mcprof directory>
+\end{Verbatim}
+}
 
 It should be noted that the \MCPROF{} options are provided in \verb|MCPROF_OPT|
 variable in \textbf{makefile}. You can modify these options as required. The
@@ -576,6 +585,19 @@ Writes to UnknownFtn : 3568
 This section will cover some of the frequently encountered problems will
 setting-up/using \MCPROF{}.
 
+\subsection{Pin: No such file or directory}
+This is because Pin needs 32 bit libraries (See \cite{PinLibs32}).
+On Ubuntu, this can be solved by:
+{
+\small
+\begin{Verbatim}[frame=single, samepage=true]
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
+\end{Verbatim}
+}
+
+
 \subsection{Pin Injection Mode Error}
 
 On some systems if Pin (parent) injection mode is not enabled by default then
@@ -606,7 +628,6 @@ echo 0 > /proc/sys/kernel/yama/ptrace_scope
 exit
 \end{Verbatim}
 }
-
 
 
 %----------------------------------------------------------------------------------

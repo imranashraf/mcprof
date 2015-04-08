@@ -9,8 +9,6 @@ TYPE* sumArr;
 TYPE* diffArr;
 
 TYPE coeff = 2;
-
-int nBytes;
 int nElem;
 
 void initVecs()
@@ -45,28 +43,22 @@ int main()
 {
     printf("Vector Operations Test.\n");
     nElem = 100;
-    nBytes = nElem*sizeof(TYPE);
-    printf("Total bytes : %d\n",nBytes);
-
-//     char *dummy = malloc(1);
-//     printf("Dummy malloc addr : %p\n", (void *)dummy );
-//     free(dummy);
+    int nBytes = nElem*sizeof(TYPE);
 
     srcArr1 = malloc(nBytes);
-    printf("srcArr1 addr : %p\n",srcArr1);
-
     srcArr2 = malloc(nBytes);
-    printf("srcArr2 addr : %p\n",srcArr2);
-
-    sumArr = malloc(nBytes);
-    printf("sumArr addr : %p\n",sumArr);
-
+    sumArr  = malloc(nBytes);
     diffArr = malloc(nBytes);
-    printf("diffArr addr : %p\n",diffArr);
+    if(srcArr1 == NULL || srcArr2 == NULL || sumArr == NULL || diffArr == NULL)
+    {
+        printf("Memory Allocation Error\n");
+        return;
+    }
 
+    int i;
     initVecs();
-    sumVecs();
-    diffVecs();
+    for(i=0; i<5; i++)  sumVecs();
+    for(i=0; i<7; i++)  diffVecs();
 
     printf("output : %d\n",sumArr[1]+diffArr[2]);
 
@@ -75,5 +67,6 @@ int main()
     free(sumArr);
     free(diffArr);
 
+    printf("End Vector Operations Test.\n");
     return 0;
 }
