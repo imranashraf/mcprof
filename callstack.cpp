@@ -101,16 +101,19 @@ void CallStackType::Print(ofstream& fout)
     #endif
 }
 
+static int PRIMES[]={2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41,
+                     43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
 u32 CallSiteStackType::GetCallSites(u32 lastCallLocIndex)
 {
     u32 callsites=0;
     u32 loc;
     for ( loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
     {
-        callsites += loc*sites[loc];    // arbitrary formula to combine call sites
+        callsites += PRIMES[loc]*sites[loc];    // arbitrary formula to combine call sites
     }
-    callsites += loc*lastCallLocIndex; // also add the effect of lastCallLocIndex
-
+    callsites += PRIMES[loc]*lastCallLocIndex; // also add the effect of lastCallLocIndex
+    // TODO what if loc > size of PRIMES
+    // and what about recursion???
     return callsites;
 }
 

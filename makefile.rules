@@ -50,7 +50,7 @@ SA_TOOL_ROOTS :=
 
 # This defines all the applications that will be run during the tests.
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
-	multiAllocFtn multiAllocMacro multiAllocClass \
+	multiAllocFtn multiAllocMacro multiAllocClass loopAllocations \
 	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04 \
 	markers
 
@@ -74,7 +74,7 @@ ifeq ($(TARGET_OS),linux)
 #	TOOL_CXXFLAGS+= -MD -std=c++11
 	TOOL_CXXFLAGS+= -MD -std=c++0x
 # 	TOOL_LDFLAGS+= -pg
-# 	TOOL_LIBS+= -pg
+	TOOL_LIBS+= -lelf
 	APP_CXXFLAGS+= -fno-inline -g
 # 	APP_CCFLAGS+= -fno-inline -g
 endif
@@ -123,6 +123,9 @@ memSetCopyMove.test: $(OBJDIR)memSetCopyMove$(EXE_SUFFIX)
 multiAllocFtn.test: $(OBJDIR)multiAllocFtn$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocFtn$(EXE_SUFFIX)
 
+loopAllocations.test: $(OBJDIR)loopAllocations$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)loopAllocations$(EXE_SUFFIX)
+
 multiAllocMacro.test: $(OBJDIR)multiAllocMacro$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)multiAllocMacro$(EXE_SUFFIX)
 
@@ -157,10 +160,10 @@ cleantemp:
 
 ###### Special applications' build rules ######
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
-	$(APP_CC) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+	$(APP_CC) -I. -O1 -g -fno-inline $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
-	$(APP_CXX) -I. -O1 -g -fno-inline -fomit-frame-pointer $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+	$(APP_CXX) -I. -O1 -g -fno-inline $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)

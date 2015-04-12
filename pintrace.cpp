@@ -129,7 +129,7 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   executable image");
 
 KNOB<BOOL> KnobRecordAllAllocations(KNOB_MODE_WRITEONCE, "pintool",
-                                  "RecordAllAllocations","0",
+                                  "RecordAllAllocations","1",
                                   "Record all allocation sizes of objects");
 
 KNOB<BOOL> KnobFlushCalls(KNOB_MODE_WRITEONCE, "pintool",
@@ -1088,6 +1088,14 @@ void SetupPin(int argc, char *argv[])
         Usage();
         Die();
     }
+    
+    TrackObjects = KnobTrackObjects.Value();
+    RecordAllAllocations=KnobRecordAllAllocations.Value();
+    FlushCalls=KnobFlushCalls.Value();
+    FlushCallsLimit=KnobFlushCallsLimit.Value();
+    ShowUnknown = KnobShowUnknown.Value();
+    TrackStartStop = KnobTrackStartStop.Value();
+    TrackZones = KnobTrackZones.Value();
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
@@ -1116,14 +1124,6 @@ void SetupPin(int argc, char *argv[])
         //D1ECHO("Initialize objects from Selected Objects file ...");
         //symTable.InitFromObjFile();
     }
-
-    TrackObjects = KnobTrackObjects.Value();
-    RecordAllAllocations=KnobRecordAllAllocations.Value();
-    FlushCalls=KnobFlushCalls.Value();
-    FlushCallsLimit=KnobFlushCallsLimit.Value();
-    ShowUnknown = KnobShowUnknown.Value();
-    TrackStartStop = KnobTrackStartStop.Value();
-    TrackZones = KnobTrackZones.Value();
 
 #if (DEBUG>0)
     ECHO("Printing Initial Symbol Table ...");

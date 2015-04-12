@@ -60,14 +60,15 @@ u32 Symbols::GetSymSize(uptr saddr)
 {
     IDNoType id = GetObjectID(saddr);
     D2ECHO("Getting symbol size for address " << ADDR(saddr) << " " << VAR(id));
-    return ( _Symbols[id].GetSize(saddr) );
+    Symbol& sym = _Symbols[id];
+    return ( sym.GetSize(saddr) );
 }
 
-u32 Symbols::GetSymSize(IDNoType id)
+u32 Symbols::GetTotalSymSize(IDNoType id)
 {
     D2ECHO("Getting size of symbol with id: " << id );
     Symbol& sym = _Symbols[id];
-    return ( sym.GetSize() );
+    return ( sym.GetTotalSize() );
 }
 
 string Symbols::GetSymLocation(IDNoType id)
@@ -90,7 +91,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     else
         callsites = CallSiteStack.GetCallSites(0);
 
-    D2ECHO(" callsites " << callsites );
+    D2ECHO(" callsites " << callsites << " and " << CallSiteStack.GetCallSitesString() );
 
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
@@ -153,20 +154,6 @@ void Symbols::InsertFunction(const string& ftnname)
     _Symbols[id] = sym;
 }
 
-// void Symbols::InsertZoneIfNotAvailable(const string& zoneName)
-// {
-//     D2ECHO("Inserting Zone " << zoneName << " if it is not available" );
-//     if ( IsSeenFunctionName(zoneName) == false)
-//     {
-//         IDNoType zid = GlobalID++;
-//         FuncName2ID[zoneName] = zid;
-//         Symbol sym(zid, zoneName, SymType::FUNC); // TODO separate type for zones???
-//         D1ECHO("Adding Zone Symbol: " << zoneName << " with id: " << int(zid) << " to Symbol Table");
-//         _Symbols[zid] = sym;
-//     }
-// }
-
-
 // TODO is searching in this map fast enough or do we need different/separate
 // data structure for seen function names
 bool Symbols::IsSeenFunctionName(string& ftnName)
@@ -202,6 +189,8 @@ u16 Symbols::TotalFunctionCount()
 void Symbols::Remove(uptr saddr)
 {
     D2ECHO("Removing symbol at Start Address: " << ADDR(saddr) );
+    // TODO:How do you deal with objects with multiple allocations
+    // from the same location
     u32 size = GetSymSize(saddr);
 
     // uncomment the following to remove the objects on free.
@@ -308,8 +297,8 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
                         IDNoType id = GlobalID++;
                         // create a new symbol
                         Symbol newsym(id, sAddr, sSize, sName, SymType::OBJ);
-                        // insert it in the symbol table
-                        D2ECHO ( "Adding ELF Symbol " << sName << " ID " << int(id) << " start address " << ADDR(sAddr) << " size " << sSize);                        
+                        // insert this new symbol in symbol table
+                        ECHO ( "Adding ELF Symbol " << sName << " ID " << int(id) << " start address " << ADDR(sAddr) << " size " << sSize);                        
                         _Symbols[id] = newsym;
                         // we also need to set the object ids in the shadow table/mem for this object
                         SetObjectIDs(sAddr, sSize, id);
@@ -387,23 +376,21 @@ void Symbol::Print(ostream& fout)
         return;
 
     fout << "ID: " << id << " "
-         << SymTypeName[symType] << " " << name << " "
-         << VAR(symLocIndex) << " ";
+         << SymTypeName[symType] << " " << name << " ";
+         //<< VAR(symLocIndex) << " ";
 
     fout << symCallSite.GetCallSitesString() << ">"
          << Locations.GetLocation(symLocIndex).toString() << endl;
 
     if(RecordAllAllocations)
     {
-        //for(auto& pair : startAddr2Size)
         map<uptr,vector<u32>>::iterator mIter;
-        for(mIter=startAddr2Size.begin(); mIter!=startAddr2Size.end(); mIter++)
+        for(mIter=startAddr2Size.begin(); mIter!=startAddr2Size.end(); ++mIter)
         {
             auto& saddr = mIter->first;
             auto& sizes = mIter->second;
             fout << "    " << ADDR(saddr) << "(";
 
-            //for(auto& size : sizes)
             vector<u32>::iterator vIter;
             for(vIter=sizes.begin(); vIter!=sizes.end(); vIter++)
                 fout << " " << *vIter;

@@ -224,7 +224,7 @@ public:
         if(RecordAllAllocations)
         {
             startAddr2Size[saddr].push_back(size1);
-            size=size1; // size then only holds the last size value
+            size=size1;
         }
         else
         {
@@ -236,6 +236,7 @@ public:
     {
         if(RecordAllAllocations)
         {
+            //size of the last allocation only in the case of multiple allocations
             auto& sizeVec = startAddr2Size[saddr];
             if( sizeVec.size() )
                 return sizeVec.back();
@@ -247,10 +248,27 @@ public:
             return size;
         }
     }
-    //size of the last allocation only in the case of multiple allocations
-    u32 GetSize()
+    
+    u32 GetTotalSize()
     {
-        return size;
+        u32 totalSize = 0;
+        if(RecordAllAllocations)
+        {
+            map<uptr,vector<u32>>::iterator mIter;
+            for(mIter=startAddr2Size.begin(); mIter!=startAddr2Size.end(); mIter++)
+            {
+                //auto& saddr = mIter->first;
+                auto& sizes = mIter->second;
+                vector<u32>::iterator vIter;
+                for(vIter=sizes.begin(); vIter!=sizes.end(); vIter++)
+                    totalSize += (*vIter);
+            }
+        }
+        else
+        {
+            totalSize = size;
+        }
+        return totalSize;
     }
 
     bool isSameLine( u32 l)
@@ -306,7 +324,7 @@ public:
     void InsertFunction(const string& ftnname);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
-    u32 GetSymSize(IDNoType idno);
+    u32 GetTotalSymSize(IDNoType idno);
     string GetSymLocation(IDNoType idno);
     bool IsSeenFunctionName(string& ftnName);
     bool IsSeenLocation(Location& loc, u32& locIndex);

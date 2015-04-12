@@ -195,20 +195,20 @@ void Matrix2D::PrintDot(ostream &dotout)
         {
             if ( symTable.SymIsObj(c) )
             {
-                dotout  << "\"" << (u16)c << "\"" << " [label=\" " << symname
-                        << " \\n" << hBytes(symTable.GetSymSize(c)) << "\""
-                        << objNodeStyle 
-                        << "];" << endl;
+                dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname
+                       << " \\n" << hBytes(symTable.GetTotalSymSize(c)) << "\""
+                       << objNodeStyle 
+                       << "];" << endl;
             }
             #if (FUNCTION_ORDER == UNORDERED)
             else
             {
-                dotout  << "\"" << (u16)c << "\""
-                        << " [label=\" " << symname
-                        << " \\n" << GetInstrCountPercent(c) << "%"
-                        << ", " << GetCallCount(c) << "\""
-                        << ftnNodeStyle 
-                        << "];" << endl;
+                dotout << "\"" << (u16)c << "\""
+                       << " [label=\" " << symname
+                       << " \\n" << GetInstrCountPercent(c) << "%"
+                       << ", " << GetCallCount(c) << "\""
+                       << ftnNodeStyle 
+                       << "];" << endl;
             }
             #endif
         }
