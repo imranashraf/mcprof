@@ -8,12 +8,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 - Simplified path printing in output files (e.g. symbol.out)
+- Updated manual and example description
 
 ### Removed
 - Removed dash and dash.
 
 ### Fixed
-- Fixed the dash and dash.
+- Fixed Multi-allocation issue in loops and added test
+- Fixed the issue with placement of knobs
 
 
 ## [ 0.2 ] - [ 2015-03-30 ]
