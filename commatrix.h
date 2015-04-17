@@ -43,6 +43,7 @@
 #include <vector>
 #include <iostream>
 #include <map>
+#include <set>
 #include <string>
 #include <cmath>
 #include <iomanip>
@@ -57,6 +58,8 @@ private:
     vector< vector<float> > Matrix;
     //most of the applications have functions less than 256
     static const u32 DEFAULT_SIZE = 1024; //15000
+    set<IDNoType> FilledRows;
+    set<IDNoType> FilledCols;
 
 public:
     Matrix2D();
@@ -75,6 +78,9 @@ public:
     void Print(ostream &fout);
     void PrintMatrix(ostream &fout);
     void PrintDot(ostream &dotout);
+    void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
+    bool IsFilledRow(IDNoType r);
+    bool IsFilledCol(IDNoType c);
 };
 
 #endif

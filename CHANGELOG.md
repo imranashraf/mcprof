@@ -11,9 +11,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Simplified path printing in output files (e.g. symbol.out)
 - Updated manual and example description
+- Updated manual with used packages and their example installation
 
 ### Removed
-- Removed dash and dash.
+- Removed condition of matrix printing with objects
 
 ### Fixed
 - Fixed Multi-allocation issue in loops and added test

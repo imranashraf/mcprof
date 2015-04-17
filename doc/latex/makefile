@@ -9,6 +9,7 @@ all: $(texfname).tex
 	bibtex $(texfname).aux
 	pdflatex $(texfname).tex
 	pdflatex $(texfname).tex
+	cp $(texfname).pdf ../.
 
 view: $(texfname).pdf
 	evince $(texfname).pdf

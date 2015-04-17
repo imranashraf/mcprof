@@ -161,7 +161,7 @@ KNOB<BOOL> KnobReadStaticObjects(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<UINT32> KnobThreshold(KNOB_MODE_WRITEONCE,  "pintool",
                         "Threshold", "0",
                         "Specify Threshold, communication edge below this Threshold \
-                        will not appear in the communication graph.");
+                        will not appear in the communication graph/matrix.");
 
 /* ===================================================================== */
 // Utilities
@@ -1045,21 +1045,12 @@ VOID TheEnd(INT32 code, VOID *v)
         PrintAccesses();
         break;
     case 2:
-        if(TrackObjects)
-        {
-            OpenOutFile(KnobDotFile.Value(), dotout);
-            ComMatrix.PrintDot(dotout);
-            dotout.close();
-        }
-        else
-        {
-            OpenOutFile(KnobDotFile.Value(), dotout);
-            OpenOutFile(KnobMatrixFile.Value(), mout);
-            ComMatrix.PrintMatrix(mout);
-            ComMatrix.PrintDot(dotout);
-            mout.close();
-            dotout.close();
-        }
+        OpenOutFile(KnobDotFile.Value(), dotout);
+        ComMatrix.PrintDot(dotout);
+        dotout.close();
+        OpenOutFile(KnobMatrixFile.Value(), mout);
+        ComMatrix.PrintMatrix(mout);
+        mout.close();
         break;
     case 3:
         PrintAllCalls(pcout);

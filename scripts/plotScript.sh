@@ -34,8 +34,8 @@ set key samplen 2 spacing .5 font ",8"
 
 set logscale zcb
 
-XTICS="`awk 'BEGIN{getline}{printf "%s ",$1}' matrix.out`"
-YTICS="`head -1 matrix.out`"
+XTICS="`head -1 matrix.out`"
+YTICS="`awk 'BEGIN{getline}{printf "%s ",$1}' matrix.out`"
 
 set for [i=1:words(XTICS)] xtics ( word(XTICS,i) i-1 )
 set for [i=1:words(YTICS)] ytics ( word(YTICS,i) i-1 )

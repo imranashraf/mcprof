@@ -88,6 +88,45 @@ void Matrix2D::Print(ostream &fout)
     }
 }
 
+void Matrix2D::UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID)
+{
+    for (IDNoType p=StartID; p<EndID; p++)
+    {
+        float rowsum=0.0;
+        for (IDNoType c=StartID; c<EndID; c++)
+        {
+            float comm = Matrix[p][c];
+            if ( comm > Threshold )
+                rowsum+=comm;
+        }
+        if( rowsum == 0 )
+            FilledRows.insert(p);
+    }
+
+    for (IDNoType c=StartID; c<EndID; c++)
+    {
+        float colsum=0.0;
+        for (IDNoType p=StartID; p<EndID; p++)
+        {
+            float comm = Matrix[p][c];
+            if ( comm > Threshold )
+                colsum+=comm;
+        }
+        if( colsum == 0 )
+            FilledCols.insert(c);
+    }
+}
+
+bool Matrix2D::IsFilledRow(IDNoType r)
+{
+    return !(FilledRows.find(r) != FilledRows.end() );
+}
+
+bool Matrix2D::IsFilledCol(IDNoType c)
+{
+    return !(FilledCols.find(c) != FilledCols.end() );
+}
+
 // Use the following for properly aligned matrix print for visual inspection
 // This can be problematic of width not set properly to be processed by gnuplot script
 // #define ALIGNMENT (setw(25))
@@ -108,22 +147,34 @@ void Matrix2D::PrintMatrix(ostream &fout)
     else
         StartID = 1; //use this if you dont want to print unknown
 
+    // first update the map which contains the filled rows and columns
+    UpdateEmptyRowsCols(StartID, TotalSymbols);
+
     fout << ALIGNMENT << " ";
     for (IDNoType c=StartID; c<TotalSymbols; c++)
     {
-        fout << ALIGNMENT << symTable.GetSymName(c);
+        if( IsFilledCol(c) )
+        {
+            fout << ALIGNMENT << symTable.GetSymName(c);
+        }
     }
     fout << endl;
 
     for (IDNoType p=StartID; p<TotalSymbols; p++)
     {
-        fout << ALIGNMENT << symTable.GetSymName(p);
-
-        for (IDNoType c=StartID; c<TotalSymbols; c++)
+        if( IsFilledRow(p) )
         {
-            fout << ALIGNMENT << Matrix[p][c];
+            fout << ALIGNMENT << symTable.GetSymName(p);
+
+            for (IDNoType c=StartID; c<TotalSymbols; c++)
+            {
+                if( IsFilledCol(c) )
+                {
+                    fout << ALIGNMENT << Matrix[p][c];
+                }
+            }
+            fout<<endl;
         }
-        fout<<endl;
     }
 }
 #undef ALIGNMENT
@@ -136,12 +187,11 @@ void Matrix2D::PrintDot(ostream &dotout)
     CHECK_LT(TotalSymbols, Matrix.size());
 
     dotout << "digraph {\ngraph [];"
-//                << "\nnode [fontcolor=black, style=filled, fontsize=20];"
-           << "\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];"
+           << "\nedge [fontsize=18, arrowhead=vee, arrowsize=0.5];"
            << endl;
 
-    string objNodeStyle(" fontcolor=black, shape=box, fontsize=20");
-    string ftnNodeStyle(" fontcolor=black, style=filled, fontsize=20");
+    string objNodeStyle(" fontcolor=black, shape=box, fontsize=22");
+    string ftnNodeStyle(" fontcolor=black, style=filled, fontsize=22");
 
     u16 StartID;
     if(ShowUnknown)

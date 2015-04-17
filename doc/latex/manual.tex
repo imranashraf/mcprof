@@ -148,10 +148,30 @@ In order to setup and use \MCPROF{} the following two packages are required:
 
 \item g++ compiler with support for C++11X
 
+\item libelf-dev
+
+\item libdwarf-dev
+
 \item  graphviz Dot utility for converting the generated communication graphs
     from DOT to pdf formats
 
 \end{itemize}
+
+Intel Pin does not need installation. You just need to download the archieve and 
+extract to some location. For the remaining packages, you can search on internet 
+how to install these packeges in your linux distribution. In Ubuntu 14.04, these 
+packages can be installed, for example, by the following commands:
+
+{
+\small
+\begin{Verbatim}[frame=single, samepage=true]
+sudo apt-get install g++
+sudo apt-get install libelf-dev
+sudo apt-get install libdwarf-dev
+sudo apt-get install graphviz
+\end{Verbatim}
+}
+
 
 
 %----------------------------------------------------------------------------------
@@ -502,7 +522,7 @@ Figure \ref{fig:matrix} shows the resulting graph for vectOps application.
 
 When TrackObjects is set to 1, then the object allocation (malloc/new) are
 also tracked and data-communication is reported through these objects. 
-Figure \ref{fig:comm} shows the same graph with TrackObjects as 1.
+Figure \ref{fig:commWithObjects} shows the same graph with TrackObjects as 1.
 
 \begin{figure}[!h]
 \centering
