@@ -61,5 +61,5 @@ set palette defined ( 0 "white", 1 "green", 2 "blue", 3 "brown", 4 "red")
 
 set pm3d map
 set pm3d interpolate 2,2
-splot "<awk '{$1=\"\"}1' matrix.out | sed '1 d'" matrix with points pointtype 5\
+splot "<awk '{$1=\"\"}1' matrix.out | sed '1 d'" matrix with points pointtype 5 \
         pointsize 1 palette linewidth 15 title ""

@@ -229,6 +229,16 @@ const char * StripPath(const char * path)
         return path;
 }
 
+bool ValidObjName(string name)
+{
+    return
+        !(
+            name.c_str()[0]=='_' ||
+            name.c_str()[0]=='?' ||
+            !name.compare("SOMEOTHERNAME")
+        );
+}
+
 void Symbols::InsertStaticSymbols(int argc, char **argv)
 {
     char fullBinName[500];
@@ -292,16 +302,19 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
                             ELF32_ST_TYPE(sym.st_info)==STT_OBJECT && sym.st_size>0)
                     {
                         string sName( elf_strptr(elf, shdr.sh_link, sym.st_name) );
-                        u64 sAddr = sym.st_value;
-                        u32 sSize = sym.st_size;
-                        IDNoType id = GlobalID++;
-                        // create a new symbol
-                        Symbol newsym(id, sAddr, sSize, sName, SymType::OBJ);
-                        // insert this new symbol in symbol table
-                        ECHO ( "Adding ELF Symbol " << sName << " ID " << int(id) << " start address " << ADDR(sAddr) << " size " << sSize);                        
-                        _Symbols[id] = newsym;
-                        // we also need to set the object ids in the shadow table/mem for this object
-                        SetObjectIDs(sAddr, sSize, id);
+                        if( ValidObjName(sName) )
+                        {
+                            u64 sAddr = sym.st_value;
+                            u32 sSize = sym.st_size;
+                            IDNoType id = GlobalID++;
+                            // create a new symbol
+                            Symbol newsym(id, sAddr, sSize, sName, SymType::OBJ);
+                            // insert this new symbol in symbol table
+                            D1ECHO ( "Adding ELF Symbol " << sName << " ID " << int(id) << " start address " << ADDR(sAddr) << " size " << sSize);                        
+                            _Symbols[id] = newsym;
+                            // we also need to set the object ids in the shadow table/mem for this object
+                            SetObjectIDs(sAddr, sSize, id);
+                        }
                     }
                 }
             }

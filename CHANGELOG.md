@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [ Unreleased ] - [ Unreleased]
 ### Added
 - Support for static symbols
+- Support for threshold knob for communication edges
+- Simplified communication matrix by removing empty rows/cols
 
 ### Changed
 - Simplified path printing in output files (e.g. symbol.out)
@@ -16,6 +18,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Fixed Multi-allocation issue in loops and added test
 - Fixed the issue with placement of knobs
+- Fixed alignment issue in communication matrix
 
 
 ## [ 0.2 ] - [ 2015-03-30 ]

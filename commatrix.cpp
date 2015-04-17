@@ -40,6 +40,7 @@
 
 extern map <string,IDNoType> FuncName2ID;
 extern bool ShowUnknown;
+extern u32  Threshold;
 
 Matrix2D::Matrix2D()
 {
@@ -93,7 +94,7 @@ void Matrix2D::Print(ostream &fout)
 
 // Use the following to print tabs which will not be visually appealing but it will
 // generate the columns properly for further processing by other tools
-#define ALIGNMENT ("\t")
+#define ALIGNMENT ("    ")
 
 void Matrix2D::PrintMatrix(ostream &fout)
 {
@@ -215,13 +216,13 @@ void Matrix2D::PrintDot(ostream &dotout)
     }
 
     int color;
-
+    // now print the edges
     for (u16 p=StartID; p<TotalSymbols; p++)
     {
         for (u16 c=StartID; c<TotalSymbols; c++)
         {
             float comm = Matrix[p][c];
-            if(comm > 0 )
+            if( comm > Threshold )
             {
                 color = (int) (  1023 *  log((float)(comm)) / log((float)maxComm)  );
                 dotout << dec

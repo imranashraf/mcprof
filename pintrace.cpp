@@ -77,11 +77,12 @@ void (*InstrCounter)(ADDRINT);
 bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
-u32 FlushCallsLimit;
+u32  FlushCallsLimit;
 bool ShowUnknown;
 bool TrackZones;
 bool TrackStartStop;
-
+u32  Threshold;
+ 
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
@@ -156,6 +157,11 @@ KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
 
 KNOB<BOOL> KnobReadStaticObjects(KNOB_MODE_WRITEONCE, "pintool",
                             "StaticSymbols", "1", "Read static symbols from the binary and show them in the graph");
+
+KNOB<UINT32> KnobThreshold(KNOB_MODE_WRITEONCE,  "pintool",
+                        "Threshold", "0",
+                        "Specify Threshold, communication edge below this Threshold \
+                        will not appear in the communication graph.");
 
 /* ===================================================================== */
 // Utilities
@@ -233,6 +239,7 @@ BOOL ValidFtnName(string name)
             name.c_str()[0]=='?' ||
             !name.compare("atexit") ||
             (name.find("std::") != string::npos) ||
+            (name.find("::operator") != string::npos) ||
 #ifdef WIN32
             !name.compare("GetPdbDll") ||
             !name.compare("DebuggerRuntime") ||
@@ -1096,6 +1103,7 @@ void SetupPin(int argc, char *argv[])
     ShowUnknown = KnobShowUnknown.Value();
     TrackStartStop = KnobTrackStartStop.Value();
     TrackZones = KnobTrackZones.Value();
+    Threshold = KnobThreshold.Value();
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!

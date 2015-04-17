@@ -154,7 +154,7 @@ class MemMap1to4
 // private:
 public:
     static const uptr SCALE = 4;
-    static const uptr LOGSCALE = log2(SCALE);
+    static const uptr LOGSCALE =2; //log2(SCALE); //OLD compilers complain log2
 
     static const uptr M0SIZE = 2*GB;
     static const uptr M0L = 0ULL;
