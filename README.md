@@ -1,4 +1,4 @@
-﻿# MCProf #
+# MCProf #
 
 `MCProf` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions. 
 `MCProf` relies on [Intel Pin](www.pintool.org) dynamic binary instrumentation framework.
@@ -73,6 +73,10 @@ Imran Ashraf, Vlad-Mihai Sima and Koen Bertels
 Technical report, Delft University of Technology, 2015
 ```
 
+## Support Patform
+
+`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04 on real machines as well as virtual machines running in virtualbox.
+
 
 ## Download
 
@@ -80,7 +84,7 @@ Technical report, Delft University of Technology, 2015
 
 ## Required Packages
 
-In order to setup and use `MCProf` the following two packages are required:
+In order to setup and use `MCProf` the following packages are required:
 
 * [Intel Pin DBI framework](www.pintool.org) Revision 62732 or higher
 * g++ compiler

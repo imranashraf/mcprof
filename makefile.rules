@@ -191,6 +191,7 @@ vimopen:
 	vim -p $(openingFileOrder)
 
 tarball:
+	make clean
 	cd ..; tar -czf mcprof.tar.gz  --exclude='mcprof/doc/latex' --exclude='mcprof/.git*' mcprof
-	mv ../mcprof.tar.gz .
+	mv ../mcprof.tar.gz ~/Desktop/.
 

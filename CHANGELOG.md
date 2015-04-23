@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [ Unreleased ] - [ Unreleased]
+## [ 0.3 ] - [ 2015-04-23 ]
 ### Added
 - Support for static symbols
 - Support for threshold knob for communication edges
