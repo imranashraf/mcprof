@@ -321,7 +321,7 @@ public:
     Symbols() {}
     void InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size);
     void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
-    void InsertFunction(const string& ftnname);
+    void InsertFunction(const string& ftnname, u32 lastCallLocIndex);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
     u32 GetTotalSymSize(IDNoType idno);

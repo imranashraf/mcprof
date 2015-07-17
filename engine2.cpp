@@ -114,6 +114,7 @@ void RecordReadEngine2(uptr addr, u32 size)
         for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
+            D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
             ComMatrix.RecordCommunication(prod, cons, 1);
         }
     }

@@ -143,13 +143,13 @@ void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 s
     SetObjectIDs(saddr, size, id);
 }
 
-void Symbols::InsertFunction(const string& ftnname)
+void Symbols::InsertFunction(const string& ftnname, u32 lastCallLocIndex)
 {
     D2ECHO("Inserting Function " << ftnname);
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
-    Symbol sym(id, ftnname, SymType::FUNC);
-    D1ECHO("Adding Function Symbol: " << ftnname
+    Symbol sym(id, ftnname, SymType::FUNC, lastCallLocIndex);
+    ECHO("Adding Function Symbol: " << ftnname
            << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
 }
@@ -390,10 +390,13 @@ void Symbol::Print(ostream& fout)
 
     fout << "ID: " << id << " "
          << SymTypeName[symType] << " " << name << " ";
-         //<< VAR(symLocIndex) << " ";
 
-    fout << symCallSite.GetCallSitesString() << ">"
-         << Locations.GetLocation(symLocIndex).toString() << endl;
+    string callsitestring = symCallSite.GetCallSitesString();
+    if(callsitestring == "" )
+         fout << Locations.GetLocation(symLocIndex).toString() << endl;
+    else
+        fout << symCallSite.GetCallSitesString() << ">"
+             << Locations.GetLocation(symLocIndex).toString() << endl;
 
     if(RecordAllAllocations)
     {

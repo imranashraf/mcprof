@@ -324,18 +324,23 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname );
 
     #if (FUNCTION_ORDER == ORDERED)
+    ECHO("Last Call Location " << lastCallLocIndex << " "
+                        << Locations.GetLocation(lastCallLocIndex).toString());
+
     // enter the function in the symbole table if seeing for first time.
     // This CAN be done at instrumentation time as we know functions
     // doing at analysis time will have overhead but functions will
     // be added in the order of appearance
-    string srname(rname);
+    string srname1(rname);
+    string srname = srname1 + to_string((long long)lastCallLocIndex);
+    ECHO(srname);
     if( ValidFtnName(srname) && !symTable.IsSeenFunctionName(srname) )
     {
-        symTable.InsertFunction(rname);
+        symTable.InsertFunction(srname, lastCallLocIndex);
     }
     #endif
 
-    IDNoType fid = FuncName2ID[rname];
+    IDNoType fid = FuncName2ID[srname];
     callCounts[fid] += 1;
     CallStack.Push(fid);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
@@ -368,7 +373,8 @@ VOID RecordZoneEntry(INT32 zoneNo)
     // only at analysis time
     if( !symTable.IsSeenFunctionName(zoneName) )
     {
-        symTable.InsertFunction(zoneName);
+        // TODO what about lastCallLocIndex for zones? Fix it
+        symTable.InsertFunction(zoneName, lastCallLocIndex);
     }
 
     IDNoType zid = FuncName2ID[zoneName];
@@ -1099,7 +1105,7 @@ void SetupPin(int argc, char *argv[])
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
     // Insert Unknown Ftn as first symbol
-    symTable.InsertFunction(UnknownFtn);
+    symTable.InsertFunction(UnknownFtn, 0); // 0 for unknown location index
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h

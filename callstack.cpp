@@ -47,13 +47,13 @@ extern LocationList Locations;
 void CallStackType::Print()
 {
     string stackftns("");
-    if( !stack.empty() )
-    {
-        stackftns += symTable.GetSymName(stack[0]);
-    }
+//     if( !stack.empty() )
+//     {
+//         stackftns += symTable.GetSymName(stack[0]);
+//     }
 
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
-        stackftns += " > " + symTable.GetSymName(stack[ftn]);
+        stackftns += symTable.GetSymName(stack[ftn]);
 
     D1ECHO("Call Stack: " << stackftns);
 }
@@ -120,37 +120,33 @@ u32 CallSiteStackType::GetCallSites(u32 lastCallLocIndex)
 string CallSiteStackType::GetCallSitesString()
 {
     string callsites("");
-    if( !sites.empty() )
-    {
-        callsites += Locations.GetLocation(sites[0]).toString();
-    }
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += ">" + Locations.GetLocation(sites[loc]).toString();
+        callsites += Locations.GetLocation(sites[loc]).toString();
     return callsites;
 }
 
 void CallSiteStackType::Print()
 {
     string callsites("");
-    if( !sites.empty() )
-    {
-        callsites += Locations.GetLocation(sites[0]).toString();
-    }
+//     if( !sites.empty() )
+//     {
+//         callsites += Locations.GetLocation(sites[0]).toString();
+//     }
 
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += " > " + Locations.GetLocation(sites[loc]).toString();
+        callsites += Locations.GetLocation(sites[loc]).toString();
     D1ECHO("Call sites: " << callsites);
 }
 
 void CallSiteStackType::Print(ofstream& fout)
 {
     string callsites("");
-    if( !sites.empty() )
-    {
-        callsites += Locations.GetLocation(sites[0]).toString();
-    }
+//     if( !sites.empty() )
+//     {
+//         callsites += Locations.GetLocation(sites[0]).toString();
+//     }
 
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += " > " + Locations.GetLocation(sites[loc]).toString();
+        callsites += Locations.GetLocation(sites[loc]).toString();
     fout << "Call sites: " << callsites << "\n";
 }

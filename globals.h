@@ -225,8 +225,8 @@ std::multimap<B,A> flipMap(std::map<A,B> & src)
 // the order of execution
 #define UNORDERED 0
 #define ORDERED 1
-// #define FUNCTION_ORDER ORDERED
-#define FUNCTION_ORDER UNORDERED
+#define FUNCTION_ORDER ORDERED
+// #define FUNCTION_ORDER UNORDERED
 
 #ifdef WIN32
 #define DELIMITER_CHAR '\\'
