@@ -17,13 +17,12 @@ TYPE coeff = 2;
 
 int nbytes;
 
-void initVecs()
+void initVec(TYPE* arr)
 {
     int i;
     for(i = 0; i < SIZE; i++)
     {
-        srcArr1[i]=i*5 + 7;
-        srcArr2[i]=2*i - 3;
+        arr[i]=i*5 + 7;
     }
 }
 
@@ -72,6 +71,19 @@ void sumdiffVecs()
     MCPROF_ZONE_EXIT(2);
 }
 
+void process()
+{
+    initVec(srcArr1);
+    initVec(srcArr2);
+
+    #if 0
+    sumVecs();
+    diffVecs();
+    #else
+    sumdiffVecs();
+    #endif
+    prodVecs();
+}
 
 int main()
 {
@@ -95,16 +107,7 @@ int main()
     printf("prodArr addr after malloc : %p\n",prodArr);
 
     MCPROF_START();
-    initVecs();
-
-    #if 0
-    sumVecs();
-    diffVecs();
-    #else
-    sumdiffVecs();
-    #endif
-    prodVecs();
-
+    process();
     printf("output : %d\n", sumArr[1]+diffArr[1]+prodArr[1]);
     MCPROF_STOP();
 

@@ -55,6 +55,7 @@
 #include <deque>
 #include <algorithm>
 #include <cstring> 
+#include <cstddef>
 
 /* ================================================================== */
 // Global variables
@@ -66,6 +67,8 @@ extern Matrix2D ComMatrix;
 std::ofstream dotout;
 std::ofstream mout;
 std::ofstream pcout;
+std::ofstream cgout;
+std::ofstream locout;
 
 CallStackType CallStack;
 CallSiteStackType CallSiteStack;
@@ -313,6 +316,24 @@ BOOL ValidFtnCallName(string name)
         );
 }
 
+
+// a simple utility function to give persistence appended
+// names to functions/zones
+void inline AppendNoToName(string& name, u32 no)
+{ name += ( "_" + to_string((long long)no) ); }
+void inline ExtractNoFromName(string& name, u32& no)
+{
+    size_t found = name.find_last_of("_");
+    if( found != string::npos )
+    {
+        string nostr = name.substr(found+1);
+        no = stoul( nostr , nullptr , 0);
+        name =  name.substr(0,found);
+        D3ECHO(" name: " << name);
+        D3ECHO(" no: " << no );
+    }
+}
+
 // These are some global variables set by memory allocation functions
 IDNoType currID;
 u32 lastCallLocIndex=0;
@@ -324,18 +345,35 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname );
 
     #if (FUNCTION_ORDER == ORDERED)
-    ECHO("Last Call Location " << lastCallLocIndex << " "
-                        << Locations.GetLocation(lastCallLocIndex).toString());
+    D1ECHO("Last Call Location " << lastCallLocIndex << " "
+        << Locations.GetLocation(lastCallLocIndex).toString());
 
     // enter the function in the symbole table if seeing for first time.
     // This CAN be done at instrumentation time as we know functions
     // doing at analysis time will have overhead but functions will
     // be added in the order of appearance
-    string srname1(rname);
-    string srname = srname1 + to_string((long long)lastCallLocIndex);
-    ECHO(srname);
+    string srname(rname);
+    AppendNoToName(srname, lastCallLocIndex);
+
     if( ValidFtnName(srname) && !symTable.IsSeenFunctionName(srname) )
     {
+        /******** for callstack.dot  *************/
+        IDNoType lid = CallStack.Top();
+        string callerName = symTable.GetSymName(lid);
+        string tempName = callerName;
+        u32 tempIndex=0;
+        ExtractNoFromName(tempName, tempIndex);
+
+        D2ECHO("Function Call from "
+            << tempName << " at " << Locations.GetLocation(tempIndex).toString()
+            << " to " << rname << " at " << Locations.GetLocation(lastCallLocIndex).toString() );
+
+//         cgout << "Call "
+//             << tempName << " " << Locations.GetLocation(tempIndex).toString() << " "
+//             << rname << " " << Locations.GetLocation(lastCallLocIndex).toString() << endl;
+        cgout << "Call " << callerName << " " << srname  << endl;
+
+        /******** for callstack.dot  *************/
         symTable.InsertFunction(srname, lastCallLocIndex);
     }
     #endif
@@ -364,7 +402,9 @@ VOID RecordRoutineEntry(CHAR* rname)
 VOID RecordZoneEntry(INT32 zoneNo)
 {
     IDNoType fid = CallStack.Top();
-    string zoneName = symTable.GetSymName(fid) + to_string((long long)zoneNo);
+    string zoneName1 = symTable.GetSymName(fid);
+    string zoneName=zoneName1;
+    AppendNoToName(zoneName, lastCallLocIndex);
     D1ECHO("Entring zone " << zoneName );
 
     // enter the zone in the symbole table if seeing for first time.
@@ -373,7 +413,22 @@ VOID RecordZoneEntry(INT32 zoneNo)
     // only at analysis time
     if( !symTable.IsSeenFunctionName(zoneName) )
     {
-        // TODO what about lastCallLocIndex for zones? Fix it
+        /******** for callstack.dot  *************/
+        IDNoType lid = CallStack.Top();
+        string callerName = symTable.GetSymName(lid);
+        string tempName = callerName;
+        u32 tempIndex=0;
+        ExtractNoFromName(tempName, tempIndex);
+
+        D2ECHO("Loop from "
+            << tempName << " at " << Locations.GetLocation(tempIndex).toString()
+            << " to " << zoneName1 << " at " << Locations.GetLocation(lastCallLocIndex).toString() );
+//         cgout << "Loop "
+//             << tempName << " " << Locations.GetLocation(tempIndex).toString() << " "
+//             << zoneName1 << " " << Locations.GetLocation(lastCallLocIndex).toString() << endl;
+        cgout << "Loop " << callerName << " " << zoneName << endl;
+        /******** for callstack.dot  *************/
+
         symTable.InsertFunction(zoneName, lastCallLocIndex);
     }
 
@@ -382,8 +437,8 @@ VOID RecordZoneEntry(INT32 zoneNo)
 
     // push it on to stack so that communication is associated with it
     CallStack.Push(zid);
-
-    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
+    // record the call site loc index
+    CallSiteStack.Push(lastCallLocIndex);
 
     #if (DEBUG>0)
     CallStack.Print();
@@ -405,81 +460,70 @@ VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    D1ECHO ("Exiting Routine : " << rname );
+    D1ECHO ("Trying to exit routine : " << rname );
 
-    // check first if map has entry for this ftn
-    if ( symTable.IsSeenFunctionName(rname) )
+    IDNoType topRtnID = CallStack.Top();
+    u32 topSiteIdx=0;
+    string topRtnName = symTable.GetSymName( topRtnID );
+    D1ECHO( "Call stack top " << topRtnName );
+    ExtractNoFromName(topRtnName, topSiteIdx);
+
+    if ( topRtnName == rname )
     {
-        IDNoType lastCallID = CallStack.Top();
-        // check if the top ftn is the current one
-        if ( lastCallID == FuncName2ID[rname] )
+        D1ECHO("Exiting Routine : " << rname
+                << " Popping call stack top is "
+                << symTable.GetSymName(topRtnID )
+            );
+
+        CallStack.Pop();
+        CallSiteStack.Pop();
+        #if (DEBUG>0)
+        CallStack.Print();
+        CallSiteStack.Print();
+        #endif
+
+        // In engine 3, to save time, the curr call is selected only at func entry/exit,
+        // so that it does not need to be determined on each access
+        if (KnobEngine.Value() == 3)
         {
-            D1ECHO("Routine ID: " << FuncName2ID[rname]
-                   << " Call stack top id " << lastCallID );
-
-            D1ECHO("Leaving Routine : " << rname
-                   << " Popping call stack top is "
-                   << symTable.GetSymName( lastCallID ) );
-
-            CallStack.Pop();
-            CallSiteStack.Pop();
-            #if (DEBUG>0)
-            CallStack.Print();
-            CallSiteStack.Print();
-            #endif
-
-            // In engine 3, to save time, the curr call is selected only at func entry/exit,
-            // so that it does not need to be determined on each access
-            if (KnobEngine.Value() == 3)
-            {
-                D1ECHO("Setting Current Call for : " << rname );
-                SetCurrCallOnExit(lastCallID);
-            }
+            D1ECHO("Setting Current Call for : " << rname );
+            SetCurrCallOnExit(topRtnID);
         }
     }
 
     // un-comment the following to enable printing running count of instructions executed so far
     //ECHO("Instructions executed so far : " << rInstrCount );
-    D1ECHO ("Exiting Routine : " << rname << " Done");
+    D2ECHO ("Exiting Routine : " << rname << " Done");
 }
 
 VOID RecordZoneExit(INT32 zoneNo)
 {
     IDNoType lastCallID = CallStack.Top();
     string zoneName = symTable.GetSymName(lastCallID);
-    D1ECHO ("Exiting Zone : " << zoneName );
+    D1ECHO ("Trying to exit zone : " << zoneName );
 
     // check first if map has entry for this zone
     if( symTable.IsSeenFunctionName(zoneName) )
     {
-        // check if the top ftn is the current one
-        if ( lastCallID == FuncName2ID[zoneName] )
+        D1ECHO("Exiting Zone : " << zoneName);
+
+        CallStack.Pop();
+        CallSiteStack.Pop();
+        #if (DEBUG>0)
+        CallStack.Print();
+        CallSiteStack.Print();
+        #endif
+
+        // In engine 3, to save time, the curr call is selected only at func entry/exit,
+        // so that it does not need to be determined on each access
+        if (KnobEngine.Value() == 3)
         {
-            D1ECHO("Zone ID: " << FuncName2ID[zoneName]
-                   << " Call stack top id " << lastCallID );
-
-            D1ECHO("Leaving Zone : " << zoneName
-                   << " Popping call stack top is "
-                   << symTable.GetSymName( lastCallID ) );
-
-            CallStack.Pop();
-            CallSiteStack.Pop();
-            #if (DEBUG>0)
-            CallStack.Print();
-            CallSiteStack.Print();
-            #endif
-
-            // In engine 3, to save time, the curr call is selected only at func entry/exit,
-            // so that it does not need to be determined on each access
-            if (KnobEngine.Value() == 3)
-            {
-                D1ECHO("Setting Current Call for : " << zoneName );
-                SetCurrCallOnExit(lastCallID);
-            }
+            D1ECHO("Setting Current Call for : " << zoneName );
+            SetCurrCallOnExit(lastCallID);
         }
     }
 
-    D1ECHO ("Exiting Zone : " << zoneName << " Done");
+    D2ECHO ("Exiting Zone : " << zoneName << " Done");
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -758,7 +802,7 @@ VOID InstrumentImages(IMG img, VOID * v)
     }
 }
 
-VOID Markers( INT32 arg, INT32 arg1, INT32 arg2)
+VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
 {
     int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
     int val = arg & __PIN_ID_MASK;
@@ -793,6 +837,8 @@ VOID Markers( INT32 arg, INT32 arg1, INT32 arg2)
         if(TrackZones)
         {
             D1ECHO("__PIN_MAGIC_ZONE_ENTER");
+            D2ECHO("setting call site locindex to " << locidx);
+            SetCallSite(locidx);
             RecordZoneEntry(val);
         }
     break;
@@ -931,8 +977,30 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 {
                     // RTN rtn = INS_Rtn(ins);
                     // string rtnName = RTN_Name(rtn);
+                    string fileName("");    // This will hold the source file name.
+                    INT32 line = 0;     // This will hold the line number within the file
+                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &fileName);
+                    // Remove the complete path of the filename
+                    RemoveCurrDirFromName(fileName);
+                    D2ECHO("Marker : " << fileName << ":" << line);
+                    // create a temp Location loc, may be inserted in list of locations later
+                    Location loc(line, fileName);
+                    u32 locIndex =-1;
+                    bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
+                    if( !found )
+                        locIndex = Locations.Insert(loc);
+
+//                     INS_InsertCall(
+//                         ins,
+//                         IPOINT_BEFORE,
+//                         (AFUNPTR)SetCallSite,
+//                         IARG_UINT32, locIndex,
+//                         IARG_END
+//                     );
+
                     D2ECHO("Instrumenting XCHG/Markers instruction in " << RTN_Name(INS_Rtn(ins)) << "()" );
                     INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Markers,
+                                             IARG_UINT32, locIndex,
                                              IARG_REG_VALUE, REG_EAX,
                                              IARG_REG_VALUE, REG_ECX,
                                              IARG_REG_VALUE, REG_EDX,
@@ -1070,6 +1138,10 @@ VOID TheEnd(INT32 code, VOID *v)
 
     // PrintInstrCount();
     PrintInstrPercents();
+    Locations.Print(locout);
+
+    locout.close();
+    cgout.close();
 }
 
 /*!
@@ -1151,6 +1223,11 @@ void SetupPin(int argc, char *argv[])
     {
         OpenOutFile(KnobPerCallFile.Value(), pcout);
     }
+
+    // open the file to store call graph
+    OpenOutFile("callgraph.dat", cgout);
+    // open the file to store locations
+    OpenOutFile("locations.dat", locout);
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);

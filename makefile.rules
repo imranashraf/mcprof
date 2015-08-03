@@ -156,7 +156,9 @@ $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
 
 clean: cleantemp
 cleantemp:
-	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps
+	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps \
+	callgraph.dat dependencies.dat execution.dat locations.dat
+
 
 ###### Special applications' build rules ######
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c

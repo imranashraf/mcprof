@@ -176,6 +176,24 @@ void Matrix2D::PrintMatrix(ostream &fout)
             fout<<endl;
         }
     }
+
+    /******** for callstack.dot  *************/
+    std::ofstream depout;
+    OpenOutFile("dependencies.dat", depout);
+    depout << "# producer    consumer    communication " << endl;
+    for (IDNoType pid=StartID; pid<TotalSymbols; pid++)
+    {
+        string prod = symTable.GetSymName(pid);
+        for (IDNoType cid=StartID; cid<TotalSymbols; cid++)
+        {
+            string cons = symTable.GetSymName(cid);
+            if( Matrix[pid][cid] > 0 )
+                depout << prod << " "<< cons << "  " << Matrix[pid][cid] << endl;
+        }
+    }
+    depout.close();
+    /******** for callstack.dot  *************/
+
 }
 #undef ALIGNMENT
 

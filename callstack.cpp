@@ -53,9 +53,9 @@ void CallStackType::Print()
 //     }
 
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
-        stackftns += symTable.GetSymName(stack[ftn]);
+        stackftns += symTable.GetSymName(stack[ftn]) + " ";
 
-    D1ECHO("Call Stack: " << stackftns);
+    ECHO("Call Stack: " << stackftns);
 }
 
 void CallStackType::Print(ofstream& fout)
@@ -134,8 +134,8 @@ void CallSiteStackType::Print()
 //     }
 
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += Locations.GetLocation(sites[loc]).toString();
-    D1ECHO("Call sites: " << callsites);
+        callsites += Locations.GetLocation(sites[loc]).toString() + " ";
+    ECHO("Call sites: " << callsites);
 }
 
 void CallSiteStackType::Print(ofstream& fout)

@@ -149,7 +149,7 @@ void Symbols::InsertFunction(const string& ftnname, u32 lastCallLocIndex)
     IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC, lastCallLocIndex);
-    ECHO("Adding Function Symbol: " << ftnname
+    D1ECHO("Adding Function Symbol: " << ftnname
            << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
 }

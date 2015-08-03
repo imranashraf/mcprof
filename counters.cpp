@@ -66,6 +66,7 @@ void PrintInstrCount()
 
 void PrintInstrPercents()
 {
+    {
     ofstream fout;
     OpenOutFile("execProfile.out", fout);
 
@@ -85,6 +86,30 @@ void PrintInstrPercents()
         }
     }
     fout.close();
+    }
+
+    // generates output for mxif
+    {
+    ofstream fout;
+    OpenOutFile("execution.dat", fout);
+
+    multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
+    map<u64,IDNoType>::reverse_iterator iter;
+    fout << setw(10) << "#  Calls " << setw(15) << "%Exec.Instr." << "\t\t" << "Name" << endl;
+    fout << " #==================================================================" <<endl;
+
+    for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
+    {
+        IDNoType fid =  iter->second;
+        if(!ShowUnknown && fid==UnknownID)
+            continue;
+        else
+        {
+            fout << setw(10) << GetCallCount(fid) << setw(15) << GetInstrCountPercent(fid) << "\t\t" << symTable.GetSymName(fid) << endl;
+        }
+    }
+    fout.close();
+    }
 }
 
 // The following prints the map without sorting

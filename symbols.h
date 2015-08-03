@@ -65,7 +65,10 @@ struct Location
     Location(u32 l, string f) : lineNo(l), fileName(f) {}
     string toString()
     {
-        return fileName + ":" + to_string((long long)lineNo);
+        if( fileName.empty() )
+            return "NA:" + to_string((long long)lineNo);
+        else
+            return fileName + ":" + to_string((long long)lineNo);
     }
 
     bool operator==(const Location& loc) const
@@ -116,6 +119,14 @@ public:
         }
 
         return false;
+    }
+    void Print(ostream& fout)
+    {
+        fout << "# list of locations in order" << endl;
+        for(u32 i=0; i<locations.size(); ++i)
+        {
+            fout << locations[i].toString() << endl;
+        }
     }
 };
 
