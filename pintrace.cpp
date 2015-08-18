@@ -371,7 +371,7 @@ VOID RecordRoutineEntry(CHAR* rname)
 //         cgout << "Call "
 //             << tempName << " " << Locations.GetLocation(tempIndex).toString() << " "
 //             << rname << " " << Locations.GetLocation(lastCallLocIndex).toString() << endl;
-        cgout << "Call " << callerName << " " << srname  << endl;
+        cgout << callerName << " FUNC " << srname  << endl;
 
         /******** for callstack.dot  *************/
         symTable.InsertFunction(srname, lastCallLocIndex);
@@ -423,10 +423,7 @@ VOID RecordZoneEntry(INT32 zoneNo)
         D2ECHO("Loop from "
             << tempName << " at " << Locations.GetLocation(tempIndex).toString()
             << " to " << zoneName1 << " at " << Locations.GetLocation(lastCallLocIndex).toString() );
-//         cgout << "Loop "
-//             << tempName << " " << Locations.GetLocation(tempIndex).toString() << " "
-//             << zoneName1 << " " << Locations.GetLocation(lastCallLocIndex).toString() << endl;
-        cgout << "Loop " << callerName << " " << zoneName << endl;
+        cgout << callerName << " LOOP " << zoneName << endl;
         /******** for callstack.dot  *************/
 
         symTable.InsertFunction(zoneName, lastCallLocIndex);
@@ -761,17 +758,20 @@ VOID InstrumentImages(IMG img, VOID * v)
                     INT32 line = 0;     // This will hold the line number within the file
                     PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &fileName);
                     // Remove the complete path of the filename
-                    RemoveCurrDirFromName(fileName);
+                    if(fileName == "")  fileName = "NA";
+                    else RemoveCurrDirFromName(fileName);
                     // create a temp Location loc, may be inserted in list of locations later
                     Location loc(line, fileName);
-
                     D1ECHO("  Routine Call found for " << tname << " at " << fileName <<":"<< line);
                     bool inStdHeaders = ( fileName.find("/usr/include") != string::npos );
                     if( (!inStdHeaders) && ( ValidFtnCallName(tname) ) )
                     {
                         bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                         if( !found )
+                        {
+                            ECHO("Location " << loc.toString() << " not found, Inserting");
                             locIndex = Locations.Insert(loc);
+                        }
 
                         D1ECHO("  Instrumenting call " << " at " << VAR(locIndex) << " " << fileName <<":"<< line);
 
@@ -981,14 +981,18 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                     INT32 line = 0;     // This will hold the line number within the file
                     PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &fileName);
                     // Remove the complete path of the filename
-                    RemoveCurrDirFromName(fileName);
-                    D2ECHO("Marker : " << fileName << ":" << line);
+                    if(fileName == "")  fileName = "NA";
+                    else RemoveCurrDirFromName(fileName);
+                    D1ECHO("Marker at " << fileName << ":" << line);
                     // create a temp Location loc, may be inserted in list of locations later
-                    Location loc(line, fileName);
+                    Location loc(line+1, fileName);
                     u32 locIndex =-1;
                     bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                     if( !found )
+                    {
+                        ECHO("Location " << loc.toString() << " not found, Inserting");
                         locIndex = Locations.Insert(loc);
+                    }
 
 //                     INS_InsertCall(
 //                         ins,
@@ -1138,6 +1142,8 @@ VOID TheEnd(INT32 code, VOID *v)
 
     // PrintInstrCount();
     PrintInstrPercents();
+    // open the file to store locations
+    OpenOutFile("locations.dat", locout);
     Locations.Print(locout);
 
     locout.close();
@@ -1164,6 +1170,9 @@ void SetupPin(int argc, char *argv[])
         Usage();
         Die();
     }
+
+    // Read locations available in locations.dat
+    Locations.InitFromFile();
     
     TrackObjects = KnobTrackObjects.Value();
     RecordAllAllocations=KnobRecordAllAllocations.Value();
@@ -1226,8 +1235,6 @@ void SetupPin(int argc, char *argv[])
 
     // open the file to store call graph
     OpenOutFile("callgraph.dat", cgout);
-    // open the file to store locations
-    OpenOutFile("locations.dat", locout);
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);

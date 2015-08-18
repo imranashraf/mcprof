@@ -47,6 +47,7 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 extern bool RecordAllAllocations;
 
@@ -66,9 +67,9 @@ struct Location
     string toString()
     {
         if( fileName.empty() )
-            return "NA:" + to_string((long long)lineNo);
+            return "NA " + to_string((long long)lineNo);
         else
-            return fileName + ":" + to_string((long long)lineNo);
+            return fileName + " " + to_string((long long)lineNo);
     }
 
     bool operator==(const Location& loc) const
@@ -91,7 +92,7 @@ private:
 public:
     LocationList()
     {
-        locations.push_back( Location() );
+        //locations.push_back( Location() );
     }
 
     // Insert a location and return location index
@@ -128,6 +129,8 @@ public:
             fout << locations[i].toString() << endl;
         }
     }
+
+    void InitFromFile();
 };
 
 // List of all locations of symbols

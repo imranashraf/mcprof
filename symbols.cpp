@@ -49,6 +49,45 @@ extern bool ShowUnknown;
 // List of all locations of symbols
 LocationList Locations;
 
+void LocationList::InitFromFile()
+{
+    ifstream fin;
+    string locationsFileName("locations.dat");
+    OpenInFile(locationsFileName, fin);
+
+    u32 counter=0;
+    string line;
+    while ( getline(fin, line) )
+    {
+        //the following line trims white space from the beginning of the string
+        line.erase(line.begin(), find_if(line.begin(), line.end(), not1(ptr_fun<int, int>(isspace))));
+
+        // ignore empty lines and lines starting with #
+        if (line.length() == 0 || line[0] == '#')
+            continue;
+
+        string filename;
+        u32 lno;
+        istringstream iss(line);
+        if (!(iss >> filename >> lno))
+        {
+            break;    // error
+        }
+        Insert( Location(lno, filename) );
+        ++counter;
+    }
+
+    fin.close();
+    remove("locations.dat"); // delete file
+
+    if(counter==0)
+    {
+        ECHO("No locations available in the input file.");
+        Die();
+    }
+    ECHO("Initialized " << counter << " locations from file");
+}
+
 string& Symbols::GetSymName(IDNoType id)
 {
     D2ECHO("Getting name of symbol with id: " << id );
