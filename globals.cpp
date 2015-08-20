@@ -213,3 +213,22 @@ void RemoveCurrDirFromName(std::string& src)
     std::string cdir(currDir);
     RemoveSubstrs(src, cdir);
 }
+
+// a simple utility function to give persistence appended
+// names to functions/zones
+void AppendNoToName(string& name, u32 no)
+{
+    name += ( "_" + to_string((long long)no) );
+}
+void ExtractNoFromName(string& name, u32& no)
+{
+    size_t found = name.find_last_of("_");
+    if( found != string::npos )
+    {
+        string nostr = name.substr(found+1);
+        no = stoul( nostr , nullptr , 0);
+        name =  name.substr(0,found);
+        D3ECHO(" name: " << name);
+        D3ECHO(" no: " << no );
+    }
+}

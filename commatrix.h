@@ -81,6 +81,7 @@ public:
     void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
     bool IsFilledRow(IDNoType r);
     bool IsFilledCol(IDNoType c);
+    void CheckLoopIndependence( IDNoType loopNo, u32 nIterations);
 };
 
 #endif

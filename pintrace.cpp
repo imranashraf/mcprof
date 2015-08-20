@@ -84,8 +84,9 @@ u32  FlushCallsLimit;
 bool ShowUnknown;
 bool TrackZones;
 bool TrackStartStop;
+bool TrackLoopDepend;
 u32  Threshold;
- 
+u32 SelectedLoopNo;
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
@@ -158,6 +159,13 @@ KNOB<BOOL> KnobTrackStartStop(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackZones", "0", "Track zone markers to profile per zones");
 
+KNOB<BOOL> KnobLoopDepend(KNOB_MODE_WRITEONCE, "pintool",
+                            "LoopDepend", "0", "Track markers for loop dependence");
+
+KNOB<UINT32> KnobSelectedLoopNo(KNOB_MODE_WRITEONCE,  "pintool",
+                        "SelectedLoopNo", "0",
+                        "Specify loop no to test of dependence.");
+
 KNOB<BOOL> KnobReadStaticObjects(KNOB_MODE_WRITEONCE, "pintool",
                             "StaticSymbols", "1", "Read static symbols from the binary and show them in the graph");
 
@@ -165,6 +173,7 @@ KNOB<UINT32> KnobThreshold(KNOB_MODE_WRITEONCE,  "pintool",
                         "Threshold", "0",
                         "Specify Threshold, communication edge below this Threshold \
                         will not appear in the communication graph/matrix.");
+
 
 /* ===================================================================== */
 // Utilities
@@ -317,23 +326,6 @@ BOOL ValidFtnCallName(string name)
 }
 
 
-// a simple utility function to give persistence appended
-// names to functions/zones
-void inline AppendNoToName(string& name, u32 no)
-{ name += ( "_" + to_string((long long)no) ); }
-void inline ExtractNoFromName(string& name, u32& no)
-{
-    size_t found = name.find_last_of("_");
-    if( found != string::npos )
-    {
-        string nostr = name.substr(found+1);
-        no = stoul( nostr , nullptr , 0);
-        name =  name.substr(0,found);
-        D3ECHO(" name: " << name);
-        D3ECHO(" no: " << no );
-    }
-}
-
 // These are some global variables set by memory allocation functions
 IDNoType currID;
 u32 lastCallLocIndex=0;
@@ -451,6 +443,26 @@ VOID RecordZoneEntry(INT32 zoneNo)
     }
 
     D1ECHO("Entering Zone " << zoneName << " Done" );
+}
+u32 LoopIterationCount=0;
+VOID RecordLoopBodyEntry(IDNoType loopNo)
+{
+    string loopName = "LOOP";
+    AppendNoToName(loopName, loopNo);
+    AppendNoToName(loopName, LoopIterationCount);
+    D2ECHO("Entring loop body " << loopName );
+    symTable.InsertFunction(loopName, lastCallLocIndex);
+    IDNoType lid = FuncName2ID[loopName];
+    CallStack.Push(lid);
+}
+
+VOID RecordLoopBodyExit(IDNoType loopNo)
+{
+    IDNoType lid = CallStack.Top();
+    string loopName = symTable.GetSymName(lid);
+    D2ECHO("Exiting loop " << loopName );
+    CallStack.Pop();
+    ++LoopIterationCount;
 }
 
 VOID RecordRoutineExit(VOID *ip)
@@ -769,7 +781,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                         bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                         if( !found )
                         {
-                            ECHO("Location " << loc.toString() << " not found, Inserting");
+                            D2ECHO("Location " << loc.toString() << " not found, Inserting");
                             locIndex = Locations.Insert(loc);
                         }
 
@@ -804,9 +816,10 @@ VOID InstrumentImages(IMG img, VOID * v)
 
 VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
 {
-    int cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
-    int val = arg & __PIN_ID_MASK;
-
+    u32 cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
+    u32 val = arg & __PIN_ID_MASK;
+//     u32 fid  = CallStack.Top();
+//     string fname = symTable.GetSymName(fid);
     D2ECHO("Recieved MAGIC " << VAR(cmd) << VAR(val) << VAR(arg) << VAR(arg1) );
 
     switch(cmd)
@@ -836,7 +849,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
     case __PIN_MAGIC_ZONE_ENTER:
         if(TrackZones)
         {
-            D1ECHO("__PIN_MAGIC_ZONE_ENTER");
+            D2ECHO("__PIN_MAGIC_ZONE_ENTER");
             D2ECHO("setting call site locindex to " << locidx);
             SetCallSite(locidx);
             RecordZoneEntry(val);
@@ -845,8 +858,42 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
     case __PIN_MAGIC_ZONE_EXIT:
         if(TrackZones)
         {
-            D1ECHO("__PIN_MAGIC_ZONE_EXIT");
+            D2ECHO("__PIN_MAGIC_ZONE_EXIT");
             RecordZoneExit(val);
+        }
+    break;
+    case __PIN_MAGIC_LOOP_ENTER:
+        if( TrackLoopDepend && val == SelectedLoopNo )
+        {
+            D2ECHO("__PIN_MAGIC_LOOP_ENTER");
+            D2ECHO("setting call site locindex to " << locidx);
+            SelectAnalysisEngine();
+            LoopIterationCount=0;
+        }
+    break;
+    case __PIN_MAGIC_LOOPBODY_ENTER:
+        if( TrackLoopDepend && val == SelectedLoopNo )
+        {
+            D2ECHO("__PIN_MAGIC_LOOPBODY_ENTER");
+            D2ECHO("setting call site locindex to " << locidx);
+            SetCallSite(locidx);
+            RecordLoopBodyEntry(val);
+
+        }
+    break;
+    case __PIN_MAGIC_LOOPBODY_EXIT:
+        if( TrackLoopDepend && val == SelectedLoopNo )
+        {
+            D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT");
+            RecordLoopBodyExit(val);
+        }
+    break;
+    case __PIN_MAGIC_LOOP_EXIT:
+        if( TrackLoopDepend && val == SelectedLoopNo )
+        {
+            D2ECHO("__PIN_MAGIC_LOOP_EXIT");
+            SelectDummyAnalysisEngine();
+            ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
         }
     break;
     default:
@@ -971,7 +1018,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 }
             }
 
-            if( TrackZones || TrackStartStop ) // If marker tracking is requested
+            if( TrackZones || TrackStartStop || TrackLoopDepend ) // If marker tracking is requested
             {
                 if (INS_Disassemble(ins) == "xchg bx, bx") // track the magic instruction
                 {
@@ -990,17 +1037,9 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                     bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                     if( !found )
                     {
-                        ECHO("Location " << loc.toString() << " not found, Inserting");
+                        D2ECHO("Location " << loc.toString() << " not found, Inserting");
                         locIndex = Locations.Insert(loc);
                     }
-
-//                     INS_InsertCall(
-//                         ins,
-//                         IPOINT_BEFORE,
-//                         (AFUNPTR)SetCallSite,
-//                         IARG_UINT32, locIndex,
-//                         IARG_END
-//                     );
 
                     D2ECHO("Instrumenting XCHG/Markers instruction in " << RTN_Name(INS_Rtn(ins)) << "()" );
                     INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Markers,
@@ -1172,8 +1211,8 @@ void SetupPin(int argc, char *argv[])
     }
 
     // Read locations available in locations.dat
-    Locations.InitFromFile();
-    
+    //Locations.InitFromFile();
+
     TrackObjects = KnobTrackObjects.Value();
     RecordAllAllocations=KnobRecordAllAllocations.Value();
     FlushCalls=KnobFlushCalls.Value();
@@ -1181,7 +1220,9 @@ void SetupPin(int argc, char *argv[])
     ShowUnknown = KnobShowUnknown.Value();
     TrackStartStop = KnobTrackStartStop.Value();
     TrackZones = KnobTrackZones.Value();
+    TrackLoopDepend = KnobLoopDepend.Value();
     Threshold = KnobThreshold.Value();
+    SelectedLoopNo = KnobSelectedLoopNo.Value();
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
@@ -1217,7 +1258,7 @@ void SetupPin(int argc, char *argv[])
 #endif
 
     D1ECHO("Selecting Analysis Engine ...");
-    if(TrackStartStop)
+    if( TrackStartStop || TrackLoopDepend )
     {
         // start dummy so that actual profiling starts when start is seen
         SelectDummyAnalysisEngine();

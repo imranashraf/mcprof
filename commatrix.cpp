@@ -181,10 +181,10 @@ void Matrix2D::PrintMatrix(ostream &fout)
     std::ofstream depout;
     OpenOutFile("dependencies.dat", depout);
     depout << "# producer    consumer    communication " << endl;
-    for (IDNoType pid=StartID; pid<TotalSymbols; pid++)
+    for (IDNoType pid=0; pid<TotalSymbols; pid++)
     {
         string prod = symTable.GetSymName(pid);
-        for (IDNoType cid=StartID; cid<TotalSymbols; cid++)
+        for (IDNoType cid=0; cid<TotalSymbols; cid++)
         {
             string cons = symTable.GetSymName(cid);
             if( Matrix[pid][cid] > 0 )
@@ -312,4 +312,32 @@ void Matrix2D::PrintDot(ostream &dotout)
     }
 
     dotout << "}" << endl;
+}
+
+void Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
+{
+    bool result=true;
+    for (IDNoType i=0; i<nIterations-1; ++i)
+    {
+        string prod = "LOOP";
+        AppendNoToName(prod, loopNo);
+        AppendNoToName(prod, i);
+        IDNoType pid = FuncName2ID[prod];
+        for (IDNoType j=i; j<nIterations; ++j)
+        {
+            string cons = "LOOP";
+            AppendNoToName(cons, loopNo);
+            AppendNoToName(cons, j);
+            IDNoType cid = FuncName2ID[cons];
+            if( Matrix[pid][cid] > 0 )
+            {
+                D2ECHO( prod << " "<< cons << "  " << Matrix[pid][cid] );
+                result = false;
+                break;
+            }
+        }
+    }
+
+    if( result ) cout << " Iterations of loop " << loopNo << " are independent " << endl;
+    else         cout << " Iterations of loop " << loopNo << " are dependent " << endl;
 }

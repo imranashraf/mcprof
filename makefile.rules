@@ -52,7 +52,7 @@ SA_TOOL_ROOTS :=
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
 	multiAllocFtn multiAllocMacro multiAllocClass loopAllocations \
 	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04 \
-	markers
+	markers loopdepend
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -134,6 +134,9 @@ multiAllocClass.test: $(OBJDIR)multiAllocClass$(EXE_SUFFIX)
 
 markers.test: $(OBJDIR)markers$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -TrackZones 1 -TrackStartStop 1 -- $(OBJDIR)markers$(EXE_SUFFIX)
+
+loopdepend.test: $(OBJDIR)loopdepend$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -LoopDepend 1 -SelectedLoopNo 2 -- $(OBJDIR)loopdepend$(EXE_SUFFIX)
 
 ##############################################################
 #

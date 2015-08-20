@@ -74,14 +74,22 @@
 #define __PIN_MAGIC_ZONE_ENTER      0x04
 #define __PIN_MAGIC_ZONE_EXIT       0x05
 
+#define __PIN_MAGIC_LOOP_ENTER      0x06
+#define __PIN_MAGIC_LOOP_EXIT       0x07
+#define __PIN_MAGIC_LOOPBODY_ENTER  0x08
+#define __PIN_MAGIC_LOOPBODY_EXIT   0x09
+
 #define __PIN_MAKE_CMD_ARG(cmd, arg) ((cmd) << __PIN_CMD_OFFSET | ((arg) & __PIN_ID_MASK))
 #define __PIN_CMD_ARG(cmd, arg)     __PIN_MAGIC(__PIN_MAKE_CMD_ARG(cmd, arg))
 
 
 #define MCPROF_START()                 __PIN_MAGIC(__PIN_MAGIC_START)
 #define MCPROF_STOP()                  __PIN_MAGIC(__PIN_MAGIC_STOP)
-
 #define MCPROF_ZONE_ENTER(rid)         __PIN_CMD_ARG(__PIN_MAGIC_ZONE_ENTER, rid)
 #define MCPROF_ZONE_EXIT(rid)          __PIN_CMD_ARG(__PIN_MAGIC_ZONE_EXIT, rid)
+#define MCPROF_LOOP_ENTER(rid)        __PIN_CMD_ARG(__PIN_MAGIC_LOOP_ENTER, rid)
+#define MCPROF_LOOP_EXIT(rid)          __PIN_CMD_ARG(__PIN_MAGIC_LOOP_EXIT, rid)
+#define MCPROF_LOOPBODY_ENTER(rid)     __PIN_CMD_ARG(__PIN_MAGIC_LOOPBODY_ENTER, rid)
+#define MCPROF_LOOPBODY_EXIT(rid)      __PIN_CMD_ARG(__PIN_MAGIC_LOOPBODY_EXIT, rid)
 
 #endif // MARKERS_H
