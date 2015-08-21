@@ -182,10 +182,9 @@ void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 s
     SetObjectIDs(saddr, size, id);
 }
 
-void Symbols::InsertFunction(const string& ftnname, u32 lastCallLocIndex)
+void Symbols::InsertFunction(const string& ftnname, IDNoType id, u32 lastCallLocIndex)
 {
     D2ECHO("Inserting Function " << ftnname);
-    IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
     Symbol sym(id, ftnname, SymType::FUNC, lastCallLocIndex);
     D1ECHO("Adding Function Symbol: " << ftnname

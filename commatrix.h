@@ -57,7 +57,7 @@ class Matrix2D
 private:
     vector< vector<float> > Matrix;
     //most of the applications have functions less than 256
-    static const u32 DEFAULT_SIZE = 1024; //15000
+    static const u32 DEFAULT_SIZE = 15000; //15000
     set<IDNoType> FilledRows;
     set<IDNoType> FilledCols;
 

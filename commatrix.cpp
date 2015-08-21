@@ -34,7 +34,6 @@
  *
  */
 
-#include "globals.h"
 #include "commatrix.h"
 #include "counters.h"
 
@@ -320,14 +319,14 @@ void Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
     for (IDNoType i=0; i<nIterations-1; ++i)
     {
         string prod = "LOOP";
-        AppendNoToName(prod, loopNo);
-        AppendNoToName(prod, i);
+        AppendIDToName(prod, loopNo);
+        AppendIDToName(prod, i);
         IDNoType pid = FuncName2ID[prod];
         for (IDNoType j=i; j<nIterations; ++j)
         {
             string cons = "LOOP";
-            AppendNoToName(cons, loopNo);
-            AppendNoToName(cons, j);
+            AppendIDToName(cons, loopNo);
+            AppendIDToName(cons, j);
             IDNoType cid = FuncName2ID[cons];
             if( Matrix[pid][cid] > 0 )
             {

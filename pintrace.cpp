@@ -63,6 +63,7 @@
 extern map <string,IDNoType> FuncName2ID;
 extern Symbols symTable;
 extern Matrix2D ComMatrix;
+extern map <u32,IDNoType> CallSites2ID;
 
 std::ofstream dotout;
 std::ofstream mout;
@@ -332,54 +333,72 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
+bool GetAvailableORNewID(IDNoType& id)
+{
+    u32 callsites=0;
+    bool result;
+
+    // get callsites combined with the last lastCallLocIndex
+    if( CallSiteStack.Top() != lastCallLocIndex )
+        callsites = CallSiteStack.GetCallSites(lastCallLocIndex);
+    else
+        callsites = CallSiteStack.GetCallSites(0);
+
+    if(CallSites2ID.find(callsites) != CallSites2ID.end() )
+    {
+        // use existing id as this call site is already seen
+        id = CallSites2ID[callsites];
+        D2ECHO(" callsites " << callsites << " using existing id" << id);
+        result = true;
+    }
+    else
+    {
+        // use a new id for this call site
+        id = GlobalID++;
+        CallSites2ID[callsites] = id;
+        D2ECHO(" callsites " << callsites << " using new id" << id);
+        result = false;
+    }
+
+    return result;
+}
+
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
 
-    #if (FUNCTION_ORDER == ORDERED)
-    D1ECHO("Last Call Location " << lastCallLocIndex << " "
-        << Locations.GetLocation(lastCallLocIndex).toString());
+    IDNoType callerID = CallStack.Top();
+    string callerName = symTable.GetSymName(callerID);
 
-    // enter the function in the symbole table if seeing for first time.
-    // This CAN be done at instrumentation time as we know functions
-    // doing at analysis time will have overhead but functions will
-    // be added in the order of appearance
-    string srname(rname);
-    AppendNoToName(srname, lastCallLocIndex);
-
-    if( ValidFtnName(srname) && !symTable.IsSeenFunctionName(srname) )
+    // for each callsite a unique id is generated
+    // this will result in the generation of unique name
+    IDNoType calleeID=0;
+    string calleeName(rname);
+    if( ! GetAvailableORNewID(calleeID) ) // returns false if id is new
     {
-        /******** for callstack.dot  *************/
-        IDNoType lid = CallStack.Top();
-        string callerName = symTable.GetSymName(lid);
-        string tempName = callerName;
-        u32 tempIndex=0;
-        ExtractNoFromName(tempName, tempIndex);
+        AppendIDToName(calleeName, calleeID);
+        symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
-        D2ECHO("Function Call from "
-            << tempName << " at " << Locations.GetLocation(tempIndex).toString()
-            << " to " << rname << " at " << Locations.GetLocation(lastCallLocIndex).toString() );
-
-//         cgout << "Call "
-//             << tempName << " " << Locations.GetLocation(tempIndex).toString() << " "
-//             << rname << " " << Locations.GetLocation(lastCallLocIndex).toString() << endl;
-        cgout << callerName << " FUNC " << srname  << endl;
-
-        /******** for callstack.dot  *************/
-        symTable.InsertFunction(srname, lastCallLocIndex);
+        // for callgraph output
+        cgout << callerName << " FUNC " << calleeName  << endl;
     }
-    #endif
 
-    IDNoType fid = FuncName2ID[srname];
-    callCounts[fid] += 1;
-    CallStack.Push(fid);
-    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
+    // due to recursion this check is needed
+    if( callerID != calleeID )
+    {
+        CallStack.Push(calleeID);
+        CallSiteStack.Push(lastCallLocIndex);
+    }
+
+    // call count should be updated even for recursive functions
+    callCounts[calleeID] += 1;
+
     #if (DEBUG>0)
     CallStack.Print();
     CallSiteStack.Print();
     #endif
 
-
+    // TODO test with updated logic later
     // In engine 3, to save time, the curr call is selected only at
     // func entry/exit, so that it does not need to be determined on each access
     if (KnobEngine.Value() == 3)
@@ -391,148 +410,138 @@ VOID RecordRoutineEntry(CHAR* rname)
     D1ECHO ("Entering Routine : " << rname << " Done" );
 }
 
-VOID RecordZoneEntry(INT32 zoneNo)
-{
-    IDNoType fid = CallStack.Top();
-    string zoneName1 = symTable.GetSymName(fid);
-    string zoneName=zoneName1;
-    AppendNoToName(zoneName, lastCallLocIndex);
-    D1ECHO("Entring zone " << zoneName );
-
-    // enter the zone in the symbole table if seeing for first time.
-    // This CANNOT be done at instrumentation time as we dont know 
-    // what kind of magic instruction it is at that time, we know that
-    // only at analysis time
-    if( !symTable.IsSeenFunctionName(zoneName) )
-    {
-        /******** for callstack.dot  *************/
-        IDNoType lid = CallStack.Top();
-        string callerName = symTable.GetSymName(lid);
-        string tempName = callerName;
-        u32 tempIndex=0;
-        ExtractNoFromName(tempName, tempIndex);
-
-        D2ECHO("Loop from "
-            << tempName << " at " << Locations.GetLocation(tempIndex).toString()
-            << " to " << zoneName1 << " at " << Locations.GetLocation(lastCallLocIndex).toString() );
-        cgout << callerName << " LOOP " << zoneName << endl;
-        /******** for callstack.dot  *************/
-
-        symTable.InsertFunction(zoneName, lastCallLocIndex);
-    }
-
-    IDNoType zid = FuncName2ID[zoneName];
-    callCounts[zid] += 1;
-
-    // push it on to stack so that communication is associated with it
-    CallStack.Push(zid);
-    // record the call site loc index
-    CallSiteStack.Push(lastCallLocIndex);
-
-    #if (DEBUG>0)
-    CallStack.Print();
-    CallSiteStack.Print();
-    #endif
-
-    // In engine 3, to save time, the curr call is selected only at
-    // func entry/exit, so that it does not need to be determined on each access
-    if (KnobEngine.Value() == 3)
-    {
-        D1ECHO ("Setting Current Call for : " << zoneName );
-        SetCurrCallOnEntry();
-    }
-
-    D1ECHO("Entering Zone " << zoneName << " Done" );
-}
-u32 LoopIterationCount=0;
-VOID RecordLoopBodyEntry(IDNoType loopNo)
-{
-    string loopName = "LOOP";
-    AppendNoToName(loopName, loopNo);
-    AppendNoToName(loopName, LoopIterationCount);
-    D2ECHO("Entring loop body " << loopName );
-    symTable.InsertFunction(loopName, lastCallLocIndex);
-    IDNoType lid = FuncName2ID[loopName];
-    CallStack.Push(lid);
-}
-
-VOID RecordLoopBodyExit(IDNoType loopNo)
-{
-    IDNoType lid = CallStack.Top();
-    string loopName = symTable.GetSymName(lid);
-    D2ECHO("Exiting loop " << loopName );
-    CallStack.Pop();
-    ++LoopIterationCount;
-}
-
 VOID RecordRoutineExit(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
     D1ECHO ("Trying to exit routine : " << rname );
 
-    IDNoType topRtnID = CallStack.Top();
-    u32 topSiteIdx=0;
-    string topRtnName = symTable.GetSymName( topRtnID );
-    D1ECHO( "Call stack top " << topRtnName );
-    ExtractNoFromName(topRtnName, topSiteIdx);
-
-    if ( topRtnName == rname )
+    if( ValidFtnName(rname) )
     {
-        D1ECHO("Exiting Routine : " << rname
-                << " Popping call stack top is "
-                << symTable.GetSymName(topRtnID )
-            );
+        string calleeName(rname); // name of routine which currently wants to exit
 
-        CallStack.Pop();
-        CallSiteStack.Pop();
-        #if (DEBUG>0)
-        CallStack.Print();
-        CallSiteStack.Print();
-        #endif
+        IDNoType tempID=0;
+        IDNoType topRtnID = CallStack.Top();
+        string topRtnName = symTable.GetSymName( topRtnID );
+        ExtractIDFromName(topRtnName, tempID); // this is current calleeName on stack
 
-        // In engine 3, to save time, the curr call is selected only at func entry/exit,
-        // so that it does not need to be determined on each access
-        if (KnobEngine.Value() == 3)
+        if ( calleeName == topRtnName ) // check if current == actual
         {
-            D1ECHO("Setting Current Call for : " << rname );
-            SetCurrCallOnExit(topRtnID);
+            CallStack.Pop();
+            CallSiteStack.Pop();
+
+            // TODO test it later with updated logic
+            // In engine 3, to save time, the curr call is selected only at func entry/exit,
+            // so that it does not need to be determined on each access
+            if (KnobEngine.Value() == 3)
+            {
+                D1ECHO("Setting Current Call for : " << rname );
+                SetCurrCallOnExit(topRtnID);
+            }
         }
     }
 
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
+
     // un-comment the following to enable printing running count of instructions executed so far
     //ECHO("Instructions executed so far : " << rInstrCount );
-    D2ECHO ("Exiting Routine : " << rname << " Done");
+    D1ECHO ("Exiting Routine : " << rname << " Done");
+}
+
+VOID RecordZoneEntry(INT32 zoneNo)
+{
+    D1ECHO("RecordZoneEntry(): START");
+
+    IDNoType callerID = CallStack.Top();
+    string callerName = symTable.GetSymName(callerID);
+
+    // for each callsite a unique id is generated
+    // this will result in the generation of unique name
+    IDNoType calleeID=0;
+    string calleeName(callerName);
+    ExtractIDFromName(calleeName, calleeID); // remove previous id
+    if( ! GetAvailableORNewID(calleeID) ) // returns false if id is new
+    {
+        AppendIDToName(calleeName, calleeID); // attach new id
+        symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
+
+        // for callgraph output
+        cgout << callerName << " LOOP " << calleeName  << endl;
+    }
+
+    // recursion is not possible in case of zones
+    CallStack.Push(calleeID);
+    CallSiteStack.Push(lastCallLocIndex);
+
+    // call count should be updated even for recursive functions
+    callCounts[calleeID] += 1;
+
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
+
+    // TODO test with updated logic later
+    // In engine 3, to save time, the curr call is selected only at
+    // func entry/exit, so that it does not need to be determined on each access
+    if (KnobEngine.Value() == 3)
+    {
+        D1ECHO ("Setting Current Call for : " << rname );
+        SetCurrCallOnEntry();
+    }
+
+    D1ECHO("RecordZoneEntry(): END");
 }
 
 VOID RecordZoneExit(INT32 zoneNo)
 {
-    IDNoType lastCallID = CallStack.Top();
-    string zoneName = symTable.GetSymName(lastCallID);
-    D1ECHO ("Trying to exit zone : " << zoneName );
+    D1ECHO ("RecordZoneExit(): START");
+    IDNoType calleeID = CallStack.Top();
 
-    // check first if map has entry for this zone
-    if( symTable.IsSeenFunctionName(zoneName) )
+    CallStack.Pop();
+    CallSiteStack.Pop();
+
+    // In engine 3, to save time, the curr call is selected only at func entry/exit,
+    // so that it does not need to be determined on each access
+    if (KnobEngine.Value() == 3)
     {
-        D1ECHO("Exiting Zone : " << zoneName);
-
-        CallStack.Pop();
-        CallSiteStack.Pop();
-        #if (DEBUG>0)
-        CallStack.Print();
-        CallSiteStack.Print();
-        #endif
-
-        // In engine 3, to save time, the curr call is selected only at func entry/exit,
-        // so that it does not need to be determined on each access
-        if (KnobEngine.Value() == 3)
-        {
-            D1ECHO("Setting Current Call for : " << zoneName );
-            SetCurrCallOnExit(lastCallID);
-        }
+        D1ECHO("Setting Current Call for : " << zoneName );
+        SetCurrCallOnExit(calleeID);
     }
 
-    D2ECHO ("Exiting Zone : " << zoneName << " Done");
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
+
+    D1ECHO ("RecordZoneExit(): END");
+}
+
+u32 LoopIterationCount=0;
+VOID RecordLoopBodyEntry(IDNoType loopNo)
+{
+    string loopName = "LOOP";
+    AppendIDToName(loopName, loopNo);
+    AppendIDToName(loopName, LoopIterationCount);
+
+    // for each callsite a unique id is generated
+    // this will result in the generation of unique name
+    IDNoType loopID=0;
+    if( ! GetAvailableORNewID(loopID) ) // returns false if id is new
+    {
+        symTable.InsertFunction(loopName, loopID, lastCallLocIndex);
+    }
+
+    CallStack.Push(loopID);
+}
+
+VOID RecordLoopBodyExit(IDNoType loopNo)
+{
+    CallStack.Pop();
+    ++LoopIterationCount;
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -854,6 +863,11 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             SetCallSite(locidx);
             RecordZoneEntry(val);
         }
+        if( TrackLoopDepend && val == SelectedLoopNo )
+        {
+            SelectAnalysisEngine();
+            LoopIterationCount=0;
+        }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
         if(TrackZones)
@@ -861,14 +875,11 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             D2ECHO("__PIN_MAGIC_ZONE_EXIT");
             RecordZoneExit(val);
         }
-    break;
-    case __PIN_MAGIC_LOOP_ENTER:
         if( TrackLoopDepend && val == SelectedLoopNo )
         {
-            D2ECHO("__PIN_MAGIC_LOOP_ENTER");
-            D2ECHO("setting call site locindex to " << locidx);
-            SelectAnalysisEngine();
-            LoopIterationCount=0;
+            ECHO("__PIN_MAGIC_LOOP_EXIT");
+            SelectDummyAnalysisEngine();
+            ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
         }
     break;
     case __PIN_MAGIC_LOOPBODY_ENTER:
@@ -878,7 +889,6 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             D2ECHO("setting call site locindex to " << locidx);
             SetCallSite(locidx);
             RecordLoopBodyEntry(val);
-
         }
     break;
     case __PIN_MAGIC_LOOPBODY_EXIT:
@@ -886,14 +896,6 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         {
             D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT");
             RecordLoopBodyExit(val);
-        }
-    break;
-    case __PIN_MAGIC_LOOP_EXIT:
-        if( TrackLoopDepend && val == SelectedLoopNo )
-        {
-            D2ECHO("__PIN_MAGIC_LOOP_EXIT");
-            SelectDummyAnalysisEngine();
-            ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
         }
     break;
     default:
@@ -1032,7 +1034,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                     else RemoveCurrDirFromName(fileName);
                     D1ECHO("Marker at " << fileName << ":" << line);
                     // create a temp Location loc, may be inserted in list of locations later
-                    Location loc(line+1, fileName);
+                    Location loc(line+2, fileName); // 2 is added as offset as two markers are inserted
                     u32 locIndex =-1;
                     bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                     if( !found )
@@ -1091,16 +1093,6 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                     return;
                 }
             }
-            #if (FUNCTION_ORDER == UNORDERED)
-            // functions are inserted at the instrumentation time. This implies that
-            // the functions will be in the order of how they are seen at the time of
-            // instrumentation and not in the order of execution
-            else
-            {
-                // First time seeing this valid function name, save it in the list
-                symTable.InsertFunction(rname);
-            }
-            #endif
 
             D1ECHO ("Instrumenting Routine : " << rname);
             RTN_Open(rtn);
@@ -1211,7 +1203,7 @@ void SetupPin(int argc, char *argv[])
     }
 
     // Read locations available in locations.dat
-    //Locations.InitFromFile();
+    Locations.InitFromFile();
 
     TrackObjects = KnobTrackObjects.Value();
     RecordAllAllocations=KnobRecordAllAllocations.Value();
@@ -1227,14 +1219,17 @@ void SetupPin(int argc, char *argv[])
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
     // Insert Unknown Ftn as first symbol
-    symTable.InsertFunction(UnknownFtn, 0); // 0 for unknown location index
+    symTable.InsertFunction(UnknownFtn, GlobalID++, 0); // 0 for unknown location index
 
     // Push the first ftn as UNKNOWN
     // The name can be adjusted from globals.h
     CallStack.Push(FuncName2ID[UnknownFtn]);
+    CallSiteStack.Push(0); // 0 for unknown location index
 
     if( KnobReadStaticObjects.Value() )
+    {
         symTable.InsertStaticSymbols(argc, argv);
+    }
 
     if(KnobSelectFunctions.Value())
     {

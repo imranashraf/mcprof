@@ -121,7 +121,7 @@ string CallSiteStackType::GetCallSitesString()
 {
     string callsites("");
     for ( u16 loc=1; loc < sites.size(); loc++)
-        callsites += Locations.GetLocation(sites[loc]).toString();
+        callsites += Locations.GetLocation(sites[loc]).toString() + " ";
     return callsites;
 }
 

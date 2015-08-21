@@ -246,6 +246,7 @@ void SetCurrDir();
 void PrintCurrDir();
 void RemoveSubstrs(std::string& src, std::string& toRemove);
 void RemoveCurrDirFromName(std::string& src);
-void AppendNoToName(string& name, u32 no);
-void ExtractNoFromName(string& name, u32& no);
+void AppendIDToName(string& name, IDNoType id);
+void ExtractIDFromName(string& name, IDNoType& id);
+
 #endif
