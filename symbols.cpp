@@ -49,6 +49,36 @@ extern bool ShowUnknown;
 // List of all locations of symbols
 LocationList Locations;
 
+bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
+{
+    u32 callsites=0;
+    bool result;
+
+    // get callsites combined with the last lastCallLocIndex
+    if( CallSiteStack.Top() != lastCallLocIndex )
+        callsites = CallSiteStack.GetCallSites(lastCallLocIndex);
+    else
+        callsites = CallSiteStack.GetCallSites(0);
+
+    if(CallSites2ID.find(callsites) != CallSites2ID.end() )
+    {
+        // use existing id as this call site is already seen
+        id = CallSites2ID[callsites];
+        D2ECHO(" callsites " << callsites << " using existing id" << id);
+        result = true;
+    }
+    else
+    {
+        // use a new id for this call site
+        id = GlobalID++;
+        CallSites2ID[callsites] = id;
+        D2ECHO(" callsites " << callsites << " using new id" << id);
+        result = false;
+    }
+
+    return result;
+}
+
 void LocationList::InitFromFile()
 {
     ifstream fin;
@@ -121,30 +151,8 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
 {
     D2ECHO("Inserting Malloc/Calloc/Realloc ");
 
-    u32 callsites;
-    IDNoType id;
-
-    // get callsites combined with the last lastCallLocIndex
-    if( CallSiteStack.Top() != lastCallLocIndex )
-        callsites = CallSiteStack.GetCallSites(lastCallLocIndex);
-    else
-        callsites = CallSiteStack.GetCallSites(0);
-
-    D2ECHO(" callsites " << callsites << " and " << CallSiteStack.GetCallSitesString() );
-
-    if(CallSites2ID.find(callsites) != CallSites2ID.end() )
-    {
-        // use existing id as this call site is already seen
-        id = CallSites2ID[callsites];
-        D2ECHO(" callsites " << callsites << " using existing id" << id);
-    }
-    else
-    {
-        // use a new id for this call site
-        id = GlobalID++;
-        CallSites2ID[callsites] = id;
-        D2ECHO(" callsites " << callsites << " using new id" << id);
-    }
+    IDNoType id=0;
+    GetAvailableORNewID(id, lastCallLocIndex); //ignoring return value
 
     // To check if symbol is already in the table. This is possible because of:
     //      - the list of selected objects provided as input

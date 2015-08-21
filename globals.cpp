@@ -216,11 +216,11 @@ void RemoveCurrDirFromName(std::string& src)
 
 // a simple utility function to give persistence appended
 // names to functions/zones
-void AppendIDToName(string& name, IDNoType id)
+void AddNoToNameEnd(string& name, IDNoType id)
 {
     name += ( "_" + to_string((long long)id) );
 }
-void ExtractIDFromName(string& name, IDNoType& id)
+void RemoveNoFromNameEnd(string& name, IDNoType& id)
 {
     size_t found = name.find_last_of("_");
     if( found != string::npos )

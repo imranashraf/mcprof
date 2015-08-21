@@ -319,14 +319,14 @@ void Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
     for (IDNoType i=0; i<nIterations-1; ++i)
     {
         string prod = "LOOP";
-        AppendIDToName(prod, loopNo);
-        AppendIDToName(prod, i);
+        AddNoToNameEnd(prod, loopNo);
+        AddNoToNameEnd(prod, i);
         IDNoType pid = FuncName2ID[prod];
         for (IDNoType j=i; j<nIterations; ++j)
         {
             string cons = "LOOP";
-            AppendIDToName(cons, loopNo);
-            AppendIDToName(cons, j);
+            AddNoToNameEnd(cons, loopNo);
+            AddNoToNameEnd(cons, j);
             IDNoType cid = FuncName2ID[cons];
             if( Matrix[pid][cid] > 0 )
             {

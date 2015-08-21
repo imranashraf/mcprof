@@ -333,36 +333,6 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
-bool GetAvailableORNewID(IDNoType& id)
-{
-    u32 callsites=0;
-    bool result;
-
-    // get callsites combined with the last lastCallLocIndex
-    if( CallSiteStack.Top() != lastCallLocIndex )
-        callsites = CallSiteStack.GetCallSites(lastCallLocIndex);
-    else
-        callsites = CallSiteStack.GetCallSites(0);
-
-    if(CallSites2ID.find(callsites) != CallSites2ID.end() )
-    {
-        // use existing id as this call site is already seen
-        id = CallSites2ID[callsites];
-        D2ECHO(" callsites " << callsites << " using existing id" << id);
-        result = true;
-    }
-    else
-    {
-        // use a new id for this call site
-        id = GlobalID++;
-        CallSites2ID[callsites] = id;
-        D2ECHO(" callsites " << callsites << " using new id" << id);
-        result = false;
-    }
-
-    return result;
-}
-
 VOID RecordRoutineEntry(CHAR* rname)
 {
     D1ECHO ("Entering Routine : " << rname );
@@ -374,9 +344,10 @@ VOID RecordRoutineEntry(CHAR* rname)
     // this will result in the generation of unique name
     IDNoType calleeID=0;
     string calleeName(rname);
-    if( ! GetAvailableORNewID(calleeID) ) // returns false if id is new
+    if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
     {
-        AppendIDToName(calleeName, calleeID);
+        AddNoToNameEnd(calleeName, lastCallLocIndex);
+        AddNoToNameEnd(calleeName, calleeID);
         symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
         // for callgraph output
@@ -423,7 +394,8 @@ VOID RecordRoutineExit(VOID *ip)
         IDNoType tempID=0;
         IDNoType topRtnID = CallStack.Top();
         string topRtnName = symTable.GetSymName( topRtnID );
-        ExtractIDFromName(topRtnName, tempID); // this is current calleeName on stack
+        RemoveNoFromNameEnd(topRtnName, tempID); // remove previous id
+        RemoveNoFromNameEnd(topRtnName, tempID); // remove previous lastCallLocIndex
 
         if ( calleeName == topRtnName ) // check if current == actual
         {
@@ -462,10 +434,12 @@ VOID RecordZoneEntry(INT32 zoneNo)
     // this will result in the generation of unique name
     IDNoType calleeID=0;
     string calleeName(callerName);
-    ExtractIDFromName(calleeName, calleeID); // remove previous id
-    if( ! GetAvailableORNewID(calleeID) ) // returns false if id is new
+    RemoveNoFromNameEnd(calleeName, calleeID); // remove previous id
+    RemoveNoFromNameEnd(calleeName, calleeID); // remove previous lastCallLocIndex
+    if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
     {
-        AppendIDToName(calleeName, calleeID); // attach new id
+        AddNoToNameEnd(calleeName, lastCallLocIndex); // attach new lastCallLocIndex
+        AddNoToNameEnd(calleeName, calleeID); // attach new id
         symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
         // for callgraph output
@@ -524,13 +498,13 @@ u32 LoopIterationCount=0;
 VOID RecordLoopBodyEntry(IDNoType loopNo)
 {
     string loopName = "LOOP";
-    AppendIDToName(loopName, loopNo);
-    AppendIDToName(loopName, LoopIterationCount);
+    AddNoToNameEnd(loopName, loopNo);
+    AddNoToNameEnd(loopName, LoopIterationCount);
 
     // for each callsite a unique id is generated
     // this will result in the generation of unique name
     IDNoType loopID=0;
-    if( ! GetAvailableORNewID(loopID) ) // returns false if id is new
+    if( ! GetAvailableORNewID(loopID, lastCallLocIndex) ) // returns false if id is new
     {
         symTable.InsertFunction(loopName, loopID, lastCallLocIndex);
     }
@@ -877,7 +851,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
         if( TrackLoopDepend && val == SelectedLoopNo )
         {
-            ECHO("__PIN_MAGIC_LOOP_EXIT");
+            D2ECHO("__PIN_MAGIC_LOOP_EXIT");
             SelectDummyAnalysisEngine();
             ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
         }
@@ -1034,7 +1008,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                     else RemoveCurrDirFromName(fileName);
                     D1ECHO("Marker at " << fileName << ":" << line);
                     // create a temp Location loc, may be inserted in list of locations later
-                    Location loc(line+2, fileName); // 2 is added as offset as two markers are inserted
+                    Location loc(line+1, fileName); // 1 is added as offset as two markers are inserted
                     u32 locIndex =-1;
                     bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                     if( !found )

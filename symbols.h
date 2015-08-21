@@ -354,4 +354,6 @@ public:
     void InitFromFtnFile();
 };
 
+bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex);
+
 #endif
