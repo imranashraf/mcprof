@@ -160,8 +160,8 @@ KNOB<BOOL> KnobTrackStartStop(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobTrackZones(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackZones", "0", "Track zone markers to profile per zones");
 
-KNOB<BOOL> KnobLoopDepend(KNOB_MODE_WRITEONCE, "pintool",
-                            "LoopDepend", "0", "Track markers for loop dependence");
+KNOB<BOOL> KnobTrackLoopDepend(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackLoopDepend", "0", "Track markers for loop dependence");
 
 KNOB<UINT32> KnobSelectedLoopNo(KNOB_MODE_WRITEONCE,  "pintool",
                         "SelectedLoopNo", "0",
@@ -333,9 +333,10 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
-VOID RecordRoutineEntry(CHAR* rname)
+VOID RecordRoutineEntry(ADDRINT irname)
 {
-    D1ECHO ("Entering Routine : " << rname );
+    const char* rname = reinterpret_cast<const char *>(irname);
+    ECHO ("Entering Routine : " << rname );
 
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
@@ -378,7 +379,7 @@ VOID RecordRoutineEntry(CHAR* rname)
         SetCurrCallOnEntry();
     }
 
-    D1ECHO ("Entering Routine : " << rname << " Done" );
+    ECHO ("Entering Routine : " << rname << " Done" );
 }
 
 VOID RecordRoutineExit(VOID *ip)
@@ -444,6 +445,9 @@ VOID RecordZoneEntry(INT32 zoneNo)
 
         // for callgraph output
         cgout << callerName << " LOOP " << calleeName  << endl;
+        cout << endl << callerName << " LOOP " << calleeName  << endl;
+        ECHO( VAR(lastCallLocIndex) << VAR(calleeID) );
+        CallSiteStack.Print();
     }
 
     // recursion is not possible in case of zones
@@ -504,18 +508,17 @@ VOID RecordLoopBodyEntry(IDNoType loopNo)
     // for each callsite a unique id is generated
     // this will result in the generation of unique name
     IDNoType loopID=0;
-    if( ! GetAvailableORNewID(loopID, lastCallLocIndex) ) // returns false if id is new
-    {
-        symTable.InsertFunction(loopName, loopID, lastCallLocIndex);
-    }
-
+    // returns false if id is new
+    GetAvailableORNewID(loopID, lastCallLocIndex);  // we are ignoring return 
+                                                    // as we always need new id
+    loopID+=LoopIterationCount;
+    symTable.InsertFunction(loopName, loopID, lastCallLocIndex);
     CallStack.Push(loopID);
 }
 
 VOID RecordLoopBodyExit(IDNoType loopNo)
 {
     CallStack.Pop();
-    ++LoopIterationCount;
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -801,8 +804,6 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
 {
     u32 cmd = (arg & __PIN_CMD_MASK) >> __PIN_CMD_OFFSET;
     u32 val = arg & __PIN_ID_MASK;
-//     u32 fid  = CallStack.Top();
-//     string fname = symTable.GetSymName(fid);
     D2ECHO("Recieved MAGIC " << VAR(cmd) << VAR(val) << VAR(arg) << VAR(arg1) );
 
     switch(cmd)
@@ -830,46 +831,58 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
     break;
     case __PIN_MAGIC_ZONE_ENTER:
-        if(TrackZones)
+        D2ECHO("__PIN_MAGIC_ZONE_ENTER");
+        if( TrackZones || TrackLoopDepend )
         {
-            D2ECHO("__PIN_MAGIC_ZONE_ENTER");
             D2ECHO("setting call site locindex to " << locidx);
             SetCallSite(locidx);
             RecordZoneEntry(val);
         }
-        if( TrackLoopDepend && val == SelectedLoopNo )
+        if( TrackLoopDepend && val==SelectedLoopNo )
         {
             SelectAnalysisEngine();
             LoopIterationCount=0;
         }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
-        if(TrackZones)
+    {
+        D2ECHO("__PIN_MAGIC_ZONE_EXIT");
+        IDNoType loopID;
+        string loopName;
+        if( TrackZones || TrackLoopDepend )
         {
-            D2ECHO("__PIN_MAGIC_ZONE_EXIT");
+            // we need to note the name of the loop to print its dependence
+            // information before exiting
+            loopID = CallStack.Top();
+            loopName = symTable.GetSymName(loopID);
+            //ECHO("Exiting Zone/Loop No : " << val << " , Zone/Loop Name : " << loopName);
+            // now exit the loop
             RecordZoneExit(val);
         }
-        if( TrackLoopDepend && val == SelectedLoopNo )
+        if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            D2ECHO("__PIN_MAGIC_LOOP_EXIT");
             SelectDummyAnalysisEngine();
-            ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
+            bool result = ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
+            string status = result?"independent":"dependent";
+            cout << "\nIterations of loop " << loopName << " " << status << endl << endl;
         }
+    }
     break;
     case __PIN_MAGIC_LOOPBODY_ENTER:
-        if( TrackLoopDepend && val == SelectedLoopNo )
+        if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            D2ECHO("__PIN_MAGIC_LOOPBODY_ENTER");
+            D2ECHO("__PIN_MAGIC_LOOPBODY_ENTER  for Loop No : " << val << " Iterations : " << LoopIterationCount);
             D2ECHO("setting call site locindex to " << locidx);
             SetCallSite(locidx);
             RecordLoopBodyEntry(val);
         }
     break;
     case __PIN_MAGIC_LOOPBODY_EXIT:
-        if( TrackLoopDepend && val == SelectedLoopNo )
+        if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT");
+            D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT for Loop No : " << val << " Iterations : " << LoopIterationCount);
             RecordLoopBodyExit(val);
+            ++LoopIterationCount;
         }
     break;
     default:
@@ -1006,14 +1019,14 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                     // Remove the complete path of the filename
                     if(fileName == "")  fileName = "NA";
                     else RemoveCurrDirFromName(fileName);
-                    D1ECHO("Marker at " << fileName << ":" << line);
+                    D2ECHO("Marker at " << fileName << ":" << line);
                     // create a temp Location loc, may be inserted in list of locations later
-                    Location loc(line+1, fileName); // 1 is added as offset as two markers are inserted
+                    Location loc(line+1, fileName); // 1 is added as offset as loop start at next line of marker
                     u32 locIndex =-1;
                     bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
                     if( !found )
                     {
-                        D2ECHO("Location " << loc.toString() << " not found, Inserting");
+                        D2ECHO("Marker Location " << loc.toString() << " not found, Inserting");
                         locIndex = Locations.Insert(loc);
                     }
 
@@ -1068,11 +1081,15 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                 }
             }
 
-            D1ECHO ("Instrumenting Routine : " << rname);
+            char* cstr = new char[ rname.size() ];  // we need to dynamically allocate it so that it is available
+                                                    // at analysis time
+            strcpy(cstr, rname.c_str() );
+            ECHO ("Instrumenting Routine : " << cstr );
+
             RTN_Open(rtn);
 
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                           IARG_ADDRINT, rname.c_str(),
+                           IARG_ADDRINT,  (ADDRINT)(cstr) ,
                            IARG_END);
 
             RTN_Close(rtn);
@@ -1186,7 +1203,7 @@ void SetupPin(int argc, char *argv[])
     ShowUnknown = KnobShowUnknown.Value();
     TrackStartStop = KnobTrackStartStop.Value();
     TrackZones = KnobTrackZones.Value();
-    TrackLoopDepend = KnobLoopDepend.Value();
+    TrackLoopDepend = KnobTrackLoopDepend.Value();
     Threshold = KnobThreshold.Value();
     SelectedLoopNo = KnobSelectedLoopNo.Value();
 

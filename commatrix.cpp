@@ -313,7 +313,7 @@ void Matrix2D::PrintDot(ostream &dotout)
     dotout << "}" << endl;
 }
 
-void Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
+bool Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
 {
     bool result=true;
     for (IDNoType i=0; i<nIterations-1; ++i)
@@ -322,7 +322,7 @@ void Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
         AddNoToNameEnd(prod, loopNo);
         AddNoToNameEnd(prod, i);
         IDNoType pid = FuncName2ID[prod];
-        for (IDNoType j=i; j<nIterations; ++j)
+        for (IDNoType j=i+1; j<nIterations; ++j)
         {
             string cons = "LOOP";
             AddNoToNameEnd(cons, loopNo);
@@ -336,7 +336,5 @@ void Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
             }
         }
     }
-
-    if( result ) cout << " Iterations of loop " << loopNo << " are independent " << endl;
-    else         cout << " Iterations of loop " << loopNo << " are dependent " << endl;
+    return result;
 }

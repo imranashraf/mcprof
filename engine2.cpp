@@ -64,7 +64,7 @@ void RecordWriteEngine2(uptr addr, u32 size)
         cout << "W " << addr+i << endl;
     #endif
 
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
+    D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
     if( objid == UnknownID )
     {
         for(u32 i=0; i<size; i++)
@@ -99,7 +99,7 @@ void RecordWriteEngine2(uptr addr, u32 size)
 void RecordReadEngine2(uptr addr, u32 size)
 {
     IDNoType cons = CallStack.Top();
-    D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
+    D2ECHO("Recording Read of " << VAR(size) << " by " << FUNC(cons) << " at " << ADDR(addr) << dec);
     IDNoType prod=0;
     IDNoType objid = GetObjectID(addr);
     D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
