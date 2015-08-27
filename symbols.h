@@ -121,15 +121,7 @@ public:
 
         return false;
     }
-    void Print(ostream& fout)
-    {
-        fout << "# list of locations in order" << endl;
-        for(u32 i=0; i<locations.size(); ++i)
-        {
-            fout << locations[i].toString() << endl;
-        }
-    }
-
+    void Print();
     void InitFromFile();
 };
 

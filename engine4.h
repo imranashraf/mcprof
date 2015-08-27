@@ -34,60 +34,20 @@
  *
  */
 
-#ifndef COMMATRIX_H
-#define COMMATRIX_H
+#ifndef ENGINE4_H
+#define ENGINE4_H
 
 #include "globals.h"
-#include "symbols.h"
 
-#include <vector>
-#include <iostream>
-#include <map>
-#include <set>
-#include <string>
-#include <cmath>
+#include <cassert>
+#include <cstddef>
 #include <iomanip>
+#include <iostream>
 
-extern Symbols symTable;
+// if BYTELEVEL is defined than the granularity is Byte
+// #define BYTELEVEL
 
-using namespace std;
-
-class Matrix2D
-{
-private:
-    vector< vector<float> > Matrix;
-    //most of the applications have functions less than 256
-    static const u32 DEFAULT_SIZE = 9000; //15000
-    set<IDNoType> FilledRows;
-    set<IDNoType> FilledCols;
-
-public:
-    Matrix2D();
-    Matrix2D(IDNoType size);
-    void inline RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
-    {
-        D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
-            << FUNC(cons) << " of size: " << size );
-
-        if( prod < Matrix.size() && cons < Matrix.size() )
-            Matrix[prod][cons] += size;
-    }
-
-    float MaxCommunication(u16 StartID);
-    void Print(ostream &fout);
-    void PrintMatrix(u32 LoopIterationCount);
-    void PrintDependenceMatrix();
-    void PrintDot();
-    void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
-    bool IsFilledRow(IDNoType r);
-    bool IsFilledCol(IDNoType c);
-    bool CheckLoopIndependence(u32 nIterations);
-    void Clear()
-    {
-        for(u32 i=0;i<DEFAULT_SIZE;i++)
-            for(u32 j=0;j<DEFAULT_SIZE;j++)
-                Matrix[i][j]=0.0f;
-    }
-};
+void RecordWriteEngine4(uptr addr, u32 size);
+void RecordReadEngine4(uptr addr, u32 size);
 
 #endif

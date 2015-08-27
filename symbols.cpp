@@ -117,6 +117,19 @@ void LocationList::InitFromFile()
     }
     ECHO("Initialized " << counter << " locations from file");
 }
+void LocationList::Print()
+{
+    std::ofstream locout;
+    std::string locFileName("locations.dat");
+    ECHO("Writing locations to " << locFileName);
+    OpenOutFile(locFileName, locout);
+    locout << "# list of locations in order" << endl;
+    for(u32 i=0; i<locations.size(); ++i)
+    {
+        locout << locations[i].toString() << endl;
+    }
+    locout.close();
+}
 
 string& Symbols::GetSymName(IDNoType id)
 {

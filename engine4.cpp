@@ -34,60 +34,40 @@
  *
  */
 
-#ifndef COMMATRIX_H
-#define COMMATRIX_H
-
 #include "globals.h"
+#include "shadow.h"
+#include "engine4.h"
+#include "commatrix.h"
 #include "symbols.h"
+#include "callstack.h"
 
-#include <vector>
-#include <iostream>
-#include <map>
-#include <set>
-#include <string>
-#include <cmath>
-#include <iomanip>
+extern CallStackType CallStack;
+extern Matrix2D ComMatrix;
 
 extern Symbols symTable;
+extern bool TrackObjects;
+extern bool NoseDown;
+extern u32 LoopIterationCount;
 
-using namespace std;
-
-class Matrix2D
+void RecordWriteEngine4(uptr addr, u32 size)
 {
-private:
-    vector< vector<float> > Matrix;
-    //most of the applications have functions less than 256
-    static const u32 DEFAULT_SIZE = 9000; //15000
-    set<IDNoType> FilledRows;
-    set<IDNoType> FilledCols;
-
-public:
-    Matrix2D();
-    Matrix2D(IDNoType size);
-    void inline RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
+    IDNoType prod = LoopIterationCount;
+    D2ECHO("Recording Write of  " << VAR(size) << " by " << prod << " at " << ADDR(addr));
+    for(u32 i=0; i<size; i++)
     {
-        D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
-            << FUNC(cons) << " of size: " << size );
-
-        if( prod < Matrix.size() && cons < Matrix.size() )
-            Matrix[prod][cons] += size;
+        SetProducer(prod, addr+i);
     }
+}
 
-    float MaxCommunication(u16 StartID);
-    void Print(ostream &fout);
-    void PrintMatrix(u32 LoopIterationCount);
-    void PrintDependenceMatrix();
-    void PrintDot();
-    void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
-    bool IsFilledRow(IDNoType r);
-    bool IsFilledCol(IDNoType c);
-    bool CheckLoopIndependence(u32 nIterations);
-    void Clear()
+void RecordReadEngine4(uptr addr, u32 size)
+{
+    IDNoType prod;
+    IDNoType cons = LoopIterationCount;
+    D2ECHO("Recording comm of " << VAR(size) << " b/w " << GetProducer(addr) << " and " << cons << ADDR(addr) << dec);
+    for(u32 i=0; i<size; i++)
     {
-        for(u32 i=0;i<DEFAULT_SIZE;i++)
-            for(u32 j=0;j<DEFAULT_SIZE;j++)
-                Matrix[i][j]=0.0f;
+        prod = GetProducer(addr+i);
+        D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
+        ComMatrix.RecordCommunication(prod, cons, 1);
     }
-};
-
-#endif
+}

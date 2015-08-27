@@ -45,6 +45,7 @@
 #include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
+#include "engine4.h"
 #include "counters.h"
 
 #include <iostream>
@@ -65,11 +66,13 @@ extern Symbols symTable;
 extern Matrix2D ComMatrix;
 extern map <u32,IDNoType> CallSites2ID;
 
-std::ofstream dotout;
-std::ofstream mout;
 std::ofstream pcout;
 std::ofstream cgout;
-std::ofstream locout;
+std::ofstream ilout;
+
+// these maps are used to record each execution of loop as dependent/independent
+set<string>dependentLoopExecutions;
+set<string>independentLoopExecutions;
 
 CallStackType CallStack;
 CallSiteStackType CallSiteStack;
@@ -78,6 +81,7 @@ void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 void (*InstrCounter)(ADDRINT);
 
+u32 Engine=1;
 bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
@@ -91,19 +95,21 @@ u32 SelectedLoopNo;
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
+u32 LoopIterationCount=1;
+
 // Global running instruction counter
 //static UINT64 rInstrCount = 0;
 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
-KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
-                            "MatFile", "matrix.out",
-                            "specify file name for matrix output");
-
-KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
-                         "DotFile", "communication.dot",
-                         "specify file name for output in dot");
+// KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
+//                             "MatFile", "matrix.out",
+//                             "specify file name for matrix output");
+// 
+// KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
+//                          "DotFile", "communication.dot",
+//                          "specify file name for output in dot");
 
 KNOB<string> KnobPerCallFile(KNOB_MODE_WRITEONCE,  "pintool",
                          "PerCallFile", "percallaccesses.out",
@@ -207,7 +213,7 @@ VOID dummyInstrCounter(ADDRINT c){}
 void SelectAnalysisEngine()
 {
     InstrCounter = doInstrCount;
-    switch( KnobEngine.Value() )
+    switch( Engine )
     {
     case 1:
         ReadRecorder = RecordReadEngine1;
@@ -220,6 +226,10 @@ void SelectAnalysisEngine()
     case 3:
         ReadRecorder = RecordReadEngine3;
         WriteRecorder = RecordWriteEngine3;
+        break;
+    case 4:
+        ReadRecorder = RecordReadEngine4;
+        WriteRecorder = RecordWriteEngine4;
         break;
     default:
         ECHO("Specify a valid Engine number to be used");
@@ -336,7 +346,7 @@ uptr currStartAddress;
 VOID RecordRoutineEntry(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
-    ECHO ("Entering Routine : " << rname );
+    D1ECHO ("Entering Routine : " << rname );
 
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
@@ -379,7 +389,7 @@ VOID RecordRoutineEntry(ADDRINT irname)
         SetCurrCallOnEntry();
     }
 
-    ECHO ("Entering Routine : " << rname << " Done" );
+    D1ECHO ("Entering Routine : " << rname << " Done" );
 }
 
 VOID RecordRoutineExit(VOID *ip)
@@ -445,9 +455,9 @@ VOID RecordZoneEntry(INT32 zoneNo)
 
         // for callgraph output
         cgout << callerName << " LOOP " << calleeName  << endl;
-        cout << endl << callerName << " LOOP " << calleeName  << endl;
-        ECHO( VAR(lastCallLocIndex) << VAR(calleeID) );
-        CallSiteStack.Print();
+        //cout << endl << callerName << " LOOP " << calleeName  << endl;
+        D2ECHO( VAR(lastCallLocIndex) << VAR(calleeID) );
+        // CallSiteStack.Print();
     }
 
     // recursion is not possible in case of zones
@@ -496,29 +506,6 @@ VOID RecordZoneExit(INT32 zoneNo)
     #endif
 
     D1ECHO ("RecordZoneExit(): END");
-}
-
-u32 LoopIterationCount=0;
-VOID RecordLoopBodyEntry(IDNoType loopNo)
-{
-    string loopName = "LOOP";
-    AddNoToNameEnd(loopName, loopNo);
-    AddNoToNameEnd(loopName, LoopIterationCount);
-
-    // for each callsite a unique id is generated
-    // this will result in the generation of unique name
-    IDNoType loopID=0;
-    // returns false if id is new
-    GetAvailableORNewID(loopID, lastCallLocIndex);  // we are ignoring return 
-                                                    // as we always need new id
-    loopID+=LoopIterationCount;
-    symTable.InsertFunction(loopName, loopID, lastCallLocIndex);
-    CallStack.Push(loopID);
-}
-
-VOID RecordLoopBodyExit(IDNoType loopNo)
-{
-    CallStack.Pop();
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -831,7 +818,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
     break;
     case __PIN_MAGIC_ZONE_ENTER:
-        D2ECHO("__PIN_MAGIC_ZONE_ENTER");
+        D1ECHO("__PIN_MAGIC_ZONE_ENTER");
         if( TrackZones || TrackLoopDepend )
         {
             D2ECHO("setting call site locindex to " << locidx);
@@ -841,7 +828,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
             SelectAnalysisEngine();
-            LoopIterationCount=0;
+            LoopIterationCount=1;
         }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
@@ -851,8 +838,8 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         string loopName;
         if( TrackZones || TrackLoopDepend )
         {
-            // we need to note the name of the loop to print its dependence
-            // information before exiting
+            // before exiting, we need to note the name of the exiting zone/loop to print
+            // its dependence information later
             loopID = CallStack.Top();
             loopName = symTable.GetSymName(loopID);
             //ECHO("Exiting Zone/Loop No : " << val << " , Zone/Loop Name : " << loopName);
@@ -862,9 +849,17 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
             SelectDummyAnalysisEngine();
-            bool result = ComMatrix.CheckLoopIndependence(val, LoopIterationCount);
-            string status = result?"independent":"dependent";
-            cout << "\nIterations of loop " << loopName << " " << status << endl << endl;
+            bool result = ComMatrix.CheckLoopIndependence(LoopIterationCount);
+            if(result)
+            { //independent
+                independentLoopExecutions.insert(loopName);
+            }
+            else
+            { // dependent
+                dependentLoopExecutions.insert(loopName);
+            }
+            ComMatrix.PrintMatrix(LoopIterationCount);
+            ComMatrix.Clear();
         }
     }
     break;
@@ -872,16 +867,14 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
             D2ECHO("__PIN_MAGIC_LOOPBODY_ENTER  for Loop No : " << val << " Iterations : " << LoopIterationCount);
-            D2ECHO("setting call site locindex to " << locidx);
-            SetCallSite(locidx);
-            RecordLoopBodyEntry(val);
+            CallStack.Push(LoopIterationCount);
         }
     break;
     case __PIN_MAGIC_LOOPBODY_EXIT:
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
             D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT for Loop No : " << val << " Iterations : " << LoopIterationCount);
-            RecordLoopBodyExit(val);
+            CallStack.Pop();
             ++LoopIterationCount;
         }
     break;
@@ -1084,7 +1077,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
             char* cstr = new char[ rname.size() ];  // we need to dynamically allocate it so that it is available
                                                     // at analysis time
             strcpy(cstr, rname.c_str() );
-            ECHO ("Instrumenting Routine : " << cstr );
+            D2ECHO ("Instrumenting Routine : " << cstr );
 
             RTN_Open(rtn);
 
@@ -1145,12 +1138,9 @@ VOID TheEnd(INT32 code, VOID *v)
         PrintAccesses();
         break;
     case 2:
-        OpenOutFile(KnobDotFile.Value(), dotout);
-        ComMatrix.PrintDot(dotout);
-        dotout.close();
-        OpenOutFile(KnobMatrixFile.Value(), mout);
-        ComMatrix.PrintMatrix(mout);
-        mout.close();
+        ComMatrix.PrintDot();
+//         ComMatrix.PrintMatrix();
+        ComMatrix.PrintDependenceMatrix();
         break;
     case 3:
         PrintAllCalls(pcout);
@@ -1165,11 +1155,29 @@ VOID TheEnd(INT32 code, VOID *v)
     // PrintInstrCount();
     PrintInstrPercents();
     // open the file to store locations
-    OpenOutFile("locations.dat", locout);
-    Locations.Print(locout);
+    Locations.Print();
 
-    locout.close();
     cgout.close();
+
+    if(TrackLoopDepend)
+    {
+        set<string>::iterator it1;
+        set<string>::iterator it2;
+        for( it1=independentLoopExecutions.begin(); it1 !=independentLoopExecutions.end(); ++it1 )
+        {
+            it2 = dependentLoopExecutions.find(*it1);
+            if( it2 == dependentLoopExecutions.end() )
+            {
+                ilout << *it1 << " ";
+                ECHO("Iterations of loop " << *it1 << " are independent");
+            }
+        }
+        for( it1=dependentLoopExecutions.begin(); it1 !=dependentLoopExecutions.end(); ++it1 )
+        {
+            ECHO("Iterations of loop " << *it1 << " are dependent");
+        }
+        ilout.close();
+    }
 }
 
 /*!
@@ -1196,6 +1204,7 @@ void SetupPin(int argc, char *argv[])
     // Read locations available in locations.dat
     Locations.InitFromFile();
 
+    Engine = KnobEngine.Value();
     TrackObjects = KnobTrackObjects.Value();
     RecordAllAllocations=KnobRecordAllAllocations.Value();
     FlushCalls=KnobFlushCalls.Value();
@@ -1206,6 +1215,9 @@ void SetupPin(int argc, char *argv[])
     TrackLoopDepend = KnobTrackLoopDepend.Value();
     Threshold = KnobThreshold.Value();
     SelectedLoopNo = KnobSelectedLoopNo.Value();
+
+    if(TrackLoopDepend)
+        Engine=4;
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
@@ -1262,6 +1274,9 @@ void SetupPin(int argc, char *argv[])
 
     // open the file to store call graph
     OpenOutFile("callgraph.dat", cgout);
+
+    if(TrackLoopDepend)
+        OpenOutFile("independentloopnames.dat", ilout);
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);

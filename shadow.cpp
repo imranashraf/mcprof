@@ -70,10 +70,10 @@ void PrintShadowMap()
 {
 #if (MODE==HYBRID)
     ShadowMem.Print();
-    ECHO(VAR(tableCounter));
-    ECHO(VAR(memmapCounter));
+    D1ECHO(VAR(tableCounter));
+    D1ECHO(VAR(memmapCounter));
 #else
-    ECHO("NOT Using Mem Map as in TABLES Mode");
+    D1ECHO("NOT Using Mem Map as in TABLES Mode");
 #endif
 }
 

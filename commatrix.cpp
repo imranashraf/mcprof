@@ -132,53 +132,92 @@ bool Matrix2D::IsFilledCol(IDNoType c)
 
 // Use the following to print tabs which will not be visually appealing but it will
 // generate the columns properly for further processing by other tools
-#define ALIGNMENT ("    ")
+// #define ALIGNMENT ("    ")
+// void Matrix2D::PrintMatrix()
+// {
+//     std::ofstream mout;
+//     string matrixFileName("matrix.out");
+//     OpenOutFile(matrixFileName, mout);
+//     ECHO("Printing communication matrix as table in " << matrixFileName);
+//     IDNoType TotalSymbols = symTable.TotalSymbolCount();
+//     CHECK_LT(TotalSymbols, Matrix.size());
+// 
+//     u16 StartID;
+//     if(ShowUnknown)
+//         StartID = 0; //use this if you want to print unknown
+//     else
+//         StartID = 1; //use this if you dont want to print unknown
+// 
+//     // first update the map which contains the filled rows and columns
+//     UpdateEmptyRowsCols(StartID, TotalSymbols);
+// 
+//     mout << ALIGNMENT << " ";
+//     for (IDNoType c=StartID; c<TotalSymbols; c++)
+//     {
+//         if( IsFilledCol(c) )
+//         {
+//             mout << ALIGNMENT << symTable.GetSymName(c);
+//         }
+//     }
+//     mout << endl;
+// 
+//     for (IDNoType p=StartID; p<TotalSymbols; p++)
+//     {
+//         if( IsFilledRow(p) )
+//         {
+//             mout << ALIGNMENT << symTable.GetSymName(p);
+// 
+//             for (IDNoType c=StartID; c<TotalSymbols; c++)
+//             {
+//                 if( IsFilledCol(c) )
+//                 {
+//                     mout << ALIGNMENT << Matrix[p][c];
+//                 }
+//             }
+//             mout<<endl;
+//         }
+//     }
+//     mout.close();
+// }
+// #undef ALIGNMENT
 
-void Matrix2D::PrintMatrix(ostream &fout)
+// a complete/simplified printing of matrix for loop dependence testing
+#define ALIGNMENT setw(8)
+void Matrix2D::PrintMatrix(u32 LoopIterationCount)
 {
-    ECHO("Printing communication matrix as table for processing by tool");
-    IDNoType TotalSymbols = symTable.TotalSymbolCount();
-    CHECK_LT(TotalSymbols, Matrix.size());
+    std::ofstream mout;
+    string matrixFileName("matrix.out");
+    OpenOutFile(matrixFileName, mout);
+    ECHO("Printing communication matrix as table in " << matrixFileName);
+    CHECK_LT(LoopIterationCount, Matrix.size());
 
-    u16 StartID;
-    if(ShowUnknown)
-        StartID = 0; //use this if you want to print unknown
-    else
-        StartID = 1; //use this if you dont want to print unknown
-
-    // first update the map which contains the filled rows and columns
-    UpdateEmptyRowsCols(StartID, TotalSymbols);
-
-    fout << ALIGNMENT << " ";
-    for (IDNoType c=StartID; c<TotalSymbols; c++)
+    mout << ALIGNMENT << "#";
+    for (IDNoType c=1; c<LoopIterationCount; c++)
     {
-        if( IsFilledCol(c) )
-        {
-            fout << ALIGNMENT << symTable.GetSymName(c);
-        }
+        mout << ALIGNMENT << c;
     }
-    fout << endl;
+    mout << endl;
 
-    for (IDNoType p=StartID; p<TotalSymbols; p++)
+    for (IDNoType p=1; p<LoopIterationCount; p++)
     {
-        if( IsFilledRow(p) )
+        mout << ALIGNMENT << p;
+        for (IDNoType c=1; c<LoopIterationCount; c++)
         {
-            fout << ALIGNMENT << symTable.GetSymName(p);
-
-            for (IDNoType c=StartID; c<TotalSymbols; c++)
-            {
-                if( IsFilledCol(c) )
-                {
-                    fout << ALIGNMENT << Matrix[p][c];
-                }
-            }
-            fout<<endl;
+            mout << ALIGNMENT << Matrix[p][c];
         }
+        mout<<endl;
     }
+    mout.close();
+}
+#undef ALIGNMENT
 
-    /******** for callstack.dot  *************/
+void Matrix2D::PrintDependenceMatrix()
+{
+    string depFileName("dependencies.dat");
+    ECHO("Printing dependencies in " << depFileName);
     std::ofstream depout;
-    OpenOutFile("dependencies.dat", depout);
+    OpenOutFile(depFileName, depout);
+    IDNoType TotalSymbols = symTable.TotalSymbolCount();
     depout << "# producer    consumer    communication " << endl;
     for (IDNoType pid=0; pid<TotalSymbols; pid++)
     {
@@ -191,14 +230,14 @@ void Matrix2D::PrintMatrix(ostream &fout)
         }
     }
     depout.close();
-    /******** for callstack.dot  *************/
-
 }
-#undef ALIGNMENT
 
-void Matrix2D::PrintDot(ostream &dotout)
+void Matrix2D::PrintDot()
 {
-    ECHO("Printing communication in DOT");
+    std::ofstream dotout;
+    string dotFileName("communication.dot");
+    OpenOutFile(dotFileName, dotout);
+    ECHO("Printing communication as DOT in " << dotFileName);
     u16 TotalSymbols = GlobalID;
     D1ECHO( VAR(TotalSymbols) );
     CHECK_LT(TotalSymbols, Matrix.size());
@@ -311,23 +350,16 @@ void Matrix2D::PrintDot(ostream &dotout)
     }
 
     dotout << "}" << endl;
+    dotout.close();
 }
 
-bool Matrix2D::CheckLoopIndependence( IDNoType loopNo, u32 nIterations)
+bool Matrix2D::CheckLoopIndependence(u32 nIterations)
 {
     bool result=true;
-    for (IDNoType i=0; i<nIterations-1; ++i)
+    for (IDNoType pid=1; pid<nIterations-1; ++pid) // iterations start from 1
     {
-        string prod = "LOOP";
-        AddNoToNameEnd(prod, loopNo);
-        AddNoToNameEnd(prod, i);
-        IDNoType pid = FuncName2ID[prod];
-        for (IDNoType j=i+1; j<nIterations; ++j)
+        for (IDNoType cid=pid+1; cid<nIterations; ++cid)
         {
-            string cons = "LOOP";
-            AddNoToNameEnd(cons, loopNo);
-            AddNoToNameEnd(cons, j);
-            IDNoType cid = FuncName2ID[cons];
             if( Matrix[pid][cid] > 0 )
             {
                 D2ECHO( prod << " "<< cons << "  " << Matrix[pid][cid] );
