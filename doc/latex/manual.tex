@@ -14,7 +14,6 @@
 \usepackage{dcolumn}
 \usepackage{flushend}
 \usepackage{capt-of}
-\usepackage{arydshln}
 \usepackage{booktabs}
 \usepackage{rotating}
 \usepackage{textcomp}
@@ -104,28 +103,32 @@ with MCProf.  If not, see <http://www.gnu.org/licenses/>.
 %----------------------------------------------------------------------------------
 \section{Reference \MCPROF{}}
 
-
-\subsection{To cite MCProf Tool}
+\subsection{To cite MCProf}
 
 {
-\scriptsize
+\tiny
 \begin{Verbatim}[frame=single, samepage=true]
-"MCProf: Open-source Memory and Communication Profiler"
-Imran Ashraf
-URL: https://bitbucket.org/imranashraf/mcprof
+@inproceedings{mcprof,
+author = "I. Ashraf and V.M. Sima and K.L.M. Bertels",
+title = "Intra-Application Data-Communication Characterization",
+booktitle = "Proc. 1st International Workshop on Communication Architectures at Extreme Scale",
+address = "Frankfurt, Germany",
+month = "July",
+year = "2015",
+}
 \end{Verbatim}
 }
 
-\subsection{To cite MCProf Design OR MCProf Shadow Memory Technique}
-
-{
-\scriptsize
-\begin{Verbatim}[frame=single, samepage=true]
-"Intra-Application Data-Communication Characterization"
-Imran Ashraf, Vlad-Mihai Sima and Koen Bertels
-Technical report, Delft University of Technology, 2015
-\end{Verbatim}
-}
+% \subsection{To cite MCProf Tool}
+% 
+% {
+% \scriptsize
+% \begin{Verbatim}[frame=single, samepage=true]
+% "MCProf: Open-source Memory and Communication Profiler"
+% Imran Ashraf
+% URL: https://bitbucket.org/imranashraf/mcprof
+% \end{Verbatim}
+% }
 
 
 %----------------------------------------------------------------------------------
@@ -181,8 +184,10 @@ In order to setup and use \MCPROF{} the following two packages are required:
 
 \item libdwarf-dev
 
-\item  graphviz Dot utility for converting the generated communication graphs
+\item graphviz Dot utility for converting the generated communication graphs
     from DOT to pdf formats
+
+\item gnuplot to plot communication matrix as graph
 
 \end{itemize}
 
@@ -198,6 +203,7 @@ sudo apt-get install g++
 sudo apt-get install libelf-dev
 sudo apt-get install libdwarf-dev
 sudo apt-get install graphviz
+sudo apt-get install gnuplot
 \end{Verbatim}
 }
 

@@ -46,22 +46,22 @@ Matrix2D::Matrix2D()
 {
     IDNoType cols=DEFAULT_SIZE;
     IDNoType rows=DEFAULT_SIZE;
-    float value=0.0f;
+    CommValType value=0;
     D1ECHO("Default Comm Matrix Size = " << DEFAULT_SIZE);
-    Matrix.resize( cols , vector<float>( rows , value) );
+    Matrix.resize( cols , vector<CommValType>( rows , value) );
 }
 
 Matrix2D::Matrix2D(IDNoType size)
 {
     IDNoType cols=size;
     IDNoType rows=size;
-    float value=0.0f;
-    Matrix.resize( cols , vector<float>( rows , value) );
+    CommValType value=0;
+    Matrix.resize( cols , vector<CommValType>( rows , value) );
 }
 
-float Matrix2D::MaxCommunication(u16 StartID)
+CommValType Matrix2D::MaxCommunication(u16 StartID)
 {
-    float currmax=0.0f;
+    CommValType currmax=0;
     // Following iterations can be optimized to TotalSymbols instead of size
     for (IDNoType p=StartID; p<Matrix.size(); p++)
     {
@@ -92,10 +92,10 @@ void Matrix2D::UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID)
 {
     for (IDNoType p=StartID; p<EndID; p++)
     {
-        float rowsum=0.0;
+        CommValType rowsum=0;
         for (IDNoType c=StartID; c<EndID; c++)
         {
-            float comm = Matrix[p][c];
+            CommValType comm = Matrix[p][c];
             if ( comm > Threshold )
                 rowsum+=comm;
         }
@@ -105,10 +105,10 @@ void Matrix2D::UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID)
 
     for (IDNoType c=StartID; c<EndID; c++)
     {
-        float colsum=0.0;
+        CommValType colsum=0;
         for (IDNoType p=StartID; p<EndID; p++)
         {
-            float comm = Matrix[p][c];
+            CommValType comm = Matrix[p][c];
             if ( comm > Threshold )
                 colsum+=comm;
         }
@@ -199,7 +199,7 @@ void Matrix2D::PrintDot(ostream &dotout)
     else
         StartID = 1;
 
-    float maxComm = MaxCommunication(StartID);
+    CommValType maxComm = MaxCommunication(StartID);
 
     #if (FUNCTION_ORDER == ORDERED)
     // this sorting of functions is done in the order of insertion to map
@@ -271,10 +271,10 @@ void Matrix2D::PrintDot(ostream &dotout)
     {
         for (u16 c=StartID; c<TotalSymbols; c++)
         {
-            float comm = Matrix[p][c];
+            CommValType comm = Matrix[p][c];
             if( comm > Threshold )
             {
-                color = (int) (  1023 *  log((float)(comm)) / log((float)maxComm)  );
+                color = (int) (  1023 *  log((CommValType)(comm)) / log((CommValType)maxComm)  );
                 dotout << dec
                        << "\"" << (u16)p << "\""
                        << "->"

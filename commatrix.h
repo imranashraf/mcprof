@@ -52,12 +52,14 @@ extern Symbols symTable;
 
 using namespace std;
 
+typedef u64 CommValType;
+
 class Matrix2D
 {
 private:
-    vector< vector<float> > Matrix;
+    vector< vector<CommValType> > Matrix;
     //most of the applications have functions less than 256
-    static const u32 DEFAULT_SIZE = 1024; //15000
+    static const u32 DEFAULT_SIZE = 2048; //15000
     set<IDNoType> FilledRows;
     set<IDNoType> FilledCols;
 
@@ -74,7 +76,7 @@ public:
             Matrix[prod][cons] += size;
     }
 
-    float MaxCommunication(u16 StartID);
+    CommValType MaxCommunication(u16 StartID);
     void Print(ostream &fout);
     void PrintMatrix(ostream &fout);
     void PrintDot(ostream &dotout);

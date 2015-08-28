@@ -188,7 +188,7 @@ openingFileOrder=makefile.rules globals.h globals.cpp markers.h \
 open:
 	kate $(openingFileOrder) &> /dev/null &
 vimopen:
-	vim -p $(openingFileOrder)
+	vim $(openingFileOrder)
 
 tarball:
 	make clean
