@@ -111,6 +111,8 @@ void RecordReadEngine2(uptr addr, u32 size)
 
     if( objid == UnknownID )
     {
+        D2ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
+
         for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);

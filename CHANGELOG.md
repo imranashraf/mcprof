@@ -2,6 +2,22 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [ X.X ] - [ XXXX-XX-XX ]
+### Added
+- 
+
+### Changed
+- Default for printing communication values is not SI units (1K is 1024)
+- Type of communication matrix entry is u64
+
+### Removed
+- 
+
+### Fixed
+- Fixed bug of routine names with recent g++ version
+
+
+
 ## [ 0.3 ] - [ 2015-04-23 ]
 ### Added
 - Support for static symbols

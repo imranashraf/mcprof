@@ -987,9 +987,10 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 
             D1ECHO ("Instrumenting Routine : " << rname);
             RTN_Open(rtn);
-
+            char* cstr = new char[rname.size()];
+            strcpy( cstr, rname.c_str() );
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                           IARG_ADDRINT, rname.c_str(),
+                           IARG_ADDRINT, cstr,
                            IARG_END);
 
             RTN_Close(rtn);

@@ -181,7 +181,7 @@ const std::string& humanReadableByteCount(u64 bytes, bool si)
 
 const std::string& hBytes(u64 bytes)
 {
-    return humanReadableByteCount(bytes, true);
+    return humanReadableByteCount(bytes, false);
 }
 
 void SetCurrDir()
