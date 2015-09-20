@@ -1,7 +1,6 @@
 # MCProf #
 
-`MCProf` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions. 
-`MCProf` relies on [Intel Pin](www.pintool.org) dynamic binary instrumentation framework.
+`MCProf` is a memory and communication profiler. It traces memory reads/writes and reports memory accesses by various functions in the application as well as the data-communication between functions.  `MCProf` relies on [Intel Pin](www.pintool.org) dynamic binary instrumentation framework.
 
 # A picture is worth a thousand words #
 Consider the following `C` code snippet in which some operations are performed on some arrays.
@@ -58,19 +57,17 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 
 ## Reference
+**To cite MCProf:**
 
-**To cite MCProf Tool:**
 ```
-"MCProf: Open-source Memory and Communication Profiler"
-Imran Ashraf
-URL: https://bitbucket.org/imranashraf/mcprof
-```
-
-**To cite MCProf Design OR MCProf Shadow Memory Technique:**
-```
-"Intra-Application Data-Communication Characterization"
-Imran Ashraf, Vlad-Mihai Sima and Koen Bertels
-Technical report, Delft University of Technology, 2015
+@inproceedings{mcprof,
+author = {{I. Ashraf and V.M. Sima and K.L.M. Bertels}},
+title = {Intra-Application Data-Communication Characterization},
+booktitle = {Proc. 1st International Workshop on Communication Architectures at Extreme Scale},
+address = {Frankfurt, Germany},
+month = {July},
+year = {2015},
+}
 ```
 
 ## Support Patform
@@ -90,6 +87,7 @@ In order to setup and use `MCProf` the following packages are required:
 * g++ compiler
 * libelf library to read static symbols from the binary
 * graphviz Dot utility for converting the generated communication graphs from dot to pdf, png etc
+* gnuplot to plot communication matrix as graph
 
 ## Setup
 
