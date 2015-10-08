@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [ X.X ] - [ XXXX-XX-XX ]
+## [ 0.4 ] - [ 2015-10-08 ]
 ### Added
 - 
 
@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - Fixed bug of routine names with recent g++ version
-
+- Better implementation of callpath to ID
 
 
 ## [ 0.3 ] - [ 2015-04-23 ]

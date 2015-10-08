@@ -57,7 +57,7 @@ Matrix2D ComMatrix;
 
 // some mappings for faster access
 map <string,IDNoType> FuncName2ID;
-map <u32,IDNoType> CallSites2ID;
+map <string,IDNoType> CallSites2ID;
 
 /* ================================================================== */
 // Main
