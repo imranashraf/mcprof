@@ -42,7 +42,7 @@
 #include "callstack.h"
 
 extern map <string,IDNoType> FuncName2ID;
-extern map <u32,IDNoType> CallSites2ID;
+extern map <string,IDNoType> CallSites2ID;
 extern CallSiteStackType CallSiteStack;
 extern bool ShowUnknown;
 
@@ -51,20 +51,14 @@ LocationList Locations;
 
 bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
 {
-    u32 callsites=0;
     bool result;
-
-    // get callsites combined with the last lastCallLocIndex
-    if( CallSiteStack.Top() != lastCallLocIndex )
-        callsites = CallSiteStack.GetCallSites(lastCallLocIndex);
-    else
-        callsites = CallSiteStack.GetCallSites(0);
-
+    string callsites("");
+    CallSiteStack.GetCallSites(lastCallLocIndex, callsites);
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
         // use existing id as this call site is already seen
         id = CallSites2ID[callsites];
-        D2ECHO(" callsites " << callsites << " using existing id" << id);
+        D1ECHO("callsites " << callsites << ", using existing id " << id);
         result = true;
     }
     else
@@ -72,10 +66,9 @@ bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
         // use a new id for this call site
         id = GlobalID++;
         CallSites2ID[callsites] = id;
-        D2ECHO(" callsites " << callsites << " using new id" << id);
+        D1ECHO("callsites " << callsites << ", using new id " << id);
         result = false;
     }
-
     return result;
 }
 

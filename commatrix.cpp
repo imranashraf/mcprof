@@ -188,7 +188,7 @@ void Matrix2D::PrintMatrix(u32 LoopIterationCount)
     std::ofstream mout;
     string matrixFileName("matrix.out");
     OpenOutFile(matrixFileName, mout);
-    ECHO("Printing communication matrix as table in " << matrixFileName);
+    D2ECHO("Printing communication matrix as table in " << matrixFileName);
     CHECK_LT(LoopIterationCount, Matrix.size());
 
     mout << ALIGNMENT << "#";

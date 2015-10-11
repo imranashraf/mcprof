@@ -47,11 +47,6 @@ extern LocationList Locations;
 void CallStackType::Print()
 {
     string stackftns("");
-//     if( !stack.empty() )
-//     {
-//         stackftns += symTable.GetSymName(stack[0]);
-//     }
-
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
         stackftns += symTable.GetSymName(stack[ftn]) + " ";
 
@@ -101,20 +96,12 @@ void CallStackType::Print(ofstream& fout)
     #endif
 }
 
-static int PRIMES[]={2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41,
-                     43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
-u32 CallSiteStackType::GetCallSites(u32 lastCallLocIndex)
+void CallSiteStackType::GetCallSites(u32 lastCallLocIndex, string& callsites)
 {
-    u32 callsites=0;
-    u32 loc;
-    for ( loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
-    {
-        callsites += PRIMES[loc]*sites[loc];    // arbitrary formula to combine call sites
-    }
-    callsites += PRIMES[loc]*lastCallLocIndex; // also add the effect of lastCallLocIndex
-    // TODO what if loc > size of PRIMES
-    // and what about recursion???
-    return callsites;
+    for (u32 loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
+        callsites += to_string(sites[loc]);    // arbitrary formula to combine call sites
+
+    callsites += to_string(lastCallLocIndex); // also add the effect of lastCallLocIndex
 }
 
 string CallSiteStackType::GetCallSitesString()
@@ -128,11 +115,6 @@ string CallSiteStackType::GetCallSitesString()
 void CallSiteStackType::Print()
 {
     string callsites("");
-//     if( !sites.empty() )
-//     {
-//         callsites += Locations.GetLocation(sites[0]).toString();
-//     }
-
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += Locations.GetLocation(sites[loc]).toString() + " ";
     ECHO("Call sites: " << callsites);
@@ -141,11 +123,6 @@ void CallSiteStackType::Print()
 void CallSiteStackType::Print(ofstream& fout)
 {
     string callsites("");
-//     if( !sites.empty() )
-//     {
-//         callsites += Locations.GetLocation(sites[0]).toString();
-//     }
-
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += Locations.GetLocation(sites[loc]).toString();
     fout << "Call sites: " << callsites << "\n";

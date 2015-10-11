@@ -47,16 +47,16 @@ int main()
     nBytes = nElem*sizeof(TYPE);
     printf("Total bytes : %d\n",nBytes);
 
-    srcArr1 = malloc(nBytes);
+    srcArr1 = (TYPE*)malloc(nBytes);
     printf("srcArr1 addr : %p\n",srcArr1);
 
-    srcArr2 = malloc(nBytes);
+    srcArr2 = (TYPE*)malloc(nBytes);
     printf("srcArr2 addr : %p\n",srcArr2);
 
-    sumArr = malloc(nBytes);
+    sumArr = (TYPE*)malloc(nBytes);
     printf("sumArr addr : %p\n",sumArr);
 
-    diffArr = malloc(nBytes);
+    diffArr = (TYPE*)malloc(nBytes);
     printf("diffArr addr : %p\n",diffArr);
 
     initVec(srcArr1);

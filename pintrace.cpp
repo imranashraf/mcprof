@@ -346,28 +346,31 @@ uptr currStartAddress;
 VOID RecordRoutineEntry(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
-    D1ECHO ("Entering Routine : " << rname );
+    string calleeName(rname);
+    D1ECHO ("Entering Routine : " << calleeName );
 
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
+    IDNoType tempID=0;
+    string callerNameSimple(callerName);
+    RemoveNoFromNameEnd(callerNameSimple, tempID); // remove previous id
+    RemoveNoFromNameEnd(callerNameSimple, tempID); // remove previous lastCallLocIndex
 
-    // for each callsite a unique id is generated
-    // this will result in the generation of unique name
     IDNoType calleeID=0;
-    string calleeName(rname);
-    if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
+    D2ECHO( callerNameSimple << " ->  " << calleeName);
+    if( callerNameSimple != calleeName ) // due to recursion this check is needed
     {
-        AddNoToNameEnd(calleeName, lastCallLocIndex);
-        AddNoToNameEnd(calleeName, calleeID);
-        symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
+        // for each callsite a unique id is generated
+        // this will result in the generation of unique name
+        if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
+        {
+            AddNoToNameEnd(calleeName, lastCallLocIndex);
+            AddNoToNameEnd(calleeName, calleeID);
+            symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
-        // for callgraph output
-        cgout << callerName << " FUNC " << calleeName  << endl;
-    }
+            cgout << callerName << " FUNC " << calleeName  << endl; // for callgraph output
+        }
 
-    // due to recursion this check is needed
-    if( callerID != calleeID )
-    {
         CallStack.Push(calleeID);
         CallSiteStack.Push(lastCallLocIndex);
     }
@@ -385,11 +388,11 @@ VOID RecordRoutineEntry(ADDRINT irname)
     // func entry/exit, so that it does not need to be determined on each access
     if (KnobEngine.Value() == 3)
     {
-        D1ECHO ("Setting Current Call for : " << rname );
+        D1ECHO ("Setting Current Call for : " << calleeName );
         SetCurrCallOnEntry();
     }
 
-    D1ECHO ("Entering Routine : " << rname << " Done" );
+    D1ECHO ("Entering Routine : " << calleeName << " Done" );
 }
 
 VOID RecordRoutineExit(VOID *ip)
@@ -436,19 +439,20 @@ VOID RecordRoutineExit(VOID *ip)
 
 VOID RecordZoneEntry(INT32 zoneNo)
 {
-    D1ECHO("RecordZoneEntry(): START");
-
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
+    D1ECHO("Trying to Enter Zone in " << callerName);
 
     // for each callsite a unique id is generated
     // this will result in the generation of unique name
     IDNoType calleeID=0;
+    IDNoType tempLastCallLocIndex=0;
     string calleeName(callerName);
     RemoveNoFromNameEnd(calleeName, calleeID); // remove previous id
-    RemoveNoFromNameEnd(calleeName, calleeID); // remove previous lastCallLocIndex
+    RemoveNoFromNameEnd(calleeName, tempLastCallLocIndex); // remove previous lastCallLocIndex
     if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
     {
+        D2ECHO(" Using new id " << calleeID << " for : " << calleeName);
         AddNoToNameEnd(calleeName, lastCallLocIndex); // attach new lastCallLocIndex
         AddNoToNameEnd(calleeName, calleeID); // attach new id
         symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
@@ -456,15 +460,11 @@ VOID RecordZoneEntry(INT32 zoneNo)
         // for callgraph output
         cgout << callerName << " LOOP " << calleeName  << endl;
         //cout << endl << callerName << " LOOP " << calleeName  << endl;
-        D2ECHO( VAR(lastCallLocIndex) << VAR(calleeID) );
-        // CallSiteStack.Print();
     }
 
-    // recursion is not possible in case of zones
     CallStack.Push(calleeID);
     CallSiteStack.Push(lastCallLocIndex);
 
-    // call count should be updated even for recursive functions
     callCounts[calleeID] += 1;
 
     #if (DEBUG>0)
@@ -481,13 +481,14 @@ VOID RecordZoneEntry(INT32 zoneNo)
         SetCurrCallOnEntry();
     }
 
-    D1ECHO("RecordZoneEntry(): END");
+    D1ECHO("Entering zone : " << calleeName << " Done");
 }
 
 VOID RecordZoneExit(INT32 zoneNo)
 {
-    D1ECHO ("RecordZoneExit(): START");
-    IDNoType calleeID = CallStack.Top();
+    IDNoType topRtnID = CallStack.Top();
+    string topRtnName = symTable.GetSymName(topRtnID);
+    D1ECHO("Trying to exit zone " <<  topRtnName);
 
     CallStack.Pop();
     CallSiteStack.Pop();
@@ -496,8 +497,8 @@ VOID RecordZoneExit(INT32 zoneNo)
     // so that it does not need to be determined on each access
     if (KnobEngine.Value() == 3)
     {
-        D1ECHO("Setting Current Call for : " << zoneName );
-        SetCurrCallOnExit(calleeID);
+        D1ECHO("Setting Current Call for : " << topRtnName );
+        SetCurrCallOnExit(topRtnID);
     }
 
     #if (DEBUG>0)
@@ -505,7 +506,7 @@ VOID RecordZoneExit(INT32 zoneNo)
     CallSiteStack.Print();
     #endif
 
-    D1ECHO ("RecordZoneExit(): END");
+    D1ECHO ("Exiting zone: " << symTable.GetSymName(topRtnID) << " Done");
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -1074,15 +1075,15 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
                 }
             }
 
-            char* cstr = new char[ rname.size() ];  // we need to dynamically allocate it so that it is available
+            char* cstr = new char[ rname.size()+1 ];  // we need to dynamically allocate it so that it is available
                                                     // at analysis time
             strcpy(cstr, rname.c_str() );
-            D2ECHO ("Instrumenting Routine : " << cstr );
+            D1ECHO ("Instrumenting Routine : " << cstr );
 
             RTN_Open(rtn);
 
             RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
-                           IARG_ADDRINT,  (ADDRINT)(cstr) ,
+                           IARG_ADDRINT, (ADDRINT)(cstr),
                            IARG_END);
 
             RTN_Close(rtn);
