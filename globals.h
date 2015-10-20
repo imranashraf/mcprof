@@ -199,6 +199,7 @@ void PrintLogo();
 bool isEmpty(std::ifstream& fin);
 void OpenInFile(const std::string& fileName, std::ifstream& fin);
 void OpenOutFile(const std::string& fileName, std::ofstream& fout);
+bool OpenInFileIfExists(const std::string& fileName, std::ifstream& fin);
 bool IsPowerOfTwo(uptr x);
 uptr RoundUpTo(uptr size, uptr boundary);
 uptr RoundDownTo(uptr x, uptr boundary);

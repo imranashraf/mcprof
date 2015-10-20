@@ -52,7 +52,7 @@ SA_TOOL_ROOTS :=
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
 	multiAllocFtn multiAllocMacro multiAllocClass loopAllocations \
 	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04 \
-	markers loopdepend callgraph
+	markers loopdepend callgraph allocDepend
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -141,6 +141,8 @@ loopdepend.test: $(OBJDIR)loopdepend$(EXE_SUFFIX)
 callgraph.test: $(OBJDIR)callgraph$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -TrackZones 1 -TrackStartStop 1 -- $(OBJDIR)callgraph$(EXE_SUFFIX)
 	
+allocDepend.test: $(OBJDIR)allocDepend$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 2 -- $(OBJDIR)allocDepend$(EXE_SUFFIX)
 
 ##############################################################
 #

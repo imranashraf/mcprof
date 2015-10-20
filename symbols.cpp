@@ -43,8 +43,11 @@
 
 extern map <string,IDNoType> FuncName2ID;
 extern map <string,IDNoType> CallSites2ID;
+extern CallStackType CallStack;
 extern CallSiteStackType CallSiteStack;
 extern bool ShowUnknown;
+
+std::string locsFileName("locations.dat");
 
 // List of all locations of symbols
 LocationList Locations;
@@ -74,48 +77,44 @@ bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
 
 void LocationList::InitFromFile()
 {
-    ifstream fin;
-    string locationsFileName("locations.dat");
-    OpenInFile(locationsFileName, fin);
-
+    ifstream locin;
     u32 counter=0;
-    string line;
-    while ( getline(fin, line) )
+
+    if ( OpenInFileIfExists(locsFileName, locin) )
     {
-        //the following line trims white space from the beginning of the string
-        line.erase(line.begin(), find_if(line.begin(), line.end(), not1(ptr_fun<int, int>(isspace))));
-
-        // ignore empty lines and lines starting with #
-        if (line.length() == 0 || line[0] == '#')
-            continue;
-
-        string filename;
-        u32 lno;
-        istringstream iss(line);
-        if (!(iss >> filename >> lno))
+        string line;
+        while ( getline(locin, line) )
         {
-            break;    // error
+            //the following line trims white space from the beginning of the string
+            line.erase(line.begin(), find_if(line.begin(), line.end(), not1(ptr_fun<int, int>(isspace))));
+
+            // ignore empty lines and lines starting with #
+            if (line.length() == 0 || line[0] == '#')
+                continue;
+
+            string filename;
+            u32 lno;
+            istringstream iss(line);
+            if (!(iss >> filename >> lno))
+            {
+                break;    // error
+            }
+            Insert( Location(lno, filename) );
+            ++counter;
         }
-        Insert( Location(lno, filename) );
-        ++counter;
+
+        locin.close();
+        remove( locsFileName.c_str() ); // delete file
     }
 
-    fin.close();
-    remove("locations.dat"); // delete file
-
-    if(counter==0)
-    {
-        ECHO("No locations available in the input file.");
-        Die();
-    }
     ECHO("Initialized " << counter << " locations from file");
 }
+
 void LocationList::Print()
 {
     std::ofstream locout;
-    std::string locFileName("locations.dat");
-    ECHO("Writing locations to " << locFileName);
-    OpenOutFile(locFileName, locout);
+    ECHO("Writing locations to " << locsFileName);
+    OpenOutFile(locsFileName, locout);
     locout << "# list of locations in order" << endl;
     for(u32 i=0; i<locations.size(); ++i)
     {
@@ -163,7 +162,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     // To check if symbol is already in the table. This is possible because of:
     //      - the list of selected objects provided as input
     //      - multiple allocations from same line
-    if(_Symbols.find(id) != _Symbols.end() )
+    if( _Symbols.find(id) != _Symbols.end() )
     {
         D2ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
         Symbol& availSym = _Symbols[id];
@@ -183,17 +182,42 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     SetObjectIDs(saddr, size, id);
+
+    // Added for allocation dependencies
+    // also set the function in which this allocation is taking place
+    // as the producer of this object to consider it in allocation dependencies
+    IDNoType prod = CallStack.Top();
+    for(u32 i=0; i<size; i++)
+    {
+        SetProducer(prod, saddr+i);
+    }
 }
 
-void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 size)
+void Symbols::UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 lastCallLocIndex, u32 size)
 {
     D2ECHO("Updating Realloc ");
     Symbol& availSym = _Symbols[id];
-    availSym.SetSize(saddr,size);
+    u32 prevSize = availSym.GetSize(prevSAddr);
+    availSym.SetSize(saddr, size);
 
-    // we also need to set the object ids in the shadow table/mem for this object
+    // set the object ID of previous address range to unknown
+    SetObjectIDs(prevSAddr, prevSize, UnknownID);
     D2ECHO("Setting object ID as " << id << " on a size " << size);
+    // we also need to set the object ids in the shadow table/mem for this object
     SetObjectIDs(saddr, size, id);
+
+    // Added for allocation dependencies
+    // set producer of previous address range to Unknown
+    for(u32 i=0; i<prevSize; i++)
+    {
+        SetProducer( UnknownID, prevSAddr+i );
+    }
+    // now set the current producer to the new address range
+    IDNoType prod = CallStack.Top();
+    for(u32 i=0; i<size; i++)
+    {
+        SetProducer( prod, saddr+i );
+    }
 }
 
 void Symbols::InsertFunction(const string& ftnname, IDNoType id, u32 lastCallLocIndex)
@@ -258,6 +282,12 @@ void Symbols::Remove(uptr saddr)
     // Clear the obj ids for this object, which is same as setting it to UnknownID
     D2ECHO("Clearing object ID to " << UnknownID << " on a size " << size);
     SetObjectIDs(saddr, size, UnknownID);
+
+    // Added for allocation dependencies
+    for(u32 i=0; i<size; i++)
+    {
+        SetProducer(UnknownID, saddr+i);
+    }
 }
 
 bool Symbols::SymIsObj(IDNoType id)
@@ -272,7 +302,7 @@ bool Symbols::SymIsFunc(IDNoType id)
     return ( _Symbols[id].GetType() == SymType::FUNC );
 }
 
-const char * StripPath(const char * path)
+const char* StripPath(const char * path)
 {
     const char * file = strrchr(path,DELIMITER_CHAR);
     if (file)

@@ -328,7 +328,7 @@ public:
     void Insert(Symbol sym, IDNoType id) { _Symbols[id] = sym; }
     void InsertFunction(const string& ftnname, IDNoType id, u32 lastCallLocIndex);
     void InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size);
-    void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
+    void UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 locIndex, u32 size);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
     u32 GetTotalSymSize(IDNoType idno);

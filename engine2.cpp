@@ -46,7 +46,6 @@ extern Matrix2D ComMatrix;
 
 extern Symbols symTable;
 extern bool TrackObjects;
-extern bool NoseDown;
 
 // un-comment the following to print read/write address trace to output
 // #define GENRATE_TRACES
@@ -63,6 +62,14 @@ void RecordWriteEngine2(uptr addr, u32 size)
     for(u32 i=0; i<size; i++)
         cout << "W " << addr+i << endl;
     #endif
+
+    // Added for allocation dependencies
+    for(u32 i=0; i<size; i++)
+    {
+        IDNoType prevProd = GetProducer(addr+i);
+        ComMatrix.RecordCommunication(prevProd, prod, 1);
+        //ECHO( "AllocDepend " << FUNC(prevProd) << " " << FUNC(prod) << " at " << ADDR(addr) );
+    }
 
     D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
 

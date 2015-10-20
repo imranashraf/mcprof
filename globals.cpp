@@ -107,6 +107,25 @@ void OpenOutFile(const string& fileName, ofstream& fout)
     }
 }
 
+bool OpenInFileIfExists(const string& fileName, ifstream& fin)
+{
+    if ( !fileName.empty() )
+    {
+        fin.open(fileName.c_str());
+        if ( fin.fail() )
+        {
+            ECHO("Input file (" << fileName.c_str() << ") does not exist ...");
+            return false;
+        }
+    }
+    else
+    {
+        ECHO("Specify a non empty file name. Aborting ...");
+        Die();
+    }
+    return true;
+}
+
 const string& Target2RtnName(uptr target)
 {
     const string& name = RTN_FindNameByAddress(target);

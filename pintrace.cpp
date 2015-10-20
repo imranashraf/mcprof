@@ -574,7 +574,7 @@ VOID ReallocAfter(uptr addr)
             currStartAddress = addr;
         }
 
-        symTable.UpdateRealloc(currID, currStartAddress, lastCallLocIndex, currSize);
+        symTable.UpdateRealloc(currID, prevAddr, addr, lastCallLocIndex, currSize);
     }
 }
 
