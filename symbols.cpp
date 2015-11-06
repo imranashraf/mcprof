@@ -75,6 +75,12 @@ bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
     return result;
 }
 
+IDNoType GetNewID()
+{
+    return GlobalID++;
+}
+
+
 void LocationList::InitFromFile()
 {
     ifstream locin;

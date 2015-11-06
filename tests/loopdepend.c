@@ -48,14 +48,27 @@ void diffVecs()
     }
 }
 
-void prodVecs()
+// void prodVecs()
+// {
+//     int i;
+//     MCPROF_ZONE_ENTER(2);
+//     for(i = 0; i < SIZE; i++)
+//     {
+//         MCPROF_LOOPBODY_ENTER(2);
+//         prodArr[i] = sumArr[i] * diffArr[i] ;
+//         MCPROF_LOOPBODY_EXIT(2);
+//     }
+//     MCPROF_ZONE_EXIT(2);
+// }
+
+void prodVecs(TYPE* a, TYPE* b, TYPE* c)
 {
     int i;
     MCPROF_ZONE_ENTER(2);
-    for(i = 0; i < SIZE; i++)
+    for(i = 1; i < SIZE; i++)
     {
         MCPROF_LOOPBODY_ENTER(2);
-        prodArr[i] = sumArr[i] * diffArr[i] ;
+        c[i] = a[i] * b[i] ;
         MCPROF_LOOPBODY_EXIT(2);
     }
     MCPROF_ZONE_EXIT(2);
@@ -95,7 +108,8 @@ void process()
     #else
     sumdiffVecs();
     #endif
-    prodVecs();
+    prodVecs(sumArr, diffArr, prodArr);
+//     prodVecs();
 }
 
 int main()

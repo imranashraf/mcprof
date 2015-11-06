@@ -347,5 +347,6 @@ public:
 };
 
 bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex);
+IDNoType GetNewID();
 
 #endif

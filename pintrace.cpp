@@ -68,11 +68,12 @@ extern map <u32,IDNoType> CallSites2ID;
 
 std::ofstream pcout;
 std::ofstream cgout;
-std::ofstream ilout;
 
 // these maps are used to record each execution of loop as dependent/independent
 set<string>dependentLoopExecutions;
 set<string>independentLoopExecutions;
+
+set<string>recursiveFunctions;
 
 CallStackType CallStack;
 CallSiteStackType CallSiteStack;
@@ -80,6 +81,8 @@ CallSiteStackType CallSiteStack;
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 void (*InstrCounter)(ADDRINT);
+VOID (*RecordRoutineEntry)(ADDRINT);
+VOID (*RecordRoutineExit)(VOID*);
 
 u32 Engine=1;
 bool TrackObjects;
@@ -175,6 +178,10 @@ KNOB<UINT32> KnobSelectedLoopNo(KNOB_MODE_WRITEONCE,  "pintool",
 
 KNOB<BOOL> KnobReadStaticObjects(KNOB_MODE_WRITEONCE, "pintool",
                             "StaticSymbols", "1", "Read static symbols from the binary and show them in the graph");
+
+KNOB<BOOL> KnobTrackTasks(KNOB_MODE_WRITEONCE, "pintool",
+                            "TrackTasks", "0", "Each function call and loop execution for different source-code\
+                            location will be considered as separate tasks.");
 
 KNOB<UINT32> KnobThreshold(KNOB_MODE_WRITEONCE,  "pintool",
                         "Threshold", "0",
@@ -343,7 +350,51 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
-VOID RecordRoutineEntry(ADDRINT irname)
+VOID RecordRoutineEntry1(ADDRINT irname)
+{
+    const char* rname = reinterpret_cast<const char *>(irname);
+    D1ECHO ("Entering Routine : " << rname );
+    string calleeName(rname);
+    IDNoType calleeID=0;
+
+    if( !symTable.IsSeenFunctionName(calleeName) )
+    {
+        calleeID = GetNewID();
+        symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
+    }
+
+    // following is to store recursive functions
+    IDNoType callerID = CallStack.Top();
+    string callerName = symTable.GetSymName(callerID);
+    D1ECHO( callerName << "  " << calleeName);
+    if(callerName == calleeName) // recursive function
+    {
+        recursiveFunctions.insert(calleeName);
+    }
+
+    calleeID = FuncName2ID[calleeName];
+    callCounts[calleeID] += 1;
+    CallStack.Push(calleeID);
+    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
+
+    #if (DEBUG>0)
+    CallStack.Print();
+    CallSiteStack.Print();
+    #endif
+
+    // In engine 3, to save time, the curr call is selected only at
+    // func entry/exit, so that it does not need to be determined on each access
+    if (KnobEngine.Value() == 3)
+    {
+        D1ECHO ("Setting Current Call for : " << rname );
+        SetCurrCallOnEntry();
+    }
+
+    D1ECHO ("Entering Routine : " << calleeName << " Done" );
+}
+
+
+VOID RecordRoutineEntry2(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
     string calleeName(rname);
@@ -395,7 +446,49 @@ VOID RecordRoutineEntry(ADDRINT irname)
     D1ECHO ("Entering Routine : " << calleeName << " Done" );
 }
 
-VOID RecordRoutineExit(VOID *ip)
+VOID RecordRoutineExit1(VOID *ip)
+{
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+    D1ECHO ("Exiting Routine : " << rname );
+
+    // check first if map has entry for this ftn
+    if ( symTable.IsSeenFunctionName(rname) )
+    {
+        IDNoType lastCallID = CallStack.Top();
+        // check if the top ftn is the current one
+        if ( lastCallID == FuncName2ID[rname] )
+        {
+            D1ECHO("Routine ID: " << FuncName2ID[rname]
+                   << " Call stack top id " << lastCallID );
+
+            D1ECHO("Leaving Routine : " << rname
+                   << " Popping call stack top is "
+                   << symTable.GetSymName( lastCallID ) );
+
+            CallStack.Pop();
+            CallSiteStack.Pop();
+            #if (DEBUG>0)
+            CallStack.Print();
+            CallSiteStack.Print();
+            #endif
+
+            // In engine 3, to save time, the curr call is selected only at func entry/exit,
+            // so that it does not need to be determined on each access
+            if (KnobEngine.Value() == 3)
+            {
+                D1ECHO("Setting Current Call for : " << rname );
+                SetCurrCallOnExit(lastCallID);
+            }
+        }
+    }
+
+    // un-comment the following to enable printing running count of instructions executed so far
+    //ECHO("Instructions executed so far : " << rInstrCount );
+    D1ECHO ("Exiting Routine : " << rname << " Done");
+}
+
+VOID RecordRoutineExit2(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
@@ -1137,6 +1230,17 @@ VOID TheEnd(INT32 code, VOID *v)
     {
     case 1:
         PrintAccesses();
+        if(KnobTrackTasks.Value() == false)
+        {
+            ofstream rfout;
+            OpenOutFile("recursivefunctions.dat", rfout);
+            set<string>::iterator it1;
+            for( it1=recursiveFunctions.begin(); it1 !=recursiveFunctions.end(); ++it1 )
+            {
+                rfout << *it1 << "\n";
+            }
+            rfout.close();
+        }
         break;
     case 2:
         ComMatrix.PrintDot();
@@ -1155,13 +1259,13 @@ VOID TheEnd(INT32 code, VOID *v)
 
     // PrintInstrCount();
     PrintInstrPercents();
-    // open the file to store locations
     Locations.Print();
-
     cgout.close();
 
     if(TrackLoopDepend)
     {
+        ofstream ilout;
+        OpenOutFile("independentloopnames.dat", ilout);
         set<string>::iterator it1;
         set<string>::iterator it2;
         for( it1=independentLoopExecutions.begin(); it1 !=independentLoopExecutions.end(); ++it1 )
@@ -1276,8 +1380,16 @@ void SetupPin(int argc, char *argv[])
     // open the file to store call graph
     OpenOutFile("callgraph.dat", cgout);
 
-    if(TrackLoopDepend)
-        OpenOutFile("independentloopnames.dat", ilout);
+    if( KnobTrackTasks.Value() )
+    {
+        RecordRoutineEntry = RecordRoutineEntry2;
+        RecordRoutineExit = RecordRoutineExit2;
+    }
+    else
+    {
+        RecordRoutineEntry = RecordRoutineEntry1;
+        RecordRoutineExit = RecordRoutineExit1;
+    }
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);
