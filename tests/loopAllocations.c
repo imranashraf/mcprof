@@ -56,5 +56,6 @@ int main()
 {
     printf("Loop Allocation Test.\n");
     process();
+    process();
     return 0;
 }
