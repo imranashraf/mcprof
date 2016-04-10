@@ -86,8 +86,10 @@ u32  Threshold;
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
-// Global running instruction counter
-//static UINT64 rInstrCount = 0;
+// routine instruction counter for a call
+static UINT64 rInstrCount = 0;
+
+CallGraph callgraph;
 
 /* ===================================================================== */
 // Command line switches
@@ -185,7 +187,7 @@ VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
 {
     IDNoType fid = CallStack.Top();
     instrCounts[fid] += c;
-    //rInstrCount+=c; // add to global counter
+    rInstrCount+=c;
 }
 
 VOID dummyRecorder(uptr a, u32 b){}
@@ -337,6 +339,8 @@ VOID RecordRoutineEntry(CHAR* rname)
 
     IDNoType fid = FuncName2ID[rname];
     callCounts[fid] += 1;
+    callgraph.UpdateCall(fid);
+    rInstrCount=0;
     CallStack.Push(fid);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
     #if (DEBUG>0)
@@ -415,6 +419,8 @@ VOID RecordRoutineExit(VOID *ip)
                    << " Popping call stack top is "
                    << symTable.GetSymName( lastCallID ) );
 
+            callgraph.UpdateReturn( lastCallID, rInstrCount );
+            rInstrCount = 0;
             CallStack.Pop();
             CallSiteStack.Pop();
             #if (DEBUG>0)
@@ -1052,6 +1058,9 @@ VOID TheEnd(INT32 code, VOID *v)
         OpenOutFile(KnobMatrixFile.Value(), mout);
         ComMatrix.PrintMatrix(mout);
         mout.close();
+        callgraph.Print();
+        callgraph.PrintCallChains();
+        callgraph.PrintJson();
         break;
     case 3:
         PrintAllCalls(pcout);
