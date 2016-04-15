@@ -805,7 +805,9 @@ class JsonParser(Parser):
 
         for functionIndex in range(len(fns)):
             fn = fns[functionIndex]
-            function = Function(functionIndex, fn['name'])
+            #function = Function(functionIndex, fn['name'])
+            #print "id = %d" % fn['id']
+            function = Function(fn['id'], fn['name'])
             try:
                 function.module = fn['module']
             except KeyError:
