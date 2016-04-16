@@ -15,10 +15,16 @@ int nElem;
 
 void test(int count)
 {
+    printf("Calling test\n");
     if(count)
         test(count-1);
     else
         return;
+}
+
+void test2()
+{
+    printf("Calling test2\n");
 }
 
 void initVecs()
@@ -44,7 +50,8 @@ void sumVecs()
 void diffVecs()
 {
     int i;
-    //test(5);
+//     test2();
+//     test(5);
     for(i = 0; i < nElem; i++)
     {
         diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]);
