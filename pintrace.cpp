@@ -1058,8 +1058,8 @@ VOID TheEnd(INT32 code, VOID *v)
         OpenOutFile(KnobMatrixFile.Value(), mout);
         ComMatrix.PrintMatrix(mout);
         mout.close();
-        callgraph.Print();
-        callgraph.PrintCallChains();
+//         callgraph.Print();
+//         callgraph.PrintCallChains();
         callgraph.PrintJson();
         break;
     case 3:

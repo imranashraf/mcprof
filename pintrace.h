@@ -37,6 +37,11 @@
 #ifndef PINTRACE_H
 #define PINTRACE_H
 
+#include <set>
+#include <json.hpp>
+
+using json = nlohmann::json;
+
 extern Symbols symTable;
 
 void SetupPin(int argc, char *argv[]);
@@ -72,7 +77,7 @@ public:
     }
     void UpdateCall(IDNoType callee)
     {
-        ECHO("Call to " << symTable.GetSymName(callee) );
+        D1ECHO("Call to " << symTable.GetSymName(callee) );
         if(currNode == NULL)
         {
             head.ID = callee;
@@ -89,7 +94,7 @@ public:
             {
                 if( callee == it->ID )
                 {
-                    cout << " Found in the children " << endl;
+                    D1ECHO("Found in the children");
                     currNode = &(*it);
                     currNode->nCalls += 1;
                     break;
@@ -98,7 +103,7 @@ public:
 
             if( it == childrenVec.end() )  // if not found
             {
-                cout << " Not found in the children " << endl;
+                D1ECHO("Not found in the children");
                 Node n;
                 n.ID = callee;
                 n.instrCount = 0;
@@ -132,29 +137,24 @@ public:
     {
         ECHO("Printing Callgraph");
         PrintRec( head, 0);
-        //PrintRec( head.children[0], 0); // Printing starts from main
     }
 
     void PrintCallChainsRec(Node &n, vector<IDNoType> & callchain)
     {
         callchain.push_back(n.ID);
-        if(n.children.size() == 0) // leaf
+
+        for(u32 i=0; i<callchain.size(); i++)
         {
-            for(u32 i=0; i<callchain.size(); i++)
-            {
-                if(i>0) cout << " > ";
-                cout<< symTable.GetSymName( callchain[i] );
-            }
-            cout << endl;
-            callchain.pop_back();
+            if(i>0) cout << " > ";
+            cout<< symTable.GetSymName( callchain[i] );
         }
-        else
+        cout << endl;
+
+        for( u32 i=0; i < n.children.size(); ++i )
         {
-            for( u32 i=0; i < n.children.size(); ++i )
-            {
-                PrintCallChainsRec( n.children[i], callchain );
-            }
+            PrintCallChainsRec( n.children[i], callchain );
         }
+        callchain.pop_back();
     }
 
     void PrintCallChains()
@@ -164,67 +164,46 @@ public:
         PrintCallChainsRec( head, callchain); // Printing starts from main
     }
 
-    void PrintJCallChainsRec(Node &n, vector<IDNoType> & callchain, ofstream & jout)
+    void PrintJCallChainsRec(Node &n, vector<IDNoType> & callchain, json & jevents)
     {
+        json jevent;
         callchain.push_back(n.ID);
 
-        jout << "    {\n    \"callchain\": [";
+        vector<IDNoType> rcallchain;
         u32 callchainSize = callchain.size();
         for(u32 i=0; i<callchainSize; ++i)
         {
-            if(i>0)
-            {
-                jout << ", ";
-            }
-            jout << callchain[callchainSize-1 - i];
+            rcallchain.push_back( callchain[callchainSize-1 - i] );
         }
-        jout << "],\n";
-        jout << "    \"cost\": [ " << n.instrCount << " ],\n";
-        jout << "    \"calls\": " << n.nCalls << " \n";
-        jout << "    }";
 
-        u32 nChild = n.children.size();
-        if( 0 == nChild ) // leaf
-        {
-            callchain.pop_back();
-        }
-        else
-        {
-            for( u32 i=0; i < nChild; ++i )
-            {
-                jout << ",\n";
-                PrintJCallChainsRec( n.children[i], callchain, jout );
-            }
-        }
-    }
+        jevent["callchain"] = rcallchain;
+        jevent["cost"] = {n.instrCount};
+        jevent["calls"] = n.nCalls;
+        jevents.push_back(jevent);
 
-    void PrintJCallChains(ofstream & jout)
-    {
-        vector<IDNoType> callchain;
-        ECHO("Printing call events in json.");
-        jout << "\"events\":\n"
-             << "[\n";
-        PrintJCallChainsRec( head, callchain, jout);
-        jout << "\n]\n";
-    }
-
-    void PrintJFunctionsRec(Node &n, ofstream & jout)
-    {
-        jout << "    {" << "\"name\": \"" << symTable.GetSymName(n.ID) << "\""
-             << ", \"id\": " << n.ID << " }";
         for( u32 i=0; i < n.children.size(); ++i )
         {
-            jout << ",\n";
-            PrintJFunctionsRec( n.children[i], jout );
+            PrintJCallChainsRec( n.children[i], callchain, jevents );
         }
+        callchain.pop_back();
     }
 
-    void PrintJFunctions(ofstream & jout)
+    set<IDNoType> SeenFuncs;
+    void PrintJFunctionsRec(Node &n, json & jfuncs)
     {
-        ECHO("Printing functions in json.");
-        jout << "\"functions\":\n"  << "[\n";
-        PrintJFunctionsRec( head, jout);
-        jout << "\n],\n";
+        if ( SeenFuncs.find(n.ID) == SeenFuncs.end() )
+        {
+            SeenFuncs.insert(n.ID);
+            json jfunc; 
+            jfunc["name"] = symTable.GetSymName(n.ID);
+            jfunc["id"] = n.ID;
+            jfuncs.push_back(jfunc);
+        }
+
+        for( u32 i=0; i < n.children.size(); ++i )
+        {
+            PrintJFunctionsRec( n.children[i], jfuncs );
+        }
     }
 
     void PrintJson()
@@ -233,23 +212,27 @@ public:
         ofstream jout;
         OpenOutFile("callgraph.json", jout);
 
-        // Print header
-        jout << "{\n"
-             << "\"version\": 0,\n"
-             << "\"costs\":\n"
-             << "[\n"
-             << "   { \n"
-             << "   \"description\": \"Dynamic Instruction Count\"\n"
-             << "   }\n"
-             << "],\n";
+        json myjson;
+        myjson["version"] = 0;
+
+        json jcosts;
+        jcosts["description"] = "Callgraph Generated by MCProf";
+        myjson["costs"] = jcosts;
 
         // Print functions
-        PrintJFunctions(jout);
+        D1ECHO("Printing functions in json.");
+        json jfuncs;
+        PrintJFunctionsRec( head, jfuncs);
+        myjson["functions"] = jfuncs;
 
         // Print callchains as events
-        PrintJCallChains(jout);
+        D1ECHO("Printing call events in json.");
+        vector<IDNoType> callchain;
+        json jevents;
+        PrintJCallChainsRec( head, callchain, jevents);
+        myjson["events"] = jevents;
 
-        jout << "}" << endl;
+        jout << myjson.dump(2) << endl;
         jout.close();
     }
 };
