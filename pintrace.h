@@ -179,7 +179,8 @@ public:
             jout << callchain[callchainSize-1 - i];
         }
         jout << "],\n";
-        jout << "    \"cost\": [ " << n.instrCount << " ]\n";
+        jout << "    \"cost\": [ " << n.instrCount << " ],\n";
+        jout << "    \"calls\": " << n.nCalls << " \n";
         jout << "    }";
 
         u32 nChild = n.children.size();
