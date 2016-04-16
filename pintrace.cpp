@@ -46,6 +46,7 @@
 #include "engine2.h"
 #include "engine3.h"
 #include "counters.h"
+#include "callgraph.h"
 
 #include <iostream>
 #include <fstream>
@@ -1058,8 +1059,7 @@ VOID TheEnd(INT32 code, VOID *v)
         OpenOutFile(KnobMatrixFile.Value(), mout);
         ComMatrix.PrintMatrix(mout);
         mout.close();
-//         callgraph.Print();
-//         callgraph.PrintCallChains();
+        callgraph.Print();
         callgraph.PrintJson();
         break;
     case 3:
