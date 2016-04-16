@@ -160,7 +160,7 @@ $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
 clean: cleantemp
 cleantemp:
 	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps \
-	callgraph.dot callgraph.json callgraph.pdf
+	callgraph.out callgraph.dot callgraph.json callgraph.pdf
 
 ###### Special applications' build rules ######
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
@@ -185,7 +185,7 @@ openingFileOrder=makefile.rules globals.h globals.cpp markers.h \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
 	counters.h counters.cpp \
-	callstack.h callstack.cpp \
+	callstack.h callstack.cpp callgraph.h \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp
