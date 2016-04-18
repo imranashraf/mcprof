@@ -15,16 +15,11 @@ int nElem;
 
 void test(int count)
 {
-    printf("Calling test\n");
+    printf("Call number %d to test()\n",count);
     if(count)
         test(count-1);
     else
         return;
-}
-
-void test2()
-{
-    printf("Calling test2\n");
 }
 
 void initVecs()
@@ -50,36 +45,32 @@ void sumVecs()
 void diffVecs()
 {
     int i;
-//     test2();
-//     test(5);
+    //test(32);
     for(i = 0; i < nElem; i++)
     {
         diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]);
     }
 }
 
-int main()
+void process()
 {
-    printf("Vector Operations Test.\n");
-    nElem = 100;
-    nBytes = nElem*sizeof(TYPE);
-    printf("Total bytes : %d\n",nBytes);
-
-    srcArr1 = malloc(nBytes);
-    printf("srcArr1 addr : %p\n",srcArr1);
-
-    srcArr2 = malloc(nBytes);
-    printf("srcArr2 addr : %p\n",srcArr2);
-
-    sumArr = malloc(nBytes);
-    printf("sumArr addr : %p\n",sumArr);
-
-    diffArr = malloc(nBytes);
-    printf("diffArr addr : %p\n",diffArr);
-
     initVecs();
     sumVecs();
     diffVecs();
+}
+
+int main()
+{
+    nElem = 5000;
+    nBytes = nElem*sizeof(TYPE);
+    srcArr1 = malloc(nBytes);
+    srcArr2 = malloc(nBytes);
+    sumArr = malloc(nBytes);
+    diffArr = malloc(nBytes);
+
+    int i;
+    for(i=0; i<3; i++)
+        process();
 
     printf("output : %d\n",sumArr[1]+diffArr[2]);
 
