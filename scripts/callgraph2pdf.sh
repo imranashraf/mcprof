@@ -1,5 +1,5 @@
 #!/bin/bash
-
+scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if [ -z "$1" ]
 then
     echo "[INFO] Usage: $0 [callgraph.json]"
@@ -13,7 +13,7 @@ if [ -f "$jsonfile" ]
 then
     dotfile=${jsonfile%%.json}.dot
     pdffile=${jsonfile%%.json}.pdf
-    ./scripts/gprof2dot.py -f json $jsonfile > $dotfile
+    $scriptDir/gprof2dot.py -f json $jsonfile > $dotfile
     dot -Tpdf $dotfile -o $pdffile
     echo "[SUCCESS] Generated $pdffile"
 else
