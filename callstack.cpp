@@ -99,9 +99,9 @@ void CallStackType::Print(ofstream& fout)
 void CallSiteStackType::GetCallSites(u32 lastCallLocIndex, string& callsites)
 {
     for (u32 loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
-        callsites += to_string(sites[loc]);    // arbitrary formula to combine call sites
+        callsites += to_string( (long long) sites[loc]);    // arbitrary formula to combine call sites
 
-    callsites += to_string(lastCallLocIndex); // also add the effect of lastCallLocIndex
+    callsites += to_string( (long long) lastCallLocIndex); // also add the effect of lastCallLocIndex
 }
 
 string CallSiteStackType::GetCallSitesString()

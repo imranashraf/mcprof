@@ -44,7 +44,7 @@ void diffVecs()
 int main()
 {
     printf("Vector Operations Test.\n");
-    nElem = 100;
+    nElem = 1000;
     nBytes = nElem*sizeof(TYPE);
     printf("Total bytes : %d\n",nBytes);
 

@@ -40,12 +40,13 @@ void sumVecs()
     {
         sumArr[i] = srcArr1[i] + coeff * srcArr2[i];
     }
+    initVecs();
 }
 
 void diffVecs()
 {
     int i;
-    //test(32);
+    test(3);
     for(i = 0; i < nElem; i++)
     {
         diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]);

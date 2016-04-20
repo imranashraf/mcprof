@@ -71,11 +71,11 @@ endif
 
 # Linux
 ifeq ($(TARGET_OS),linux)
-	TOOL_CXXFLAGS+= -MD -std=c++11 -I.
+	TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors
 # 	TOOL_CXXFLAGS+= -MD -std=c++0x
 # 	TOOL_LDFLAGS+= -pg
 	TOOL_LIBS+= -lelf
-	APP_CXXFLAGS+= -fno-inline -g
+	APP_CXXFLAGS+= -fno-inline -g -Wfatal-errors
 # 	APP_CCFLAGS+= -fno-inline -g
 endif
 
