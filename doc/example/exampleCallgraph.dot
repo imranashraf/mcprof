@@ -1,0 +1,18 @@
+digraph {
+	graph [fontname=Arial, nodesep=0.125, ranksep=0.25];
+	node [fontcolor=white, fontname=Arial, height=0, shape=box, style=filled, width=0];
+	edge [fontname=Arial];
+	8 [color="#0d1274", fontcolor="#ffffff", fontsize="10.00", label="test\n1.22%\n(1.22%)\n12×"];
+	8 -> 8 [arrowsize="0.35", color="#0d1274", fontcolor="#0d1274", fontsize="10.00", label="", labeldistance="0.50", penwidth="0.50"];
+	9 [color="#0ab11e", fontcolor="#ffffff", fontsize="10.00", label="initVecs\n46.95%\n(46.95%)\n9×"];
+	10 [color="#0ab414", fontcolor="#ffffff", fontsize="10.00", label="sumVecs\n48.51%\n(17.21%)\n3×"];
+	10 -> 9 [arrowsize="0.56", color="#0c9c78", fontcolor="#0c9c78", fontsize="10.00", label="31.30%", labeldistance="1.25", penwidth="1.25"];
+	11 [color="#0c6a8b", fontcolor="#ffffff", fontsize="10.00", label="diffVecs\n18.43%\n(17.21%)\n3×"];
+	11 -> 8 [arrowsize="0.35", color="#0d1274", fontcolor="#0d1274", fontsize="10.00", label="1.22%", labeldistance="0.50", penwidth="0.50"];
+	12 [color="#e5a004", fontcolor="#ffffff", fontsize="10.00", label="process\n82.60%\n(0.00%)\n3×"];
+	12 -> 9 [arrowsize="0.40", color="#0c5987", fontcolor="#0c5987", fontsize="10.00", label="15.65%", labeldistance="0.63", penwidth="0.63"];
+	12 -> 10 [arrowsize="0.70", color="#0ab414", fontcolor="#0ab414", fontsize="10.00", label="48.51%", labeldistance="1.94", penwidth="1.94"];
+	12 -> 11 [arrowsize="0.43", color="#0c6a8b", fontcolor="#0c6a8b", fontsize="10.00", label="18.43%", labeldistance="0.74", penwidth="0.74"];
+	13 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="main\n100.00%\n(17.40%)\n1×"];
+	13 -> 12 [arrowsize="0.91", color="#e5a004", fontcolor="#e5a004", fontsize="10.00", label="82.60%", labeldistance="3.30", penwidth="3.30"];
+}

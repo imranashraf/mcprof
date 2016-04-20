@@ -1,23 +1,27 @@
 digraph {
 graph [];
-edge [fontsize=14, arrowhead=vee, arrowsize=0.5];
-"1" [label=" initVecs \n1%, 1" fontcolor=black, style=filled, fontsize=20];
-"2" [label=" sumVecs \n1%, 1" fontcolor=black, style=filled, fontsize=20];
-"3" [label=" diffVecs \n1%, 1" fontcolor=black, style=filled, fontsize=20];
-"4" [label=" main \n95%, 1" fontcolor=black, style=filled, fontsize=20];
-"5" [label=" src1 \n400 B" fontcolor=black, shape=box, fontsize=20];
-"6" [label=" src2 \n400 B" fontcolor=black, shape=box, fontsize=20];
-"7" [label=" sumArr \n400 B" fontcolor=black, shape=box, fontsize=20];
-"8" [label=" diffArr \n400 B" fontcolor=black, shape=box, fontsize=20];
-"1"->"5"[ label="400 B" color = "#00ff00"]
-"1"->"6"[ label="400 B" color = "#00ff00"]
-"2"->"7"[ label="400 B" color = "#00ff00"]
-"3"->"8"[ label="400 B" color = "#00ff00"]
-"4"->"4"[ label="3.6 kB" color = "#ff0100"]
-"5"->"2"[ label="400 B" color = "#00ff00"]
-"5"->"3"[ label="400 B" color = "#00ff00"]
-"6"->"2"[ label="400 B" color = "#00ff00"]
-"6"->"3"[ label="400 B" color = "#00ff00"]
-"7"->"4"[ label="4 B" color = "#00acff"]
-"8"->"4"[ label="4 B" color = "#00acff"]
+edge [fontsize=18, arrowhead=vee, arrowsize=0.5];
+"8" [label=" test \n1%, 12" fontcolor=black, style=filled, fontsize=22];
+"9" [label=" initVecs \n52%, 9" fontcolor=black, style=filled, fontsize=22];
+"10" [label=" sumVecs \n19%, 3" fontcolor=black, style=filled, fontsize=22];
+"11" [label=" diffVecs \n19%, 3" fontcolor=black, style=filled, fontsize=22];
+"13" [label=" main \n7%, 1" fontcolor=black, style=filled, fontsize=22];
+"14" [label=" Obj14 \n19.5 KiB" fontcolor=black, shape=box, fontsize=22];
+"15" [label=" Obj15 \n19.5 KiB" fontcolor=black, shape=box, fontsize=22];
+"16" [label=" Obj16 \n19.5 KiB" fontcolor=black, shape=box, fontsize=22];
+"17" [label=" Obj17 \n19.5 KiB" fontcolor=black, shape=box, fontsize=22];
+"8"->"8"[ label="2.7 KiB" color = "#00ff00"]
+"8"->"13"[ label="136 B" color = "#00ff61"]
+"9"->"14"[ label="175.8 KiB" color = "#ff0100"]
+"9"->"15"[ label="175.8 KiB" color = "#ff0100"]
+"10"->"16"[ label="58.6 KiB" color = "#a25e00"]
+"11"->"17"[ label="58.6 KiB" color = "#a25e00"]
+"13"->"8"[ label="72 B" color = "#00ff97"]
+"13"->"13"[ label="877 B" color = "#00ff00"]
+"14"->"10"[ label="58.6 KiB" color = "#a25e00"]
+"14"->"11"[ label="58.6 KiB" color = "#a25e00"]
+"15"->"10"[ label="58.6 KiB" color = "#a25e00"]
+"15"->"11"[ label="58.6 KiB" color = "#a25e00"]
+"16"->"13"[ label="4 B" color = "#0075ff"]
+"17"->"13"[ label="4 B" color = "#0075ff"]
 }

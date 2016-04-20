@@ -1,30 +1,84 @@
-#define SIZE 100
-int *srcArr1, *srcArr2, *sumArr, *diffArr;
+#include <stdio.h>
+#include <stdlib.h>
 
-void initVecs() {
-    for(i = 0; i < SIZE; i++) {
-        *(srcArr1+i)=i*5 + 7;
-        *(srcArr2+i)=2*i - 3;
+typedef int TYPE;
+
+TYPE* srcArr1;
+TYPE* srcArr2;
+TYPE* sumArr;
+TYPE* diffArr;
+
+TYPE coeff = 2;
+
+int nBytes;
+int nElem;
+
+void test(int count)
+{
+    printf("Call number %d to test()\n",count);
+    if(count)
+        test(count-1);
+    else
+        return;
+}
+
+void initVecs()
+{
+    int i;
+    for(i = 0; i < nElem; i++)
+    {
+        srcArr1[i]=i*5 + 7;
+        srcArr2[i]=2*i - 3;
     }
 }
-void sumVecs(){
-    for(i = 0; i < SIZE; i++)
-        *(sumArr+i) = *(srcArr1+i) + (*(srcArr2+i));
-}
-void diffVecs(){
-    for(i = 0; i < SIZE; i++)
-        *(diffArr+i) = *(srcArr1+i) + (*(srcArr2+i));
-}
-int main() {
-    srcArr1 = malloc( SIZE*sizeof(int) );
-    //simmilarly, other allocations
 
+void sumVecs()
+{
+    int i;
     initVecs();
-    for(j=0;j<3;j++)    sumVecs();
-    for(j=0;j<5;j++)    diffVecs();
-    printf("output : %d\n", sumArr[1]+diffArr[1]);
+    for(i = 0; i < nElem; i++)
+    {
+        sumArr[i] = srcArr1[i] + coeff * srcArr2[i];
+    }
+    initVecs();
+}
+
+void diffVecs()
+{
+    int i;
+    test(3);
+    for(i = 0; i < nElem; i++)
+    {
+        diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]);
+    }
+}
+
+void process()
+{
+    initVecs();
+    sumVecs();
+    diffVecs();
+}
+
+int main()
+{
+    nElem = 5000;
+    nBytes = nElem*sizeof(TYPE);
+    srcArr1 = malloc(nBytes);
+    srcArr2 = malloc(nBytes);
+    sumArr = malloc(nBytes);
+    diffArr = malloc(nBytes);
+
+    int i;
+    for(i=0; i<3; i++)
+        process();
+
+    printf("output : %d\n",sumArr[1]+diffArr[2]);
 
     free(srcArr1);
-    // simmilarly, other memory frees
+    free(srcArr2);
+    free(sumArr);
+    free(diffArr);
+
     return 0;
 }
