@@ -40,6 +40,7 @@
 // #include "counters.h"
 
 #include <set>
+#include <list>
 #include <json.hpp>
 
 using json = nlohmann::json;
@@ -52,7 +53,7 @@ typedef struct NodeType
     u64 instrCount;
     u64 nCalls;
     NodeType * parent;
-    vector<NodeType> children;
+    list<NodeType> children;
 }Node;
 
 class CallGraph
@@ -75,73 +76,90 @@ public:
 //         currNode = &head;
         currNode=NULL;
     }
-    void UpdateCall(IDNoType callee)
+    void UpdateCall(IDNoType callee, u64 rInstrCount)
     {
-        D1ECHO("Call to " << symTable.GetSymName(callee) );
         if(currNode == NULL)
         {
             head.ID = callee;
-            head.instrCount = 0;
+            //head.instrCount = 0;
+            head.instrCount = rInstrCount;
             head.nCalls = 1;
             head.parent=NULL;
             currNode = &head;
         }
         else
         {
-            vector<Node> & childrenVec = currNode->children;
-            vector<Node>::iterator it;
-            for(it = childrenVec.begin(); it != childrenVec.end(); ++it)
+            D2ECHO("Call to " << symTable.GetSymName(callee) << " from " << symTable.GetSymName(currNode->ID) );
+            list<Node> & currNodechildren = currNode->children;
+            list<Node>::iterator it;
+            u32 index;
+            for(index=0, it = currNodechildren.begin(); it != currNodechildren.end(); ++it, ++index)
             {
                 if( callee == it->ID )
                 {
-                    D1ECHO("Found in the children");
+                    D2ECHO( symTable.GetSymName(callee) << " found in the children");
+                    // Save rInstrCount of previous function before switching
+                    (currNode->instrCount) += rInstrCount;
                     currNode = &(*it);
-                    currNode->nCalls += 1;
+                    (currNode->nCalls) += 1;
                     break;
                 }
             }
 
-            if( it == childrenVec.end() )  // if not found
+            if( it == currNodechildren.end() )  // if not found
             {
-                D1ECHO("Not found in the children");
+                D2ECHO( symTable.GetSymName(callee) << " not found in the children");
                 Node n;
                 n.ID = callee;
                 n.instrCount = 0;
                 n.nCalls = 1;
                 n.parent = currNode;
-                childrenVec.push_back(n);
-                currNode = &( childrenVec[ childrenVec.size()-1 ] );
-                //currNode = &( childrenVec.back() );
+                currNodechildren.push_back(n);
+                // Save rInstrCount of previous function before switching
+                (currNode->instrCount) += rInstrCount;
+                //currNode = &( currNodechildren[ currNodechildren.size()-1 ] );
+                currNode = &( currNodechildren.back() );
             }
         }
+
+        #if (DEBUG>0)
+        ECHO("Updated situation");
+        Print();
+        #endif
     }
 
     void UpdateReturn(IDNoType retFrom, u64 rInstrCount)
     {
-        D1ECHO("Return from " << symTable.GetSymName(retFrom) );
-        currNode->instrCount += rInstrCount;
+        D2ECHO("Return from " << symTable.GetSymName(currNode->ID) );
+        (currNode->instrCount) += rInstrCount;
         currNode = currNode->parent;
+        #if (DEBUG>0)
+        ECHO("Updated situation");
+        Print();
+        #endif
     }
 
     void TotalInsCount(Node &n, u64 & count)
     {
         count +=  n.instrCount;
-        for( u32 i=0; i < n.children.size(); ++i )
-            TotalInsCount( n.children[i], count );
+        for( auto& child : n.children )
+            TotalInsCount( child, count );
     }
 
-    void PrintRec(Node &n, u32 indent, u64 total, ofstream & cgout)
+    void PrintRec(Node &n, u32 indent, u64 total, ostream & cgout = cout)
     {
         if(indent) cgout << setw(indent) << ' ';
         cgout << symTable.GetSymName(n.ID) 
-             << "( " << n.nCalls << " , " << floor( 100.0 * (n.instrCount)/total) << "% )" << endl;
-        for( u32 i=0; i < n.children.size(); ++i )
+              << "( " << n.nCalls << " , " << floor( 100.0 * (n.instrCount)/total) << "% )" << endl;
+//               << "( " << n.nCalls << " , " << n.instrCount << " )" << endl;
+
+        for( auto& child : n.children )
         {
-            PrintRec( n.children[i], indent+2, total, cgout );
+            PrintRec( child, indent+2, total, cgout );
         }
     }
 
-    void Print()
+    void PrintText()
     {
         ECHO("Printing callgraph to callgraph.out");
         ofstream cgout;
@@ -150,6 +168,13 @@ public:
         TotalInsCount(head, totalCount);
         PrintRec( head, 0, totalCount, cgout);
         cgout.close();
+    }
+    void Print()
+    {
+        ECHO("Printing callgraph");
+        u64 totalCount = 0;
+        TotalInsCount(head, totalCount);
+        PrintRec( head, 0, totalCount);
     }
 
     void PrintCallChainsRec(Node &n, vector<IDNoType> & callchain)
@@ -163,10 +188,11 @@ public:
         }
         cout << endl;
 
-        for( u32 i=0; i < n.children.size(); ++i )
+        for( auto& child : n.children )
         {
-            PrintCallChainsRec( n.children[i], callchain );
+            PrintCallChainsRec( child, callchain );
         }
+
         callchain.pop_back();
     }
 
@@ -194,10 +220,11 @@ public:
         jevent["calls"] = n.nCalls;
         jevents.push_back(jevent);
 
-        for( u32 i=0; i < n.children.size(); ++i )
+        for( auto& child : n.children )
         {
-            PrintJCallChainsRec( n.children[i], callchain, jevents );
+            PrintJCallChainsRec( child, callchain, jevents );
         }
+
         callchain.pop_back();
     }
 
@@ -213,10 +240,11 @@ public:
             jfuncs.push_back(jfunc);
         }
 
-        for( u32 i=0; i < n.children.size(); ++i )
+        for( auto& child : n.children )
         {
-            PrintJFunctionsRec( n.children[i], jfuncs );
+            PrintJFunctionsRec( child, jfuncs );
         }
+
     }
 
     void PrintJson()

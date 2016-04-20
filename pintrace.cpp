@@ -340,7 +340,7 @@ VOID RecordRoutineEntry(CHAR* rname)
 
     IDNoType fid = FuncName2ID[rname];
     callCounts[fid] += 1;
-    callgraph.UpdateCall(fid);
+    callgraph.UpdateCall(fid, rInstrCount);
     rInstrCount=0;
     CallStack.Push(fid);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
@@ -1060,6 +1060,7 @@ VOID TheEnd(INT32 code, VOID *v)
         ComMatrix.PrintMatrix(mout);
         mout.close();
         callgraph.Print();
+        callgraph.PrintText();
         callgraph.PrintJson();
         break;
     case 3:

@@ -21,9 +21,8 @@ endif
 CONFIG_EXISTS := $(shell [ -d ${CONFIG_ROOT} ] && echo 1 )
 ifneq (${CONFIG_EXISTS}, 1)
 $(info PIN_ROOT not set to point to the Pin directory.)
-# $(info And you are also compiling this tool from outside pin kit.)
 $(info Install Pin and set PIN_ROOT to point to it.)
-$(error Required Pin Rev above ${LAST_SUPPORTED_REV} )
+$(error Required Pin Rev ${LAST_SUPPORTED_REV} and above.)
 endif
 
 include $(CONFIG_ROOT)/makefile.config
