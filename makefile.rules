@@ -25,7 +25,7 @@ TESTDIR := ./tests/
 # This defines tests which run tools of the same name.  This is simply for convenience to avoid
 # defining the test name twice (once in TOOL_ROOTS and again in TEST_ROOTS).
 # Tests defined here should not be defined in TOOL_ROOTS and TEST_ROOTS.
-TEST_TOOL_ROOTS := 
+TEST_TOOL_ROOTS :=
 
 # This defines the tests to be run that were not already defined in TEST_TOOL_ROOTS.
 TEST_ROOTS :=
@@ -137,6 +137,8 @@ markers.test: $(OBJDIR)markers$(EXE_SUFFIX)
 
 callGraph.test: $(OBJDIR)callGraph$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)callGraph$(EXE_SUFFIX)
+	python -m json.tool callgraph.json > temp
+	mv temp callgraph.json
 
 ##############################################################
 #
@@ -148,7 +150,7 @@ callGraph.test: $(OBJDIR)callGraph$(EXE_SUFFIX)
 
 CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
 		engine1.cpp engine2.cpp engine3.cpp \
-		symbols.cpp counters.cpp \
+		symbols.cpp counters.cpp json.cpp \
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
 
@@ -198,4 +200,3 @@ tarball:
 	make clean
 	cd ..; tar -czf mcprof.tar.gz  --exclude='mcprof/doc/latex' --exclude='mcprof/.git*' mcprof
 	mv ../mcprof.tar.gz ~/Desktop/.
-

@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -55,7 +55,7 @@
 #include <map>
 #include <deque>
 #include <algorithm>
-#include <cstring> 
+#include <cstring>
 
 /* ================================================================== */
 // Global variables
@@ -83,7 +83,7 @@ bool ShowUnknown;
 bool TrackZones;
 bool TrackStartStop;
 u32  Threshold;
- 
+
 extern map<IDNoType,u64> instrCounts;
 extern map<IDNoType,u64> callCounts;
 
@@ -368,7 +368,7 @@ VOID RecordZoneEntry(INT32 zoneNo)
     D1ECHO("Entring zone " << zoneName );
 
     // enter the zone in the symbole table if seeing for first time.
-    // This CANNOT be done at instrumentation time as we dont know 
+    // This CANNOT be done at instrumentation time as we dont know
     // what kind of magic instruction it is at that time, we know that
     // only at analysis time
     if( !symTable.IsSeenFunctionName(zoneName) )
@@ -1059,7 +1059,7 @@ VOID TheEnd(INT32 code, VOID *v)
         OpenOutFile(KnobMatrixFile.Value(), mout);
         ComMatrix.PrintMatrix(mout);
         mout.close();
-        callgraph.Print();
+        // callgraph.Print();
         callgraph.PrintText();
         callgraph.PrintJson();
         break;
@@ -1097,7 +1097,7 @@ void SetupPin(int argc, char *argv[])
         Usage();
         Die();
     }
-    
+
     TrackObjects = KnobTrackObjects.Value();
     RecordAllAllocations=KnobRecordAllAllocations.Value();
     FlushCalls=KnobFlushCalls.Value();
