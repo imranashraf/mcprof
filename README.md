@@ -120,7 +120,7 @@ In order to setup and use `MCProf` the following packages are required:
 * graphviz Dot utility for converting the generated communication graphs from dot to pdf, png etc
 * gnuplot to plot communication matrix as graph
 
-## Quick Setup (See doc/manual.pdf for details)
+## Quick Setup (See [manual](https://bitbucket.org/imranashraf/mcprof/raw/master/doc/manual.pdf) for details)
 
 `MCProf` uses Makefile to compile the sources. In order to compile `MCProf` from sources on 32-bit / 64-bit Linux, the following steps can be performed.
 
