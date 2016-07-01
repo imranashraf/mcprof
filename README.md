@@ -103,7 +103,7 @@ year = {2015},
 
 ## Supported Patforms
 
-`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04 on real machines as well as virtual machines running in virtualbox.
+`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04 on real machines as well as virtual machines running in virtualbox. Supported has been tested with gcc 4.6 till gcc 4.9. Please not that `MCProf` does not work with gcc 5 or above, kernel 4 or above, or Pin 3.0 or above.
 
 
 ## Download
@@ -114,17 +114,17 @@ year = {2015},
 
 In order to setup and use `MCProf` the following packages are required:
 
-* [Intel Pin DBI framework](www.pintool.org) Revision 62732 or higher
+* [Intel Pin DBI framework](www.pintool.org) Revision 62732 or higher and lower than Revision 71313.
 * g++ compiler with C++ 11 support
 * libelf library to read static symbols from the binary
 * graphviz Dot utility for converting the generated communication graphs from dot to pdf, png etc
 * gnuplot to plot communication matrix as graph
 
-## Setup
+## Quick Setup (See doc/manual.pdf for details)
 
 `MCProf` uses Makefile to compile the sources. In order to compile `MCProf` from sources on 32-bit / 64-bit Linux, the following steps can be performed.
 
-* Download Pin and copy and extract it to the directory where you want to keep Pin.
+* Download Pin and copy and extract it to the directory where you want to keep Pin. Pin uses 32 bit libraries, See FAQ in manual for details on how to install them or google for your platform.
 
 * Define a variable `PIN_ROOT` by running the following commands:
 
@@ -135,6 +135,9 @@ In order to setup and use `MCProf` the following packages are required:
         export PATH=$PIN_ROOT:$PATH
 
 * You can also add these lines, for instance, to your `.bashrc` in case you are using `bash` to export these variable automatically on opening a terminal.
+
+* Test Pin by the following command:
+        pin -version
 
 * Download `MCProf` and copy and extract it to the directory where you want to compile it.
 
