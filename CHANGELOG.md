@@ -2,13 +2,27 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [ 0.4 ] - [ 2015-10-08 ]
+## [ 2.1 ] - [ 2016-xx-xx ]
 ### Added
 - 
 
 ### Changed
+- 
+
+### Removed
+- 
+
+### Fixed
+-
+
+## [ 2.0 ] - [ 2016-07-01 ]
+### Added
+- Callgraph in json and pdf format
+
+### Changed
 - Default for printing communication values is not SI units (1K is 1024)
 - Type of communication matrix entry is u64
+- 
 
 ### Removed
 - 
@@ -16,9 +30,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Fixed bug of routine names with recent g++ version
 - Better implementation of callpath to ID
+- Testing pin version
+- Tested with gcc 4.6 to 4.9
 
 
-## [ 0.3 ] - [ 2015-04-23 ]
+## [ 1.3 ] - [ 2015-04-23 ]
 ### Added
 - Support for static symbols
 - Support for threshold knob for communication edges
@@ -38,7 +54,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed alignment issue in communication matrix
 
 
-## [ 0.2 ] - [ 2015-03-30 ]
+## [ 1.2 ] - [ 2015-03-30 ]
 ### Added
 - Separate execProfile and memProfile.
 - Support for tracking zones.
@@ -56,7 +72,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed printing issue and other small modifications.
 
 
-## [ 0.1 ] - [ 2014-12-17 ]
+## [ 1.1 ] - [ 2014-12-17 ]
 ### Added
 - First implementation
 - This CHANGELOG file.
