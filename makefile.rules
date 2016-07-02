@@ -71,8 +71,8 @@ endif
 
 # Linux
 ifeq ($(TARGET_OS),linux)
-    #TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors
-    TOOL_CXXFLAGS+= -MD -std=c++0x -I -Wfatal-errors
+#     TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors #-fexceptions
+    TOOL_CXXFLAGS+= -MD -std=c++0x -I. -Wfatal-errors
     #TOOL_LDFLAGS+= -pg
     TOOL_LIBS+= -lelf
     APP_CXXFLAGS+= -fno-inline -g -Wfatal-errors
@@ -187,7 +187,7 @@ openingFileOrder=makefile.rules globals.h globals.cpp markers.h \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
 	counters.h counters.cpp \
-	callstack.h callstack.cpp callgraph.h \
+	callstack.h callstack.cpp json.h json.cpp callgraph.h \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp

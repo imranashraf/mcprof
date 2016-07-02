@@ -42,6 +42,7 @@
 #include <iomanip>
 #include <map>
 #include <string>
+#include <sstream>
 #include <cstdlib>
 
 //Set the debugging level (0-3)
@@ -111,6 +112,13 @@ static const std::string ALLOCA("alloca");
 static const std::string FREE("free");
 
 static const std::string STRDUP("strdup");
+
+template < typename T > std::string to_string( const T& n )
+{
+    std::ostringstream stm ;
+    stm << n ;
+    return stm.str() ;
+}
 
 extern std::map <std::string,IDNoType> FuncName2ID;
 #include "symbols.h"

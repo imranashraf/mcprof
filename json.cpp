@@ -19,6 +19,8 @@
 #define snprintf sprintf_s
 #endif
 
+#include "globals.h"
+
 using namespace json;
 
 namespace json
@@ -110,7 +112,7 @@ Value& Value::operator =(const Value& v)
 Value& Value::operator [](size_t idx)
 {
 	if (mValueType != ArrayVal)
-		throw std::runtime_error("json mValueType==ArrayVal required");
+		Die(); //throw std::runtime_error("json mValueType==ArrayVal required");
 
 	return mArrayVal[idx];
 }
@@ -118,7 +120,7 @@ Value& Value::operator [](size_t idx)
 const Value& Value::operator [](size_t idx) const
 {
 	if (mValueType != ArrayVal)
-		throw std::runtime_error("json mValueType==ArrayVal required");
+		Die(); //throw std::runtime_error("json mValueType==ArrayVal required");
 
 	return mArrayVal[idx];
 }
@@ -126,7 +128,7 @@ const Value& Value::operator [](size_t idx) const
 Value& Value::operator [](const std::string& key)
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal[key];
 }
@@ -134,7 +136,7 @@ Value& Value::operator [](const std::string& key)
 Value& Value::operator [](const char* key)
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal[key];
 }
@@ -142,7 +144,7 @@ Value& Value::operator [](const char* key)
 const Value& Value::operator [](const char* key) const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal[key];
 }
@@ -150,7 +152,7 @@ const Value& Value::operator [](const char* key) const
 const Value& Value::operator [](const std::string& key) const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal[key];
 }
@@ -171,7 +173,7 @@ size_t Value::size() const
 bool Value::HasKey(const std::string &key) const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal.HasKey(key);
 }
@@ -179,7 +181,7 @@ bool Value::HasKey(const std::string &key) const
 int Value::HasKeys(const std::vector<std::string> &keys) const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal.HasKeys(keys);
 }
@@ -187,7 +189,7 @@ int Value::HasKeys(const std::vector<std::string> &keys) const
 int Value::HasKeys(const char **keys, int key_count) const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal.HasKeys(keys, key_count);
 }
@@ -195,7 +197,7 @@ int Value::HasKeys(const char **keys, int key_count) const
 int Value::ToInt() const
 {
 	if (!IsNumeric())
-		throw std::runtime_error("json mValueType==IsNumeric() required");
+		Die(); //throw std::runtime_error("json mValueType==IsNumeric() required");
 
 	return mIntVal;
 }
@@ -203,7 +205,7 @@ int Value::ToInt() const
 float Value::ToFloat() const
 {
 	if (!IsNumeric())
-		throw std::runtime_error("json mValueType==IsNumeric() required");
+		Die(); //throw std::runtime_error("json mValueType==IsNumeric() required");
 
 	return mFloatVal;
 }
@@ -211,7 +213,7 @@ float Value::ToFloat() const
 double Value::ToDouble() const
 {
 	if (!IsNumeric())
-		throw std::runtime_error("json mValueType==IsNumeric() required");
+		Die(); //throw std::runtime_error("json mValueType==IsNumeric() required");
 
 	return mDoubleVal;
 }
@@ -219,7 +221,7 @@ double Value::ToDouble() const
 bool Value::ToBool() const
 {
 	if (mValueType != BoolVal)
-		throw std::runtime_error("json mValueType==BoolVal required");
+		Die(); //throw std::runtime_error("json mValueType==BoolVal required");
 
 	return mBoolVal;
 }
@@ -227,7 +229,7 @@ bool Value::ToBool() const
 const std::string& Value::ToString() const
 {
 	if (mValueType != StringVal)
-		throw std::runtime_error("json mValueType==StringVal required");
+		Die(); //throw std::runtime_error("json mValueType==StringVal required");
 
 	return mStringVal;
 }
@@ -235,7 +237,7 @@ const std::string& Value::ToString() const
 Object Value::ToObject() const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal;
 }
@@ -243,7 +245,7 @@ Object Value::ToObject() const
 Array Value::ToArray() const
 {
 	if (mValueType != ArrayVal)
-		throw std::runtime_error("json mValueType==ArrayVal required");
+		Die(); //throw std::runtime_error("json mValueType==ArrayVal required");
 
 	return mArrayVal;
 }
@@ -251,7 +253,7 @@ Array Value::ToArray() const
 Value::operator int() const
 {
 	if (!IsNumeric())
-		throw std::runtime_error("json mValueType==IsNumeric() required");
+		Die(); //throw std::runtime_error("json mValueType==IsNumeric() required");
 
 	return mIntVal;
 }
@@ -259,7 +261,7 @@ Value::operator int() const
 Value::operator float() const
 {
 	if (!IsNumeric())
-		throw std::runtime_error("json mValueType==IsNumeric() required");
+		Die(); //throw std::runtime_error("json mValueType==IsNumeric() required");
 
 	return mFloatVal;
 }
@@ -267,7 +269,7 @@ Value::operator float() const
 Value::operator double() const
 {
 	if (!IsNumeric())
-		throw std::runtime_error("json mValueType==IsNumeric() required");
+		Die(); //throw std::runtime_error("json mValueType==IsNumeric() required");
 
 	return mDoubleVal;
 }
@@ -275,7 +277,7 @@ Value::operator double() const
 Value::operator bool() const
 {
 	if (mValueType != BoolVal)
-		throw std::runtime_error("json mValueType==BoolVal required");
+		Die(); //throw std::runtime_error("json mValueType==BoolVal required");
 
 	return mBoolVal;
 }
@@ -283,7 +285,7 @@ Value::operator bool() const
 Value::operator std::string() const
 {
 	if (mValueType != StringVal)
-		throw std::runtime_error("json mValueType==StringVal required");
+		Die(); //throw std::runtime_error("json mValueType==StringVal required");
 
 	return mStringVal;
 }
@@ -291,7 +293,7 @@ Value::operator std::string() const
 Value::operator Object() const
 {
 	if (mValueType != ObjectVal)
-		throw std::runtime_error("json mValueType==ObjectVal required");
+		Die(); //throw std::runtime_error("json mValueType==ObjectVal required");
 
 	return mObjectVal;
 }
@@ -299,7 +301,7 @@ Value::operator Object() const
 Value::operator Array() const
 {
 	if (mValueType != ArrayVal)
-		throw std::runtime_error("json mValueType==ArrayVal required");
+		Die(); //throw std::runtime_error("json mValueType==ArrayVal required");
 
 	return mArrayVal;
 }

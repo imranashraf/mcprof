@@ -34,8 +34,8 @@
  *
  */
 
-#include <gelf.h>
 // #include <libelf.h>
+// #include <gelf.h>
 #include <cstring>
 #include "shadow.h"
 #include "symbols.h"
@@ -256,7 +256,7 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
     // strcpy(binName, StripPath(fullBinName));
     strcpy(binName, fullBinName );
     cout << "Binary Name = "<< binName << endl;
-
+/*
     int elf_fd;
     if (( elf_fd  = open( binName, O_RDONLY, 0)) < 0)
     {
@@ -322,6 +322,7 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
         }
     }
     close(elf_fd);
+    */
 }
 
 // TODO May be the following two init methods may be combined together to read from

@@ -70,7 +70,7 @@ void PrintInstrPercents()
     OpenOutFile("execProfile.out", fout);
 
     multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
-    map<u64,IDNoType>::reverse_iterator iter;
+    multimap<u64,IDNoType>::reverse_iterator iter;
     fout << setw(15) << "%Exec.Instr." << "\t\t" << "Function Name" << endl;
     fout << "  ===============================================" <<endl;
 

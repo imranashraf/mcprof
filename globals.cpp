@@ -167,11 +167,11 @@ const std::string& humanReadableByteCount(u64 bytes, bool si)
         hBytes = to_string((long long)bytes) + " B";
     else
     {
-        int exp = (int) (log(bytes) / log(unit));
+        int exp = (int) (log((double)bytes) / log((double)unit));
         pre[0] = punits1[exp-1];
         pre[1] = punits2;
         pre[2] = '\0';
-        float val = bytes / pow(unit, exp);
+        float val = bytes / pow((double)unit, (double)exp);
         sprintf(cBytes, "%.1f %sB", val, pre);
         hBytes = cBytes;
     }

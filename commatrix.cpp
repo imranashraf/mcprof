@@ -274,7 +274,7 @@ void Matrix2D::PrintDot(ostream &dotout)
             CommValType comm = Matrix[p][c];
             if( comm > Threshold )
             {
-                color = (int) (  1023 *  log((CommValType)(comm)) / log((CommValType)maxComm)  );
+                color = (int) (  1023 *  log( (double)(comm) ) / log( (double)maxComm ) );
                 dotout << dec
                        << "\"" << (u16)p << "\""
                        << "->"

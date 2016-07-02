@@ -42,9 +42,9 @@
 #include "pin.H"
 
 #include <vector>
-// #include <unordered_map>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <algorithm>
 
@@ -65,7 +65,7 @@ struct Location
     Location(u32 l, string f) : lineNo(l), fileName(f) {}
     string toString()
     {
-        return fileName + ":" + to_string((long long)lineNo);
+        return fileName + ":" + to_string(lineNo);
     }
 
     bool operator==(const Location& loc) const
@@ -124,7 +124,8 @@ extern LocationList Locations;
 // may be first location should be unknown/invalid
 
 enum SymType { NA, FUNC, OBJ };
-static vector<string> SymTypeName { "NA", "FUNC", "OBJ" };
+// static vector<string> SymTypeName { "NA", "FUNC", "OBJ" };
+static string SymTypeName[] = { "NA", "FUNC", "OBJ" };
 
 class Symbol
 {
