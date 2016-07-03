@@ -113,16 +113,13 @@ static const std::string FREE("free");
 
 static const std::string STRDUP("strdup");
 
-template < typename T > std::string to_string( const T& n )
+template < typename T >
+std::string to_string( const T& n )
 {
     std::ostringstream stm ;
     stm << n ;
     return stm.str() ;
 }
-
-extern std::map <std::string,IDNoType> FuncName2ID;
-#include "symbols.h"
-extern Symbols symTable;
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 
@@ -133,7 +130,6 @@ extern Symbols symTable;
 
 #define HEXA(v) hex << "0x" << setw(12) << setfill ('0') << v << dec
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
-#define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
 
 #if (DEBUG>0)
 #define DECHO(content)                          ECHO(content)

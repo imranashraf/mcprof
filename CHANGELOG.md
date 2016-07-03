@@ -25,13 +25,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - 
 
 ### Removed
-- 
+-
 
 ### Fixed
 - Fixed bug of routine names with recent g++ version
 - Better implementation of callpath to ID
-- Testing pin version
-- Tested with gcc 4.6 to 4.9
+- Tested with pin 3.0 version
+- Tested with gcc 4.6 to 5.3
 
 
 ## [ 1.3 ] - [ 2015-04-23 ]

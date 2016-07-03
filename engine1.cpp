@@ -39,6 +39,7 @@
 #include "engine1.h"
 #include "commatrix.h"
 #include "callstack.h"
+#include "symbols.h"
 
 #include <algorithm>
 #include <iomanip>

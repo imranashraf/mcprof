@@ -340,4 +340,7 @@ public:
     void InitFromFtnFile();
 };
 
+extern Symbols symTable;
+#define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
+
 #endif
