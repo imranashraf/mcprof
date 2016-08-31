@@ -44,10 +44,10 @@
 #include <iomanip>
 #include <iostream>
 
-// if BYTELEVEL is defined than the granularity is Byte
-// #define BYTELEVEL
-
 void RecordWriteEngine4(uptr addr, u32 size);
 void RecordReadEngine4(uptr addr, u32 size);
+
+void RecordWriteEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip);
+void RecordReadEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip);
 
 #endif

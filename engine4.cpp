@@ -51,19 +51,24 @@ extern u32 LoopIterationCount;
 
 void RecordWriteEngine4(uptr addr, u32 size)
 {
-    IDNoType prod = LoopIterationCount;
-    D2ECHO("Recording Write of  " << VAR(size) << " by " << prod << " at " << ADDR(addr));
+    IDNoType prod = CallStack.Top();
+    D2ECHO("Recording Write of  " << VAR(size) << " by " << prod << " at " << ADDR(addr) );
     for(u32 i=0; i<size; i++)
     {
         SetProducer(prod, addr+i);
+
+//         // TODO WAW dependence tracking
+//         IDNoType prevProd = GetProducer(addr+i);
+//         ComMatrix.RecordCommunication(prevProd, prod, 1);
     }
 }
 
 void RecordReadEngine4(uptr addr, u32 size)
 {
     IDNoType prod;
-    IDNoType cons = LoopIterationCount;
+    IDNoType cons = CallStack.Top();
     D2ECHO("Recording comm of " << VAR(size) << " b/w " << GetProducer(addr) << " and " << cons << ADDR(addr) << dec);
+
     for(u32 i=0; i<size; i++)
     {
         prod = GetProducer(addr+i);
@@ -71,3 +76,43 @@ void RecordReadEngine4(uptr addr, u32 size)
         ComMatrix.RecordCommunication(prod, cons, 1);
     }
 }
+
+
+
+void RecordWriteEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip)
+{
+    IDNoType prod = CallStack.Top();
+
+    const char* iname = reinterpret_cast<const char *>(insName);
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+    ECHO("Recording Write of  " << VAR(size) << " by " << prod << " at " << ADDR(addr) << " ins = " << iname << "; in routine " << rname);
+
+    for(u32 i=0; i<size; i++)
+    {
+        SetProducer(prod, addr+i);
+
+//         // WAW dependence tracking
+//         IDNoType prevProd = GetProducer(addr+i);
+//         ComMatrix.RecordCommunication(prevProd, prod, 1);
+    }
+}
+
+void RecordReadEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip)
+{
+    IDNoType prod;
+    IDNoType cons = CallStack.Top();
+
+    const char* iname = reinterpret_cast<const char *>(insName);
+    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+    ECHO("Recording comm of " << VAR(size) << " b/w " << GetProducer(addr) << " and " << cons << ADDR(addr) << dec << " ins = " << iname << "; in routine " << rname);
+
+    for(u32 i=0; i<size; i++)
+    {
+        prod = GetProducer(addr+i);
+        D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
+        ComMatrix.RecordCommunication(prod, cons, 1);
+    }
+}
+

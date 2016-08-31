@@ -70,7 +70,14 @@ public:
             << FUNC(cons) << " of size: " << size );
 
         if( prod < Matrix.size() && cons < Matrix.size() )
+        {
             Matrix[prod][cons] += size;
+        }
+        else
+        {
+            ECHO("prod/cons out of range");
+            Die();
+        }
     }
 
     float MaxCommunication(u16 StartID);

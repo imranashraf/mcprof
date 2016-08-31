@@ -63,15 +63,19 @@ void RecordWriteEngine2(uptr addr, u32 size)
         cout << "W " << addr+i << endl;
     #endif
 
+    D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
+
+#if 0
     // Added for allocation dependencies
+    // TODO this can be a problem when same stack addresses are reused
+    // these will appear as write after write dependencies
     for(u32 i=0; i<size; i++)
     {
         IDNoType prevProd = GetProducer(addr+i);
         ComMatrix.RecordCommunication(prevProd, prod, 1);
         //ECHO( "AllocDepend " << FUNC(prevProd) << " " << FUNC(prod) << " at " << ADDR(addr) );
     }
-
-    D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
+#endif
 
     if( objid == UnknownID )
     {
@@ -82,7 +86,7 @@ void RecordWriteEngine2(uptr addr, u32 size)
     }
     else
     {
-        D2ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
+        ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
                << " and " << symTable.GetSymName(objid) << dec);
         for(u32 i=0; i<size; i++)
         {
@@ -120,16 +124,18 @@ void RecordReadEngine2(uptr addr, u32 size)
 
     if( objid == UnknownID )
     {
+        D2ECHO("Recording comm of " << VAR(size) << " b/w function "
+                << FUNC( GetProducer(addr) ) << " and " << FUNC(cons) << dec);
+
         for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
-            D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
             ComMatrix.RecordCommunication(prod, cons, 1);
         }
     }
     else
     {
-        D2ECHO("Recording comm of " << VAR(size) << " b/w "
+        ECHO("Recording comm of " << VAR(size) << " b/w object "
                << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
 
         ComMatrix.RecordCommunication(objid, cons, size);
