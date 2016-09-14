@@ -49,6 +49,9 @@ extern bool TrackObjects;
 extern bool NoseDown;
 extern u32 LoopIterationCount;
 
+extern void *WriteRecorder;
+extern void *ReadRecorder;
+
 void RecordWriteEngine4(uptr addr, u32 size)
 {
     IDNoType prod = CallStack.Top();
@@ -56,10 +59,6 @@ void RecordWriteEngine4(uptr addr, u32 size)
     for(u32 i=0; i<size; i++)
     {
         SetProducer(prod, addr+i);
-
-//         // TODO WAW dependence tracking
-//         IDNoType prevProd = GetProducer(addr+i);
-//         ComMatrix.RecordCommunication(prevProd, prod, 1);
     }
 }
 
@@ -72,47 +71,54 @@ void RecordReadEngine4(uptr addr, u32 size)
     for(u32 i=0; i<size; i++)
     {
         prod = GetProducer(addr+i);
-        D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
         ComMatrix.RecordCommunication(prod, cons, 1);
     }
 }
 
 
-
 void RecordWriteEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip)
 {
-    IDNoType prod = CallStack.Top();
-
-    const char* iname = reinterpret_cast<const char *>(insName);
-    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    ECHO("Recording Write of  " << VAR(size) << " by " << prod << " at " << ADDR(addr) << " ins = " << iname << "; in routine " << rname);
-
-    for(u32 i=0; i<size; i++)
+    if( ReadRecorder == RecordReadEngine4 ) // to instrument when analysis engine is selected
     {
-        SetProducer(prod, addr+i);
+        IDNoType prod = CallStack.Top();
 
-//         // WAW dependence tracking
-//         IDNoType prevProd = GetProducer(addr+i);
-//         ComMatrix.RecordCommunication(prevProd, prod, 1);
+        const char* iname = reinterpret_cast<const char *>(insName);
+        string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+        string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+        ECHO("Recording Write of  " << VAR(size) << " by " << prod << " at " << ADDR(addr) << " ins = " << iname << "; in routine " << rname);
+
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer(prod, addr+i);
+        }
+    }
+    else
+    {
+        D2ECHO("Not Instrumenting Read as dummy recorder " );
     }
 }
 
 void RecordReadEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip)
 {
-    IDNoType prod;
-    IDNoType cons = CallStack.Top();
-
-    const char* iname = reinterpret_cast<const char *>(insName);
-    string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
-    string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    ECHO("Recording comm of " << VAR(size) << " b/w " << GetProducer(addr) << " and " << cons << ADDR(addr) << dec << " ins = " << iname << "; in routine " << rname);
-
-    for(u32 i=0; i<size; i++)
+    if( WriteRecorder == RecordWriteEngine4 ) // to instrument when analysis engine is selected
     {
-        prod = GetProducer(addr+i);
-        D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
-        ComMatrix.RecordCommunication(prod, cons, 1);
+        IDNoType prod;
+        IDNoType cons = CallStack.Top();
+
+        const char* iname = reinterpret_cast<const char *>(insName);
+        string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
+        string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
+        ECHO("Recording comm of " << VAR(size) << " b/w " << GetProducer(addr) << " and " << cons << ADDR(addr) << dec << " ins = " << iname << "; in routine " << rname);
+
+        for(u32 i=0; i<size; i++)
+        {
+            prod = GetProducer(addr+i);
+            D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
+            ComMatrix.RecordCommunication(prod, cons, 1);
+        }
+    }
+    else
+    {
+        D2ECHO("Not Instrumenting Read as dummy recorder " );
     }
 }
-

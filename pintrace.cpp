@@ -93,6 +93,7 @@ bool ShowUnknown;
 bool TrackZones;
 bool TrackStartStop;
 bool TrackLoopDepend;
+bool TrackTasks;
 u32  Threshold;
 u32 SelectedLoopNo;
 extern map<IDNoType,u64> instrCounts;
@@ -177,7 +178,7 @@ KNOB<UINT32> KnobSelectedLoopNo(KNOB_MODE_WRITEONCE,  "pintool",
                         "Specify loop no to test of dependence.");
 
 KNOB<BOOL> KnobReadStaticObjects(KNOB_MODE_WRITEONCE, "pintool",
-                            "StaticSymbols", "1", "Read static symbols from the binary and show them in the graph");
+                            "StaticSymbols", "0", "Read static symbols from the binary and show them in the graph");
 
 KNOB<BOOL> KnobTrackTasks(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackTasks", "0", "Each function call and loop execution for different source-code\
@@ -214,7 +215,7 @@ VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
     //rInstrCount+=c; // add to global counter
 }
 
-VOID dummyRecorder(uptr a, u32 b){}
+void dummyRecorder(uptr a, u32 b){}
 VOID dummyInstrCounter(ADDRINT c){}
 
 void SelectAnalysisEngine()
@@ -243,7 +244,11 @@ void SelectAnalysisEngine()
         Die();
         break;
     }
-    D2ECHO("Selected Engine number " << Engine);
+    ECHO("Selected Engine number " << Engine);
+    D2ECHO( ADDR((void*)RecordReadEngine1) << " and " << ADDR((void*)RecordWriteEngine1) );
+    D2ECHO( ADDR((void*)RecordReadEngine2) << " and " << ADDR((void*)RecordWriteEngine2) );
+    D2ECHO( ADDR((void*)RecordReadEngine3) << " and " << ADDR((void*)RecordWriteEngine3) );
+    D2ECHO( ADDR((void*)RecordReadEngine4) << " and " << ADDR((void*)RecordWriteEngine4) );
 }
 
 void SelectDummyAnalysisEngine()
@@ -251,6 +256,8 @@ void SelectDummyAnalysisEngine()
     ReadRecorder = dummyRecorder;
     WriteRecorder = dummyRecorder;
     InstrCounter = dummyInstrCounter;
+    ECHO("Selected Engine dummy");
+    D2ECHO( ADDR((void*)dummyRecorder) );
 }
 
 /* ===================================================================== */
@@ -399,7 +406,7 @@ VOID RecordRoutineEntry2(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
     string calleeName(rname);
-    D1ECHO ("Entering Routine : " << calleeName );
+    D2ECHO ("Entering Routine : " << calleeName );
 
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
@@ -494,7 +501,7 @@ VOID RecordRoutineExit2(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    D1ECHO ("Trying to exit routine : " << rname );
+    D2ECHO ("Trying to exit routine : " << rname );
 
     if( ValidFtnName(rname) )
     {
@@ -703,14 +710,17 @@ VOID InstrumentImages(IMG img, VOID * v)
     string imgname = IMG_Name(img);
     bool isLibC = imgname.find("/libc") != string::npos;
 
-    // we should instrument malloc/free only when tracking objects !
-    if ( TrackObjects && isLibC )
+    // We should instrument malloc/free only when tracking objects !
+    // We should also track them when tracking tasks to report
+    // allocation dependencies.
+    if ( (TrackObjects || TrackTasks) && isLibC )
+//     if ( (TrackObjects || (TrackTasks && !TrackLoopDepend) ) && isLibC )
     {
         // instrument libc for malloc, free etc
         ECHO("Instrumenting "<<imgname<<" for (re)(c)(m)alloc/free routines etc ");
 
         RTN mallocRtn = RTN_FindByName(img, MALLOC.c_str() );
-//         if (RTN_Valieoud(mallocRtn))
+        if (RTN_Valid(mallocRtn))
         {
             RTN_Open(mallocRtn);
             D1ECHO("Instrumenting malloc");
@@ -897,14 +907,14 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             case __PIN_MAGIC_START:
                 if(TrackStartStop)
                 {
-                    D1ECHO("__PIN_MAGIC_START");
+                    D2ECHO("__PIN_MAGIC_START");
                     SelectAnalysisEngine();
                 }
             break;
             case __PIN_MAGIC_STOP:
                 if(TrackStartStop)
                 {
-                    D1ECHO("__PIN_MAGIC_STOP");
+                    D2ECHO("__PIN_MAGIC_STOP");
                     SelectDummyAnalysisEngine();
                 }
             break;
@@ -914,7 +924,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
     break;
     case __PIN_MAGIC_ZONE_ENTER:
-        D1ECHO("__PIN_MAGIC_ZONE_ENTER");
+        D2ECHO("__PIN_MAGIC_ZONE_ENTER");
         if( TrackZones || TrackLoopDepend )
         {
             D2ECHO("setting call site locindex to " << locidx);
@@ -923,8 +933,9 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            //SelectAnalysisEngine();
             LoopIterationCount=0;
+            ComMatrix.Clear(); // TODO check if later if its needed
+            SelectAnalysisEngine();
         }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
@@ -942,7 +953,6 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            //SelectDummyAnalysisEngine();
             bool result = ComMatrix.CheckLoopIndependence(LoopIterationCount);
             if(result)
             { //independent
@@ -954,6 +964,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             }
             ComMatrix.PrintMatrix(LoopIterationCount);
             ComMatrix.Clear();
+            SelectDummyAnalysisEngine();
         }
     }
     break;
@@ -961,7 +972,6 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
             D2ECHO("__PIN_MAGIC_LOOPBODY_ENTER  for Loop No : " << val << " Iterations : " << LoopIterationCount);
-            SelectAnalysisEngine();
             ++LoopIterationCount;
             CallStack.Push(LoopIterationCount);
         }
@@ -970,7 +980,6 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
             D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT for Loop No : " << val << " Iterations : " << LoopIterationCount);
-            SelectDummyAnalysisEngine();
             CallStack.Pop();
         }
     break;
@@ -981,7 +990,8 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
 }
 
 // #define USEDEBUGENGINE4
-// this should be used only when using engine 4 for detailed debug output for dependencies
+// Above define can be used to perform detailed debug of engine 4.
+// Prints detailed output for dependencies.
 VOID InstrumentTraces(TRACE trace, VOID *v)
 {
     RTN rtn = TRACE_Rtn (trace);
@@ -1016,26 +1026,26 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
             bool traceRead = !( isStackRead & ignoreStack );
             bool traceWrite = !( isStackWrite & ignoreStack );
 
+            D2ECHO( VAR(traceRead) << VAR(traceWrite) );
+            D2ECHO( VAR(INS_IsMemoryRead(ins)) << VAR(INS_IsMemoryWrite(ins)) );
+
             // Instrument Read accesses
             if( traceRead )
             {
                 if (INS_IsMemoryRead(ins) )
                 {
+                    D2ECHO("Instrumenting Read in ins : " << INS_Disassemble(ins) );
 #ifdef USEDEBUGENGINE4
-                    if( ReadRecorder == RecordReadEngine4 ) // to instrument when analysis engine is selected
-                    {
-                        ECHO("Instrumenting Read in ins : " << INS_Disassemble(ins) );
-                        INS_InsertPredicatedCall
-                        (
-                            ins, IPOINT_BEFORE, (AFUNPTR)RecordReadEngine4Debug,
-                            IARG_MEMORYREAD_EA,
-                            IARG_MEMORYREAD_SIZE,
-                            //IARG_UINT32, INS_IsPrefetch(ins),
-                            IARG_ADDRINT, (ADDRINT)(cstr),
-                            IARG_INST_PTR,
-                            IARG_END
-                        );
-                    }
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)RecordReadEngine4Debug,
+                        IARG_MEMORYREAD_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_ADDRINT, (ADDRINT)(cstr),
+                        IARG_INST_PTR,
+                        IARG_END
+                    );
 #else
                     INS_InsertPredicatedCall
                     (
@@ -1049,21 +1059,18 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 }
                 if (INS_HasMemoryRead2(ins) )
                 {
+                    D2ECHO("Instrumenting Read2 in ins : " << INS_Disassemble(ins) );
 #ifdef USEDEBUGENGINE4
-                    if( ReadRecorder == RecordReadEngine4 ) // to instrument when analysis engine is selected
-                    {
-                        ECHO("Instrumenting Read2 in ins : " << INS_Disassemble(ins) );
-                        INS_InsertPredicatedCall
-                        (
-                            ins, IPOINT_BEFORE, (AFUNPTR)RecordReadEngine4Debug,
-                            IARG_MEMORYREAD2_EA,
-                            IARG_MEMORYREAD_SIZE,
-                            //IARG_UINT32, INS_IsPrefetch(ins),
-                            IARG_ADDRINT, (ADDRINT)(cstr),
-                            IARG_INST_PTR,
-                            IARG_END
-                        );
-                    }
+                    INS_InsertPredicatedCall
+                    (
+                        ins, IPOINT_BEFORE, (AFUNPTR)RecordReadEngine4Debug,
+                        IARG_MEMORYREAD2_EA,
+                        IARG_MEMORYREAD_SIZE,
+                        //IARG_UINT32, INS_IsPrefetch(ins),
+                        IARG_ADDRINT, (ADDRINT)(cstr),
+                        IARG_INST_PTR,
+                        IARG_END
+                    );
 #else
                     INS_InsertPredicatedCall
                     (
@@ -1080,22 +1087,19 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
             // Instrument Write accesses
             if( traceWrite && INS_IsMemoryWrite(ins) )
             {
+                D2ECHO("Instrumenting Write in ins : " << INS_Disassemble(ins) );
 #ifdef USEDEBUGENGINE4
-                if( WriteRecorder == RecordWriteEngine4 ) // to instrument when analysis engine is selected
-                {
-                    ECHO("Instrumenting Write in ins : " << INS_Disassemble(ins) );
-                    // Used in Debug of Engine 4
-                    INS_InsertPredicatedCall
-                    (
-                        ins, IPOINT_BEFORE, (AFUNPTR)RecordWriteEngine4Debug,
-                        IARG_MEMORYWRITE_EA,
-                        IARG_MEMORYWRITE_SIZE,
-                        //IARG_UINT32, INS_IsPrefetch(ins),
-                        IARG_ADDRINT, (ADDRINT)(cstr),
-                        IARG_INST_PTR,
-                        IARG_END
-                    );
-                }
+                // Used in Debug of Engine 4
+                INS_InsertPredicatedCall
+                (
+                    ins, IPOINT_BEFORE, (AFUNPTR)RecordWriteEngine4Debug,
+                    IARG_MEMORYWRITE_EA,
+                    IARG_MEMORYWRITE_SIZE,
+                    //IARG_UINT32, INS_IsPrefetch(ins),
+                    IARG_ADDRINT, (ADDRINT)(cstr),
+                    IARG_INST_PTR,
+                    IARG_END
+                );
 #else
                 INS_InsertPredicatedCall
                 (
@@ -1244,7 +1248,7 @@ VOID TheEnd(INT32 code, VOID *v)
     {
     case 1:
         PrintAccesses();
-        if(KnobTrackTasks.Value() == false)
+        if(TrackTasks == false)
         {
             ofstream rfout;
             OpenOutFile("recursivefunctions.dat", rfout);
@@ -1332,11 +1336,9 @@ void SetupPin(int argc, char *argv[])
     TrackStartStop = KnobTrackStartStop.Value();
     TrackZones = KnobTrackZones.Value();
     TrackLoopDepend = KnobTrackLoopDepend.Value();
+    TrackTasks=KnobTrackTasks.Value();
     Threshold = KnobThreshold.Value();
     SelectedLoopNo = KnobSelectedLoopNo.Value();
-
-    if(TrackLoopDepend)
-        Engine=4;
 
     // TODO may be this can be pushed in constructor of symTable
     // furthermore, unknownObj can also be pushed!!!
@@ -1374,8 +1376,13 @@ void SetupPin(int argc, char *argv[])
     symTable.Print();
 #endif
 
-    D1ECHO("Selecting Analysis Engine ...");
-    if( TrackStartStop || TrackLoopDepend )
+    ECHO("Selecting Analysis Engine ...");
+    if(TrackTasks)
+        Engine=2;
+    if(TrackLoopDepend)
+        Engine=4;
+
+    if( TrackStartStop || TrackLoopDepend)
     {
         // start dummy so that actual profiling starts when start is seen
         SelectDummyAnalysisEngine();
@@ -1394,7 +1401,7 @@ void SetupPin(int argc, char *argv[])
     // open the file to store call graph
     OpenOutFile("callgraph.dat", cgout);
 
-    if( KnobTrackTasks.Value() )
+    if( TrackTasks || TrackLoopDepend )
     {
         RecordRoutineEntry = RecordRoutineEntry2;
         RecordRoutineExit = RecordRoutineExit2;

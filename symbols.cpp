@@ -40,12 +40,15 @@
 #include "shadow.h"
 #include "symbols.h"
 #include "callstack.h"
+#include "commatrix.h"
 
 extern map <string,IDNoType> FuncName2ID;
 extern map <string,IDNoType> CallSites2ID;
 extern CallStackType CallStack;
 extern CallSiteStackType CallSiteStack;
+extern Matrix2D ComMatrix;
 extern bool ShowUnknown;
+extern bool TrackLoopDepend;
 
 std::string locsFileName("locations.dat");
 
@@ -189,13 +192,17 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     SetObjectIDs(saddr, size, id);
 
-    // Added for allocation dependencies
+    // Added for allocation dependencies.
     // also set the function in which this allocation is taking place
-    // as the producer of this object to consider it in allocation dependencies
-    IDNoType prod = CallStack.Top();
-    for(u32 i=0; i<size; i++)
+    // as the producer of this object. This should not be done when
+    // tracking loop dependencies as it will cause extra communication/dependencies
+    if( !TrackLoopDepend )
     {
-        SetProducer(prod, saddr+i);
+        IDNoType prod = CallStack.Top();
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer(prod, saddr+i);
+        }
     }
 }
 
@@ -289,10 +296,20 @@ void Symbols::Remove(uptr saddr)
     D2ECHO("Clearing object ID to " << UnknownID << " on a size " << size);
     SetObjectIDs(saddr, size, UnknownID);
 
-    // Added for allocation dependencies
-    for(u32 i=0; i<size; i++)
+    // Added for allocation dependencies.
+    // Record the communication to show dependencies between
+    // the last producer and the function freeing it.
+    // Also clear the producer to Unknown to avoid future
+    // recording of communication.
+    if( !TrackLoopDepend )
     {
-        SetProducer(UnknownID, saddr+i);
+        IDNoType prod = CallStack.Top();
+        for(u32 i=0; i<size; i++)
+        {
+            IDNoType prevProd = GetProducer(saddr+i);
+            ComMatrix.RecordCommunication(prevProd, prod, 1);
+            SetProducer(UnknownID, saddr+i);
+        }
     }
 }
 
