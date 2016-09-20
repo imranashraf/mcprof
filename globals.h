@@ -46,7 +46,7 @@
 
 //Set the debugging level (0-3)
 // 0   -> No Debug
-// 1-3 -> Debug mode, while 3 is the most verbose
+// 1-2 -> Debug mode, 2 is the most verbose
 #define DEBUG 0
 
 #if defined(_WIN64)

@@ -57,9 +57,11 @@ LocationList Locations;
 
 bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
 {
+    D2ECHO("Getting GetAvailableORNewID");
     bool result;
     string callsites("");
     CallSiteStack.GetCallSites(lastCallLocIndex, callsites);
+    D2ECHO("callsites " << callsites);
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
         // use existing id as this call site is already seen
@@ -113,7 +115,6 @@ void LocationList::InitFromFile()
         }
 
         locin.close();
-        remove( locsFileName.c_str() ); // delete file
     }
 
     ECHO("Initialized " << counter << " locations from file");
@@ -123,6 +124,7 @@ void LocationList::Print()
 {
     std::ofstream locout;
     ECHO("Writing locations to " << locsFileName);
+    // remove( locsFileName.c_str() ); // delete file TODO is it needed?
     OpenOutFile(locsFileName, locout);
     locout << "# list of locations in order" << endl;
     for(u32 i=0; i<locations.size(); ++i)
@@ -134,7 +136,7 @@ void LocationList::Print()
 
 string& Symbols::GetSymName(IDNoType id)
 {
-    D2ECHO("Getting name of symbol with id: " << id );
+    //D2ECHO("Getting name of symbol with id: " << id );
     Symbol& sym = _Symbols[id];
     return ( sym.GetName() );
 }

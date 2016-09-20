@@ -362,7 +362,7 @@ bool Matrix2D::CheckLoopIndependence(u32 nIterations)
         {
             if( Matrix[pid][cid] > 0 )
             {
-                D2ECHO( prod << " "<< cons << "  " << Matrix[pid][cid] );
+                D2ECHO( pid << " "<< cid << "  " << Matrix[pid][cid] );
                 result = false;
                 break;
             }

@@ -85,6 +85,7 @@ VOID (*RecordRoutineEntry)(ADDRINT);
 VOID (*RecordRoutineExit)(VOID*);
 
 u32 Engine=1;
+bool DoTrace=true;
 bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
@@ -406,7 +407,7 @@ VOID RecordRoutineEntry2(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
     string calleeName(rname);
-    D2ECHO ("Entering Routine : " << calleeName );
+    D1ECHO ("Entering Routine : " << calleeName );
 
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
@@ -430,8 +431,10 @@ VOID RecordRoutineEntry2(ADDRINT irname)
             cgout << callerName << " FUNC " << calleeName  << endl; // for callgraph output
         }
 
+        D1ECHO ("Using ID " << calleeID);
         CallStack.Push(calleeID);
         CallSiteStack.Push(lastCallLocIndex);
+        D1ECHO ("Entered Routine : " << calleeName << " with ID " << calleeID);
     }
 
     // call count should be updated even for recursive functions
@@ -450,8 +453,6 @@ VOID RecordRoutineEntry2(ADDRINT irname)
         D1ECHO ("Setting Current Call for : " << calleeName );
         SetCurrCallOnEntry();
     }
-
-    D1ECHO ("Entering Routine : " << calleeName << " Done" );
 }
 
 VOID RecordRoutineExit1(VOID *ip)
@@ -501,7 +502,7 @@ VOID RecordRoutineExit2(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    D2ECHO ("Trying to exit routine : " << rname );
+    D1ECHO ("Trying to exit routine : " << rname );
 
     if( ValidFtnName(rname) )
     {
@@ -517,6 +518,7 @@ VOID RecordRoutineExit2(VOID *ip)
         {
             CallStack.Pop();
             CallSiteStack.Pop();
+            D1ECHO ("Exited Routine : " << rname);
 
             // TODO test it later with updated logic
             // In engine 3, to save time, the curr call is selected only at func entry/exit,
@@ -529,14 +531,13 @@ VOID RecordRoutineExit2(VOID *ip)
         }
     }
 
-    #if (DEBUG>0)
-    CallStack.Print();
-    CallSiteStack.Print();
-    #endif
+//     #if (DEBUG>0)
+//     CallStack.Print();
+//     CallSiteStack.Print();
+//     #endif
 
     // un-comment the following to enable printing running count of instructions executed so far
     //ECHO("Instructions executed so far : " << rInstrCount );
-    D1ECHO ("Exiting Routine : " << rname << " Done");
 }
 
 VOID RecordZoneEntry(INT32 zoneNo)
@@ -566,6 +567,7 @@ VOID RecordZoneEntry(INT32 zoneNo)
 
     CallStack.Push(calleeID);
     CallSiteStack.Push(lastCallLocIndex);
+    D1ECHO("Entered zone : " << calleeName << " with ID " << calleeID);
 
     callCounts[calleeID] += 1;
 
@@ -579,11 +581,9 @@ VOID RecordZoneEntry(INT32 zoneNo)
     // func entry/exit, so that it does not need to be determined on each access
     if (KnobEngine.Value() == 3)
     {
-        D1ECHO ("Setting Current Call for : " << rname );
+        D1ECHO ("Setting Current Call for : " << calleeName );
         SetCurrCallOnEntry();
     }
-
-    D1ECHO("Entering zone : " << calleeName << " Done");
 }
 
 VOID RecordZoneExit(INT32 zoneNo)
@@ -594,6 +594,7 @@ VOID RecordZoneExit(INT32 zoneNo)
 
     CallStack.Pop();
     CallSiteStack.Pop();
+    D1ECHO ("Exited zone: " << symTable.GetSymName(topRtnID));
 
     // In engine 3, to save time, the curr call is selected only at func entry/exit,
     // so that it does not need to be determined on each access
@@ -607,8 +608,6 @@ VOID RecordZoneExit(INT32 zoneNo)
     CallStack.Print();
     CallSiteStack.Print();
     #endif
-
-    D1ECHO ("Exiting zone: " << symTable.GetSymName(topRtnID) << " Done");
 }
 
 VOID SetCallSite(u32 locIndex)
@@ -908,14 +907,14 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
                 if(TrackStartStop)
                 {
                     D2ECHO("__PIN_MAGIC_START");
-                    SelectAnalysisEngine();
+                    DoTrace=true;
                 }
             break;
             case __PIN_MAGIC_STOP:
                 if(TrackStartStop)
                 {
                     D2ECHO("__PIN_MAGIC_STOP");
-                    SelectDummyAnalysisEngine();
+                    DoTrace=false;
                 }
             break;
             default:
@@ -924,7 +923,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
     break;
     case __PIN_MAGIC_ZONE_ENTER:
-        D2ECHO("__PIN_MAGIC_ZONE_ENTER");
+        D1ECHO("__PIN_MAGIC_ZONE_ENTER");
         if( TrackZones || TrackLoopDepend )
         {
             D2ECHO("setting call site locindex to " << locidx);
@@ -933,14 +932,15 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            LoopIterationCount=0;
+            LoopIterationCount=1; // '0' refers to R/W before the start of loop.
+                                  //  These get associated with unknown.
             ComMatrix.Clear(); // TODO check if later if its needed
-            SelectAnalysisEngine();
+            //DoTrace=true;
         }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
     {
-        D2ECHO("__PIN_MAGIC_ZONE_EXIT");
+        D1ECHO("__PIN_MAGIC_ZONE_EXIT");
         IDNoType loopID;
         string loopName;
         if( TrackZones || TrackLoopDepend )
@@ -964,23 +964,23 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             }
             ComMatrix.PrintMatrix(LoopIterationCount);
             ComMatrix.Clear();
-            SelectDummyAnalysisEngine();
+            //DoTrace=false;
         }
     }
     break;
     case __PIN_MAGIC_LOOPBODY_ENTER:
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            D2ECHO("__PIN_MAGIC_LOOPBODY_ENTER  for Loop No : " << val << " Iterations : " << LoopIterationCount);
-            ++LoopIterationCount;
-            CallStack.Push(LoopIterationCount);
+            DoTrace=true;
+            D1ECHO("__PIN_MAGIC_LOOPBODY_ENTER  for Loop No : " << val << " Iterations : " << LoopIterationCount);
         }
     break;
     case __PIN_MAGIC_LOOPBODY_EXIT:
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            D2ECHO("__PIN_MAGIC_LOOPBODY_EXIT for Loop No : " << val << " Iterations : " << LoopIterationCount);
-            CallStack.Pop();
+            D1ECHO("__PIN_MAGIC_LOOPBODY_EXIT for Loop No : " << val << " Iterations : " << LoopIterationCount-1);
+            DoTrace=false;
+            ++LoopIterationCount;
         }
     break;
     default:
@@ -989,7 +989,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
     }
 }
 
-// #define USEDEBUGENGINE4
+//#define USEDEBUGENGINE4
 // Above define can be used to perform detailed debug of engine 4.
 // Prints detailed output for dependencies.
 VOID InstrumentTraces(TRACE trace, VOID *v)
@@ -1010,6 +1010,42 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
 
         for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
         {
+            if( TrackZones || TrackStartStop || TrackLoopDepend ) // If marker tracking is requested
+            {
+                if (INS_Disassemble(ins) == "xchg bx, bx") // track the magic instruction
+                {
+                    // RTN rtn = INS_Rtn(ins);
+                    // string rtnName = RTN_Name(rtn);
+                    string fileName("");    // This will hold the source file name.
+                    INT32 line = 0;     // This will hold the line number within the file
+                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &fileName);
+                    // Remove the complete path of the filename
+                    if(fileName == "")  fileName = "NA";
+                    else RemoveCurrDirFromName(fileName);
+                    D2ECHO("Marker at " << fileName << ":" << line);
+                    // create a temp Location loc, may be inserted in list of locations later
+                    Location loc(line+1, fileName); // 1 is added as offset as loop start at next line of marker
+                    u32 locIndex =-1;
+                    bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
+                    if( !found )
+                    {
+                        D2ECHO("Marker Location " << loc.toString() << " not found, Inserting");
+                        locIndex = Locations.Insert(loc);
+                    }
+
+                    D2ECHO("Instrumenting XCHG/Markers instruction in " << RTN_Name(INS_Rtn(ins)) << "()" );
+                    INS_InsertPredicatedCall
+                        ( ins, IPOINT_BEFORE,
+                          (AFUNPTR)Markers,
+                          IARG_UINT32, locIndex,
+                          IARG_REG_VALUE, REG_EAX,
+                          IARG_REG_VALUE, REG_ECX,
+                          IARG_REG_VALUE, REG_EDX,
+                          IARG_END
+                        );
+                }
+            }
+
             // skip instrumenting call/return/prefetch instructions for memory accesses
             if( INS_IsCall(ins) || INS_IsRet(ins) || INS_IsPrefetch(ins) ) continue;
 
@@ -1111,40 +1147,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 );
 #endif
             }
-
-            if( TrackZones || TrackStartStop || TrackLoopDepend ) // If marker tracking is requested
-            {
-                if (INS_Disassemble(ins) == "xchg bx, bx") // track the magic instruction
-                {
-                    // RTN rtn = INS_Rtn(ins);
-                    // string rtnName = RTN_Name(rtn);
-                    string fileName("");    // This will hold the source file name.
-                    INT32 line = 0;     // This will hold the line number within the file
-                    PIN_GetSourceLocation(INS_Address(ins), NULL, &line, &fileName);
-                    // Remove the complete path of the filename
-                    if(fileName == "")  fileName = "NA";
-                    else RemoveCurrDirFromName(fileName);
-                    D2ECHO("Marker at " << fileName << ":" << line);
-                    // create a temp Location loc, may be inserted in list of locations later
-                    Location loc(line+1, fileName); // 1 is added as offset as loop start at next line of marker
-                    u32 locIndex =-1;
-                    bool found = Locations.GetLocIndexIfAvailable(loc, locIndex);
-                    if( !found )
-                    {
-                        D2ECHO("Marker Location " << loc.toString() << " not found, Inserting");
-                        locIndex = Locations.Insert(loc);
-                    }
-
-                    D2ECHO("Instrumenting XCHG/Markers instruction in " << RTN_Name(INS_Rtn(ins)) << "()" );
-                    INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Markers,
-                                             IARG_UINT32, locIndex,
-                                             IARG_REG_VALUE, REG_EAX,
-                                             IARG_REG_VALUE, REG_ECX,
-                                             IARG_REG_VALUE, REG_EDX,
-                                             IARG_END);
-                }
-            }
-        } // ins
+       } // ins
     } // BBL
 }
 
@@ -1167,9 +1170,10 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 
     if( IMG_IsMainExecutable(img) )
     {
-        string mangRName = RTN_Name(rtn);
-        string rname = PIN_UndecorateSymbolName( mangRName, UNDECORATION_NAME_ONLY);
-        //string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_COMPLETE);
+        string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
+        D1ECHO ("rname (UNDECORATION_COMPLETE): " << rname );
+        //string rname1 = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_COMPLETE);
+        //D1ECHO ("rname (UNDECORATION_NAME_ONLY): " << rname1 );
 
         if (ValidFtnName(rname))
         {
@@ -1189,6 +1193,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
             char* cstr = new char[ rname.size()+1 ];  // we need to dynamically allocate it so that it is available
                                                     // at analysis time
             strcpy(cstr, rname.c_str() );
+            cstr[rname.size()] = '\0'; // null the last character TODO: is it required?
             D1ECHO ("Instrumenting Routine : " << cstr );
 
             RTN_Open(rtn);
@@ -1382,15 +1387,17 @@ void SetupPin(int argc, char *argv[])
     if(TrackLoopDepend)
         Engine=4;
 
+    SelectAnalysisEngine();
+
     if( TrackStartStop || TrackLoopDepend)
     {
         // start dummy so that actual profiling starts when start is seen
-        SelectDummyAnalysisEngine();
+        DoTrace=false;
     }
     else
     {
         // else start profiling right away
-        SelectAnalysisEngine();
+        DoTrace=true;
     }
 
     if ( KnobEngine.Value() == 3 )

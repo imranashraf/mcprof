@@ -46,6 +46,7 @@ extern Matrix2D ComMatrix;
 
 extern Symbols symTable;
 extern bool TrackObjects;
+extern bool DoTrace;
 
 // un-comment the following to print read/write address trace to output
 // #define GENRATE_TRACES
@@ -55,101 +56,108 @@ extern bool TrackObjects;
 
 void RecordWriteEngine2(uptr addr, u32 size)
 {
-    IDNoType prod = CallStack.Top();
-    IDNoType objid = GetObjectID(addr);
-
-    #ifdef GENRATE_TRACES
-    for(u32 i=0; i<size; i++)
-        cout << "W " << addr+i << endl;
-    #endif
-
-    D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
-
-#if 1
-    // Added for allocation dependencies
-    // TODO this can be a problem when same stack addresses are reused
-    // these will appear as write after write dependencies
-    for(u32 i=0; i<size; i++)
+    if(DoTrace)
     {
-        IDNoType prevProd = GetProducer(addr+i);
-        ComMatrix.RecordCommunication(prevProd, prod, 1);
-        D2ECHO( "AllocDepend " << FUNC(prevProd) << " " << FUNC(prod) << " at " << ADDR(addr) );
-    }
+        IDNoType prod = CallStack.Top();
+        IDNoType objid = GetObjectID(addr);
+
+#ifdef GENRATE_TRACES
+        for(u32 i=0; i<size; i++)
+            cout << "W " << addr+i << endl;
 #endif
 
-    if( (objid == UnknownID) || (TrackObjects == false) )
-    {
-        for(u32 i=0; i<size; i++)
-        {
-            SetProducer(prod, addr+i);
-        }
-    }
-    else
-    {
-        ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
-               << " and " << symTable.GetSymName(objid) << dec);
-        for(u32 i=0; i<size; i++)
-        {
-            SetProducer(prod, addr+i);
-        }
-        ComMatrix.RecordCommunication(prod, objid, size);
+        D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
 
-        // Write Trace of a selected function to selected objects
-        #ifdef GENRATE_SELECTED_TRACES
-        if(
-            // For canny: tmpimg objects(10) AND gaussian_smooth1(11) function.
-            // For canny: nms(20) object AND non_max_supp1(22) function.
-            (objid==20) && (prod==22)
-          )
+#if 0
+        // Added for allocation dependencies
+        // TODO this can be a problem when same stack addresses are reused
+        // these will appear as write after write dependencies
+        for(u32 i=0; i<size; i++)
         {
-            cout << "W of "<< size << " to " << objid << " by " << prod << " at " << HEXA(addr) << endl;
+            IDNoType prevProd = GetProducer(addr+i);
+            ComMatrix.RecordCommunication(prevProd, prod, 1);
+            D2ECHO( "AllocDepend " << FUNC(prevProd) << " " << FUNC(prod) << " at " << ADDR(addr) );
         }
-        #endif
+#endif
+
+        if( (objid == UnknownID) || (TrackObjects == false) )
+        {
+            for(u32 i=0; i<size; i++)
+            {
+                SetProducer(prod, addr+i);
+            }
+        }
+        else
+        {
+            ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
+                    << " and " << symTable.GetSymName(objid) << dec);
+            for(u32 i=0; i<size; i++)
+            {
+                SetProducer(prod, addr+i);
+            }
+            ComMatrix.RecordCommunication(prod, objid, size);
+
+            // Write Trace of a selected function to selected objects
+#ifdef GENRATE_SELECTED_TRACES
+            if(
+                    // For canny: tmpimg objects(10) AND gaussian_smooth1(11) function.
+                    // For canny: nms(20) object AND non_max_supp1(22) function.
+                    (objid==20) && (prod==22)
+              )
+            {
+                cout << "W of "<< size << " to " << objid << " by " << prod << " at " << HEXA(addr) << endl;
+            }
+#endif
+        }
     }
 }
 
 void RecordReadEngine2(uptr addr, u32 size)
 {
-    IDNoType cons = CallStack.Top();
-    D2ECHO("Recording Read of " << VAR(size) << " by " << FUNC(cons) << " at " << ADDR(addr) << dec);
-
-    IDNoType prod=0;
-    IDNoType objid = GetObjectID(addr);
-    D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-
-    #ifdef GENRATE_TRACES
-    for(u32 i=0; i<size; i++)
-        cout << "R " << addr+i << endl;
-    #endif
-
-    if( objid == UnknownID || (TrackObjects == false) )
+    if(DoTrace)
     {
-        D2ECHO("Recording comm of " << VAR(size) << " b/w function "
-                << FUNC( GetProducer(addr) ) << " and " << FUNC(cons) << dec);
+        IDNoType cons = CallStack.Top();
+        D2ECHO("Recording Read of " << VAR(size) << " by " << FUNC(cons) << " at " << ADDR(addr) << dec);
 
+        IDNoType prod=0;
+        IDNoType objid = GetObjectID(addr);
+        D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
+
+#ifdef GENRATE_TRACES
         for(u32 i=0; i<size; i++)
-        {
-            prod = GetProducer(addr+i);
-            ComMatrix.RecordCommunication(prod, cons, 1);
-        }
-    }
-    else
-    {
-        ECHO("Recording comm of " << VAR(size) << " b/w object "
-               << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
+            cout << "R " << addr+i << endl;
+#endif
 
-        ComMatrix.RecordCommunication(objid, cons, size);
-
-        // Read Trace by a selected function from selected objects
-        #ifdef GENRATE_SELECTED_TRACES
-        if( 
-            // For canny: image(4) OR kernel(9) objects AND gaussian_smooth1(11) function.
-            // For canny: magnitude(18) OR delta_x(13) OR delta_y(14) objects AND non_max_supp1(22) function.
-            (objid==18 || objid==13 || objid==14) && (cons==22)
-          )
+        if( objid == UnknownID || (TrackObjects == false) )
         {
-            cout << "R of "<< size << " from " << objid << " by " << cons << " at " << HEXA(addr) << endl;
+            D2ECHO("Recording comm of " << VAR(size) << " b/w function "
+                    << FUNC( GetProducer(addr) ) << " and " << FUNC(cons) << dec);
+
+            for(u32 i=0; i<size; i++)
+            {
+                prod = GetProducer(addr+i);
+                ComMatrix.RecordCommunication(prod, cons, 1);
+            }
         }
-        #endif
+        else
+        {
+            ECHO("Recording comm of " << VAR(size) << " b/w object "
+                    << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
+
+            ComMatrix.RecordCommunication(objid, cons, size);
+
+            // Read Trace by a selected function from selected objects
+#ifdef GENRATE_SELECTED_TRACES
+            if(
+                    // For canny: image(4) OR kernel(9) objects AND gaussian_smooth1(11) function.
+                    // For canny: magnitude(18) OR delta_x(13) OR delta_y(14) objects AND non_max_supp1(22) function.
+                    (objid==18 || objid==13 || objid==14) && (cons==22)
+              )
+            {
+                cout << "R of "<< size << " from " << objid << " by " << cons << " at " << HEXA(addr) << endl;
+            }
+#endif
+        }
     }
 }
+

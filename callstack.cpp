@@ -47,6 +47,7 @@ extern LocationList Locations;
 void CallStackType::Print()
 {
     string stackftns("");
+    D2ECHO( VAR( stack.size() ) );
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
         stackftns += symTable.GetSymName(stack[ftn]) + " ";
 
@@ -98,6 +99,7 @@ void CallStackType::Print(ofstream& fout)
 
 void CallSiteStackType::GetCallSites(u32 lastCallLocIndex, string& callsites)
 {
+    D2ECHO( VAR(sites.size()) );
     for (u32 loc=1; loc < sites.size(); loc++) // first callsite will be of call to main
         callsites += to_string(sites[loc]);    // arbitrary formula to combine call sites
 
@@ -115,6 +117,7 @@ string CallSiteStackType::GetCallSitesString()
 void CallSiteStackType::Print()
 {
     string callsites("");
+    D2ECHO( VAR( sites.size() ) );
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += Locations.GetLocation(sites[loc]).toString() + " ";
     ECHO("Call sites: " << callsites);

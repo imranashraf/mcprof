@@ -45,6 +45,7 @@
 
 extern CallStackType CallStack;
 extern Symbols symTable;
+extern bool DoTrace;
 
 class Access
 {
@@ -131,22 +132,28 @@ Accesses TotalAccesses;
 
 void RecordWriteEngine1(uptr addr, u32 size)
 {
-    IDNoType prod = CallStack.Top();
-    IDNoType oid = GetObjectID(addr);
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(oid) << ADDR(addr));
-    TotalAccesses.UpdateWrites(prod, size);
-    TotalAccesses.UpdateWrites(oid, size);
+    if(DoTrace)
+    {
+        IDNoType prod = CallStack.Top();
+        IDNoType oid = GetObjectID(addr);
+        D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
+        D2ECHO("Recording Write:  " << VAR(size) << FUNC(oid) << ADDR(addr));
+        TotalAccesses.UpdateWrites(prod, size);
+        TotalAccesses.UpdateWrites(oid, size);
+    }
 }
 
 void RecordReadEngine1(uptr addr, u32 size)
 {
-    IDNoType cons = CallStack.Top();
-    IDNoType oid = GetObjectID(addr);
-    D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-    D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
-    TotalAccesses.UpdateReads(cons, size);
-    TotalAccesses.UpdateReads(oid, size);
+    if(DoTrace)
+    {
+        IDNoType cons = CallStack.Top();
+        IDNoType oid = GetObjectID(addr);
+        D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
+        D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
+        TotalAccesses.UpdateReads(cons, size);
+        TotalAccesses.UpdateReads(oid, size);
+    }
 }
 
 void PrintAccesses()

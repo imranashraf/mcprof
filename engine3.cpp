@@ -45,6 +45,7 @@ extern std::map <std::string,IDNoType> FuncName2ID;
 extern Symbols symTable;
 extern std::ofstream pcout;
 extern bool FlushCalls;
+extern bool DoTrace;
 extern u32 FlushCallsLimit;
 
 // all calls to a single func, index is call no
@@ -122,32 +123,38 @@ void SetCurrCallOnExit(IDNoType lastCallID)
 
 void RecordWriteEngine3(uptr addr, u32 size)
 {
-    IDNoType prod = CallStack.Top();
-
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    IDNoType objid = GetObjectID(addr);
-    D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-
-    CHECK(currCall); // TODO Remove these checks
-    currCall->Writes[objid]+=size;
-    for(u32 i=0; i<size; i++)
+    if(DoTrace)
     {
-        SetProducer(prod, addr+i);
+        IDNoType prod = CallStack.Top();
+
+        D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
+        IDNoType objid = GetObjectID(addr);
+        D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
+
+        CHECK(currCall); // TODO Remove these checks
+        currCall->Writes[objid]+=size;
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer(prod, addr+i);
+        }
     }
 }
 
 void RecordReadEngine3(uptr addr, u32 size)
 {
-    D2ECHO("Recording Read " << VAR(size) << " at " << ADDR(addr) << dec);
+    if(DoTrace)
+    {
+        D2ECHO("Recording Read " << VAR(size) << " at " << ADDR(addr) << dec);
 
-    IDNoType objid = GetObjectID(addr);
-    D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-    CHECK(currCall); // TODO Remove these checks
-    currCall->Reads[objid]+=size;
+        IDNoType objid = GetObjectID(addr);
+        D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
+        CHECK(currCall); // TODO Remove these checks
+        currCall->Reads[objid]+=size;
 
-    //     IDNoType prod;
-    //TODO do we need to record the prod to obj, and obj to cons
-    // as separate entities ?
+        //     IDNoType prod;
+        //TODO do we need to record the prod to obj, and obj to cons
+        // as separate entities ?
+    }
 }
 
 // print a single call to a single function
@@ -204,3 +211,4 @@ void PrintAllCalls(ofstream& fout)
         PrintCalls(iter->second, fout);
     }
 }
+
