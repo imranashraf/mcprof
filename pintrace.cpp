@@ -364,7 +364,7 @@ VOID RecordRoutineEntry(CHAR* rname)
 VOID RecordZoneEntry(INT32 zoneNo)
 {
     IDNoType fid = CallStack.Top();
-    string zoneName = symTable.GetSymName(fid) + to_string((long long)zoneNo);
+    string zoneName = symTable.GetSymName(fid) + "_Zone" + to_string((long long)zoneNo);
     D1ECHO("Entring zone " << zoneName );
 
     // enter the zone in the symbole table if seeing for first time.
@@ -378,6 +378,8 @@ VOID RecordZoneEntry(INT32 zoneNo)
 
     IDNoType zid = FuncName2ID[zoneName];
     callCounts[zid] += 1;
+    callgraph.UpdateCall(zid, rInstrCount);
+    rInstrCount=0;
 
     // push it on to stack so that communication is associated with it
     CallStack.Push(zid);
@@ -463,6 +465,8 @@ VOID RecordZoneExit(INT32 zoneNo)
                    << " Popping call stack top is "
                    << symTable.GetSymName( lastCallID ) );
 
+            callgraph.UpdateReturn( lastCallID, rInstrCount );
+            rInstrCount = 0;
             CallStack.Pop();
             CallSiteStack.Pop();
             #if (DEBUG>0)
