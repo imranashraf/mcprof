@@ -40,6 +40,7 @@
 #include "symbols.h"
 #include "pintrace.h"
 #include "commatrix.h"
+#include "sparsematrix.h"
 #include "shadow.h"
 #include "callstack.h"
 #include "engine1.h"
@@ -64,6 +65,7 @@
 extern map <string,IDNoType> FuncName2ID;
 extern Symbols symTable;
 extern Matrix2D ComMatrix;
+extern SparseMatrix DependMatrix;
 extern map <u32,IDNoType> CallSites2ID;
 
 std::ofstream pcout;
@@ -109,7 +111,7 @@ u32 LoopIterationCount=1;
 // Command line switches
 /* ===================================================================== */
 // KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
-//                             "MatFile", "matrix.out",
+//                             "MatFile", "matrix.dat",
 //                             "specify file name for matrix output");
 // 
 // KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
@@ -117,7 +119,7 @@ u32 LoopIterationCount=1;
 //                          "specify file name for output in dot");
 
 KNOB<string> KnobPerCallFile(KNOB_MODE_WRITEONCE,  "pintool",
-                         "PerCallFile", "percallaccesses.out",
+                         "PerCallFile", "percallaccesses.dat",
                          "specify file name for per call output file");
 
 KNOB<BOOL> KnobRecordStack(KNOB_MODE_WRITEONCE, "pintool",
@@ -934,8 +936,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         {
             LoopIterationCount=1; // '0' refers to R/W before the start of loop.
                                   //  These get associated with unknown.
-            ComMatrix.Clear(); // TODO check if later if its needed
-            //DoTrace=true;
+            DependMatrix.Clear(); // TODO check if later if its needed
         }
     break;
     case __PIN_MAGIC_ZONE_EXIT:
@@ -953,7 +954,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         }
         if( TrackLoopDepend && val==SelectedLoopNo )
         {
-            bool result = ComMatrix.CheckLoopIndependence(LoopIterationCount);
+            bool result = DependMatrix.CheckLoopIndependence(LoopIterationCount);
             if(result)
             { //independent
                 independentLoopExecutions.insert(loopName);
@@ -962,9 +963,8 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
             { // dependent
                 dependentLoopExecutions.insert(loopName);
             }
-            ComMatrix.PrintMatrix(LoopIterationCount);
-            ComMatrix.Clear();
-            //DoTrace=false;
+            //DependMatrix.PrintMatrix(LoopIterationCount);
+            //DependMatrix.PrintMatrixAsSparse(LoopIterationCount);
         }
     }
     break;

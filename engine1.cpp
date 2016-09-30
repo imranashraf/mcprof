@@ -97,7 +97,7 @@ public:
     }
 
     // this bash command can be used to sort by total access:
-    //      tail -n +7 memProfile.out | sort -k2 -gr
+    //      tail -n +7 memProfile.dat | sort -k2 -gr
 //     void SortByTotal()
 //     {
 //         sort(_Accesses.begin(), _Accesses.end(), _sortByTotal);
@@ -106,7 +106,7 @@ public:
     void Print(ofstream& fout)
     {
         fout << " This table can be sorted by Total Accesses (-k2) by using bash command:"<<endl;
-        fout << "    tail -n +7 memProfile.out | sort -k2 -gr" <<endl<<endl;
+        fout << "    tail -n +7 memProfile.dat | sort -k2 -gr" <<endl<<endl;
 
         fout << setw(45) << "Function Name " << "\t ================= Accesses  ============  Allocation" <<endl;
         fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
@@ -159,7 +159,7 @@ void RecordReadEngine1(uptr addr, u32 size)
 void PrintAccesses()
 {
     ofstream fout;
-    OpenOutFile("memProfile.out", fout);
+    OpenOutFile("memProfile.dat", fout);
     TotalAccesses.UpdateTotal();
 //     TotalAccesses.SortByTotal();
     TotalAccesses.Print(fout);

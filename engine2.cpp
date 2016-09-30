@@ -68,7 +68,7 @@ void RecordWriteEngine2(uptr addr, u32 size)
 
         D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
 
-#if 0
+#if 1
         // Added for allocation dependencies
         // TODO this can be a problem when same stack addresses are reused
         // these will appear as write after write dependencies

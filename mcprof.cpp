@@ -37,6 +37,7 @@
 #include "globals.h"
 #include "shadow.h"
 #include "commatrix.h"
+#include "sparsematrix.h"
 #include "pintrace.h"
 #include "symbols.h"
 #include "pin.H"
@@ -54,6 +55,7 @@ Symbols symTable;
 
 // Matrix to hold communication
 Matrix2D ComMatrix;
+SparseMatrix DependMatrix;
 
 // some mappings for faster access
 map <string,IDNoType> FuncName2ID;

@@ -132,89 +132,60 @@ bool Matrix2D::IsFilledCol(IDNoType c)
 
 // Use the following to print tabs which will not be visually appealing but it will
 // generate the columns properly for further processing by other tools
-// #define ALIGNMENT ("    ")
-// void Matrix2D::PrintMatrix()
-// {
-//     std::ofstream mout;
-//     string matrixFileName("matrix.out");
-//     OpenOutFile(matrixFileName, mout);
-//     ECHO("Printing communication matrix as table in " << matrixFileName);
-//     IDNoType TotalSymbols = symTable.TotalSymbolCount();
-//     CHECK_LT(TotalSymbols, Matrix.size());
-// 
-//     u16 StartID;
-//     if(ShowUnknown)
-//         StartID = 0; //use this if you want to print unknown
-//     else
-//         StartID = 1; //use this if you dont want to print unknown
-// 
-//     // first update the map which contains the filled rows and columns
-//     UpdateEmptyRowsCols(StartID, TotalSymbols);
-// 
-//     mout << ALIGNMENT << " ";
-//     for (IDNoType c=StartID; c<TotalSymbols; c++)
-//     {
-//         if( IsFilledCol(c) )
-//         {
-//             mout << ALIGNMENT << symTable.GetSymName(c);
-//         }
-//     }
-//     mout << endl;
-// 
-//     for (IDNoType p=StartID; p<TotalSymbols; p++)
-//     {
-//         if( IsFilledRow(p) )
-//         {
-//             mout << ALIGNMENT << symTable.GetSymName(p);
-// 
-//             for (IDNoType c=StartID; c<TotalSymbols; c++)
-//             {
-//                 if( IsFilledCol(c) )
-//                 {
-//                     mout << ALIGNMENT << Matrix[p][c];
-//                 }
-//             }
-//             mout<<endl;
-//         }
-//     }
-//     mout.close();
-// }
-// #undef ALIGNMENT
-
-// a complete/simplified printing of matrix for loop dependence testing
-#define ALIGNMENT setw(8)
-void Matrix2D::PrintMatrix(u32 LoopIterationCount)
+#define ALIGNMENT ("    ")
+void Matrix2D::PrintMatrix()
 {
     std::ofstream mout;
-    string matrixFileName("matrix.out");
+    string matrixFileName("matrix.dat");
     OpenOutFile(matrixFileName, mout);
-    D2ECHO("Printing communication matrix as table in " << matrixFileName);
-    CHECK_LT(LoopIterationCount, Matrix.size());
+    ECHO("Printing communication matrix as table in " << matrixFileName);
+    IDNoType TotalSymbols = symTable.TotalSymbolCount();
+    CHECK_LT(TotalSymbols, Matrix.size());
 
-    mout << ALIGNMENT << "#";
-    for (IDNoType c=1; c<LoopIterationCount; c++)
+    u16 StartID;
+    if(ShowUnknown)
+        StartID = 0; //use this if you want to print unknown
+    else
+        StartID = 1; //use this if you dont want to print unknown
+
+    // first update the map which contains the filled rows and columns
+    UpdateEmptyRowsCols(StartID, TotalSymbols);
+
+    mout << ALIGNMENT << " ";
+    for (IDNoType c=StartID; c<TotalSymbols; c++)
     {
-        mout << ALIGNMENT << c;
+        if( IsFilledCol(c) )
+        {
+            mout << ALIGNMENT << symTable.GetSymName(c);
+        }
     }
     mout << endl;
 
-    for (IDNoType p=1; p<LoopIterationCount; p++)
+    for (IDNoType p=StartID; p<TotalSymbols; p++)
     {
-        mout << ALIGNMENT << p;
-        for (IDNoType c=1; c<LoopIterationCount; c++)
+        if( IsFilledRow(p) )
         {
-            mout << ALIGNMENT << Matrix[p][c];
+            mout << ALIGNMENT << symTable.GetSymName(p);
+
+            for (IDNoType c=StartID; c<TotalSymbols; c++)
+            {
+                if( IsFilledCol(c) )
+                {
+                    mout << ALIGNMENT << Matrix[p][c];
+                }
+            }
+            mout<<endl;
         }
-        mout<<endl;
     }
     mout.close();
 }
 #undef ALIGNMENT
 
+// printing of matrix as simple task dependences
 void Matrix2D::PrintDependenceMatrix()
 {
-    string depFileName("dependencies.dat");
-    ECHO("Printing dependencies in " << depFileName);
+    string depFileName("taskdependences.dat");
+    ECHO("Printing dependences in " << depFileName);
     std::ofstream depout;
     OpenOutFile(depFileName, depout);
     IDNoType TotalSymbols = symTable.TotalSymbolCount();

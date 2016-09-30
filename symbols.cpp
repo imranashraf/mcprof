@@ -532,7 +532,7 @@ void Symbols::Print()
         ECHO("Symbol Table Empty");
     else
     {
-        string fname("symbols.out");
+        string fname("symbols.dat");
         ofstream fout;
         OpenOutFile(fname.c_str(), fout);
         ECHO("Printing Symbol Table to " << fname );

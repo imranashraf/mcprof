@@ -68,7 +68,7 @@ void PrintInstrPercents()
 {
     {
     ofstream fout;
-    OpenOutFile("execProfile.out", fout);
+    OpenOutFile("execProfile.dat", fout);
 
     multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
     map<u64,IDNoType>::reverse_iterator iter;
@@ -116,7 +116,7 @@ void PrintInstrPercents()
 // void PrintInstrPercents()
 // {
 //     ofstream fout;
-//     OpenOutFile("execProfile.out", fout);
+//     OpenOutFile("execProfile.dat", fout);
 // 
 //     map<IDNoType,u64>::iterator iter;
 //     fout << setw(45) << "Function Name" << setw(12) << "% Instr." << endl;

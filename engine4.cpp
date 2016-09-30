@@ -37,12 +37,12 @@
 #include "globals.h"
 #include "shadow.h"
 #include "engine4.h"
-#include "commatrix.h"
 #include "symbols.h"
 #include "callstack.h"
+#include "sparsematrix.h"
 
 extern CallStackType CallStack;
-extern Matrix2D ComMatrix;
+extern SparseMatrix DependMatrix;
 
 extern Symbols symTable;
 extern bool TrackObjects;
@@ -76,7 +76,7 @@ void RecordReadEngine4(uptr addr, u32 size)
         for(u32 i=0; i<size; i++)
         {
             prod = GetProducer(addr+i);
-            ComMatrix.RecordCommunication(prod, cons, 1);
+            DependMatrix.RecordCommunication(prod, cons, 1);
         }
     }
 }
@@ -120,7 +120,7 @@ void RecordReadEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip)
         {
             prod = GetProducer(addr+i);
             D2ECHO("Recording comm b/w " << FUNC(prod) << " and " << FUNC(cons) << dec);
-            ComMatrix.RecordCommunication(prod, cons, 1);
+            DependMatrix.RecordCommunication(prod, cons, 1);
         }
     }
     else
