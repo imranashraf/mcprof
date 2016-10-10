@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -47,7 +47,7 @@
 
 //Set the debugging level (0-3)
 // 0   -> No Debug
-// 1-3 -> Debug mode, while 3 is the most verbose
+// 1-2 -> Debug mode, 2 is the most verbose
 #define DEBUG 0
 
 #if defined(_WIN64)
@@ -203,6 +203,7 @@ void PrintLogo();
 bool isEmpty(std::ifstream& fin);
 void OpenInFile(const std::string& fileName, std::ifstream& fin);
 void OpenOutFile(const std::string& fileName, std::ofstream& fout);
+bool OpenInFileIfExists(const std::string& fileName, std::ifstream& fin);
 bool IsPowerOfTwo(uptr x);
 uptr RoundUpTo(uptr size, uptr boundary);
 uptr RoundDownTo(uptr x, uptr boundary);
@@ -229,8 +230,8 @@ std::multimap<B,A> flipMap(std::map<A,B> & src)
 // the order of execution
 #define UNORDERED 0
 #define ORDERED 1
-// #define FUNCTION_ORDER ORDERED
-#define FUNCTION_ORDER UNORDERED
+#define FUNCTION_ORDER ORDERED
+// #define FUNCTION_ORDER UNORDERED
 
 #ifdef WIN32
 #define DELIMITER_CHAR '\\'
@@ -250,5 +251,7 @@ void SetCurrDir();
 void PrintCurrDir();
 void RemoveSubstrs(std::string& src, std::string& toRemove);
 void RemoveCurrDirFromName(std::string& src);
+void AddNoToNameEnd(std::string& name, IDNoType id);
+void RemoveNoFromNameEnd(std::string& name, IDNoType& id);
 
 #endif

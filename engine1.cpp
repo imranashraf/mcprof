@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -46,6 +46,7 @@
 
 extern CallStackType CallStack;
 extern Symbols symTable;
+extern bool DoTrace;
 
 class Access
 {
@@ -97,7 +98,7 @@ public:
     }
 
     // this bash command can be used to sort by total access:
-    //      tail -n +7 memProfile.out | sort -k2 -gr
+    //      tail -n +7 memProfile.dat | sort -k2 -gr
 //     void SortByTotal()
 //     {
 //         sort(_Accesses.begin(), _Accesses.end(), _sortByTotal);
@@ -106,7 +107,7 @@ public:
     void Print(ofstream& fout)
     {
         fout << " This table can be sorted by Total Accesses (-k2) by using bash command:"<<endl;
-        fout << "    tail -n +7 memProfile.out | sort -k2 -gr" <<endl<<endl;
+        fout << "    tail -n +7 memProfile.dat | sort -k2 -gr" <<endl<<endl;
 
         fout << setw(45) << "Function Name " << "\t ================= Accesses  ============  Allocation" <<endl;
         fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
@@ -132,28 +133,34 @@ Accesses TotalAccesses;
 
 void RecordWriteEngine1(uptr addr, u32 size)
 {
-    IDNoType prod = CallStack.Top();
-    IDNoType oid = GetObjectID(addr);
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(oid) << ADDR(addr));
-    TotalAccesses.UpdateWrites(prod, size);
-    TotalAccesses.UpdateWrites(oid, size);
+    if(DoTrace)
+    {
+        IDNoType prod = CallStack.Top();
+        IDNoType oid = GetObjectID(addr);
+        D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
+        D2ECHO("Recording Write:  " << VAR(size) << FUNC(oid) << ADDR(addr));
+        TotalAccesses.UpdateWrites(prod, size);
+        TotalAccesses.UpdateWrites(oid, size);
+    }
 }
 
 void RecordReadEngine1(uptr addr, u32 size)
 {
-    IDNoType cons = CallStack.Top();
-    IDNoType oid = GetObjectID(addr);
-    D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-    D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
-    TotalAccesses.UpdateReads(cons, size);
-    TotalAccesses.UpdateReads(oid, size);
+    if(DoTrace)
+    {
+        IDNoType cons = CallStack.Top();
+        IDNoType oid = GetObjectID(addr);
+        D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
+        D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
+        TotalAccesses.UpdateReads(cons, size);
+        TotalAccesses.UpdateReads(oid, size);
+    }
 }
 
 void PrintAccesses()
 {
     ofstream fout;
-    OpenOutFile("memProfile.out", fout);
+    OpenOutFile("memProfile.dat", fout);
     TotalAccesses.UpdateTotal();
 //     TotalAccesses.SortByTotal();
     TotalAccesses.Print(fout);

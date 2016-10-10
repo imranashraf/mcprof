@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -66,32 +66,57 @@ void PrintInstrCount()
 
 void PrintInstrPercents()
 {
-    ofstream fout;
-    OpenOutFile("execProfile.out", fout);
-
-    multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
-    multimap<u64,IDNoType>::reverse_iterator iter;
-    fout << setw(15) << "%Exec.Instr." << "\t\t" << "Function Name" << endl;
-    fout << "  ===============================================" <<endl;
-
-    for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
     {
-        IDNoType fid =  iter->second;
-        if(!ShowUnknown && fid==UnknownID)
-            continue;
-        else
+        ofstream fout;
+        OpenOutFile("execProfile.dat", fout);
+
+        multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
+        multimap<u64,IDNoType>::reverse_iterator iter;
+        fout << setw(15) << "%Exec.Instr." << "\t\t" << "Function Name" << endl;
+        fout << "  ===============================================" <<endl;
+
+        for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
         {
-            fout << setw(15) << GetInstrCountPercent(fid) << "\t\t" << symTable.GetSymName(fid) << endl;
+            IDNoType fid =  iter->second;
+            if(!ShowUnknown && fid==UnknownID)
+                continue;
+            else
+            {
+                fout << setw(15) << GetInstrCountPercent(fid) << "\t\t" << symTable.GetSymName(fid) << endl;
+            }
         }
+        fout.close();
     }
-    fout.close();
+
+    // generates output for mxif
+    {
+        ofstream fout;
+        OpenOutFile("execution.dat", fout);
+
+        multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
+        multimap<u64,IDNoType>::reverse_iterator iter;
+        fout << setw(10) << "#  Calls " << setw(15) << "%Exec.Instr." << "\t\t" << "Name" << endl;
+        fout << " #==================================================================" <<endl;
+
+        for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
+        {
+            IDNoType fid =  iter->second;
+            if(!ShowUnknown && fid==UnknownID)
+                continue;
+            else
+            {
+                fout << setw(10) << GetCallCount(fid) << setw(15) << GetInstrCountPercent(fid) << "\t\t" << symTable.GetSymName(fid) << endl;
+            }
+        }
+        fout.close();
+    }
 }
 
 // The following prints the map without sorting
 // void PrintInstrPercents()
 // {
 //     ofstream fout;
-//     OpenOutFile("execProfile.out", fout);
+//     OpenOutFile("execProfile.dat", fout);
 // 
 //     map<IDNoType,u64>::iterator iter;
 //     fout << setw(45) << "Function Name" << setw(12) << "% Instr." << endl;

@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -47,6 +47,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 extern bool RecordAllAllocations;
 
@@ -65,7 +66,10 @@ struct Location
     Location(u32 l, string f) : lineNo(l), fileName(f) {}
     string toString()
     {
-        return fileName + ":" + to_string(lineNo);
+        if( fileName.empty() )
+            return "NA " + to_string((long long)lineNo);
+        else
+            return fileName + " " + to_string((long long)lineNo);
     }
 
     bool operator==(const Location& loc) const
@@ -88,7 +92,7 @@ private:
 public:
     LocationList()
     {
-        locations.push_back( Location() );
+        //locations.push_back( Location() );
     }
 
     // Insert a location and return location index
@@ -117,6 +121,8 @@ public:
 
         return false;
     }
+    void Print();
+    void InitFromFile();
 };
 
 // List of all locations of symbols
@@ -320,9 +326,10 @@ private:
 
 public:
     Symbols() {}
+    void Insert(Symbol sym, IDNoType id) { _Symbols[id] = sym; }
+    void InsertFunction(const string& ftnname, IDNoType id, u32 lastCallLocIndex);
     void InsertMallocCalloc(uptr saddr, u32 locIndex, u32 size);
-    void UpdateRealloc(IDNoType id, uptr saddr, u32 locIndex, u32 size);
-    void InsertFunction(const string& ftnname);
+    void UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 locIndex, u32 size);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
     u32 GetTotalSymSize(IDNoType idno);
@@ -342,5 +349,8 @@ public:
 
 extern Symbols symTable;
 #define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
+
+bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex);
+IDNoType GetNewID();
 
 #endif

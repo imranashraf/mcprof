@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,13 +29,13 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
 
 #include <cmath>
-#include <cstring>
+#include <string>
 #include <map>
 #include "globals.h"
 #include "pin.H"
@@ -107,6 +107,25 @@ void OpenOutFile(const string& fileName, ofstream& fout)
     }
 }
 
+bool OpenInFileIfExists(const string& fileName, ifstream& fin)
+{
+    if ( !fileName.empty() )
+    {
+        fin.open(fileName.c_str());
+        if ( fin.fail() )
+        {
+            ECHO("Input file (" << fileName.c_str() << ") does not exist ...");
+            return false;
+        }
+    }
+    else
+    {
+        ECHO("Specify a non empty file name. Aborting ...");
+        Die();
+    }
+    return true;
+}
+
 const string& Target2RtnName(uptr target)
 {
     const string& name = RTN_FindNameByAddress(target);
@@ -154,7 +173,7 @@ inline bool IsAligned(uptr a, uptr alignment)
     return (a & (alignment - 1)) == 0;
 }
 
-const std::string& humanReadableByteCount(u64 bytes, bool si)
+const string& humanReadableByteCount(u64 bytes, bool si)
 {
     string hBytes;
     char cBytes[100];
@@ -179,7 +198,7 @@ const std::string& humanReadableByteCount(u64 bytes, bool si)
     return *new string(hBytes);
 }
 
-const std::string& hBytes(u64 bytes)
+const string& hBytes(u64 bytes)
 {
     return humanReadableByteCount(bytes, false);
 }
@@ -200,16 +219,37 @@ void PrintCurrDir()
     ECHO("The current working directory is " << currDir);
 }
 
-void RemoveSubstrs(std::string& src, std::string& toRemove)
+void RemoveSubstrs(string& src, string& toRemove)
 {
     int n = toRemove.length();
-    std::size_t i;
+    size_t i;
     for( i = src.find(toRemove); i != string::npos; i = src.find(toRemove) )
         src.erase(i, n);
 }
 
-void RemoveCurrDirFromName(std::string& src)
+void RemoveCurrDirFromName(string& src)
 {
-    std::string cdir(currDir);
+    string cdir(currDir);
     RemoveSubstrs(src, cdir);
+}
+
+// a simple utility function to give persistence appended
+// names to functions/zones
+void AddNoToNameEnd(string& name, IDNoType id)
+{
+    name += ( "_" + to_string((long long)id) );
+}
+
+void RemoveNoFromNameEnd(string& name, IDNoType& id)
+{
+    size_t found = name.find_last_of("_");
+    if( found != string::npos )
+    {
+        string nostr = name.substr(found+1);
+        // id = stoul( nostr , nullptr , 0);
+        id = strtoul( nostr.c_str() , NULL, 0);
+        name =  name.substr(0,found);
+        D3ECHO(" name: " << name);
+        D3ECHO(" id: " << id );
+    }
 }

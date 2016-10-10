@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -70,10 +70,10 @@ void PrintShadowMap()
 {
 #if (MODE==HYBRID)
     ShadowMem.Print();
-    ECHO(VAR(tableCounter));
-    ECHO(VAR(memmapCounter));
+    D1ECHO(VAR(tableCounter));
+    D1ECHO(VAR(memmapCounter));
 #else
-    ECHO("NOT Using Mem Map as in TABLES Mode");
+    D1ECHO("NOT Using Mem Map as in TABLES Mode");
 #endif
 }
 

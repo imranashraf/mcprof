@@ -4,16 +4,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [ 2.1 ] - [ 2016-xx-xx ]
 ### Added
-- 
+- loop dependency Support
+- callgraph Support for zones as well
+- sparse matrix for loop dependence detection
 
 ### Changed
-- 
+- DoTrace modified for proper tracing only when required
 
 ### Removed
-- 
+- detection of static symbols is disabled due to changes in pin 3.0.
 
 ### Fixed
--
+- Support for gcc 4.8.1 to 5.4.1
 
 ## [ 2.0 ] - [ 2016-07-01 ]
 ### Added

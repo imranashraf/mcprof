@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
+ *
  * Copyright (c) 2014-2015 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -47,6 +47,7 @@ extern LocationList Locations;
 void CallStackType::Print()
 {
     string stackftns("");
+    D2ECHO( VAR( stack.size() ) );
     for ( u16 ftn=1; ftn < stack.size(); ftn++)
         stackftns += symTable.GetSymName(stack[ftn]) + " ";
 
@@ -115,6 +116,7 @@ string CallSiteStackType::GetCallSitesString()
 void CallSiteStackType::Print()
 {
     string callsites("");
+    D2ECHO( VAR( sites.size() ) );
     for ( u16 loc=1; loc < sites.size(); loc++)
         callsites += Locations.GetLocation(sites[loc]).toString() + " ";
     ECHO("Call sites: " << callsites);

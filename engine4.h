@@ -34,69 +34,20 @@
  *
  */
 
-#ifndef COMMATRIX_H
-#define COMMATRIX_H
+#ifndef ENGINE4_H
+#define ENGINE4_H
 
 #include "globals.h"
-#include "symbols.h"
 
-#include <vector>
-#include <iostream>
-#include <map>
-#include <set>
-#include <string>
-#include <cmath>
+#include <cassert>
+#include <cstddef>
 #include <iomanip>
+#include <iostream>
 
-extern Symbols symTable;
+void RecordWriteEngine4(uptr addr, u32 size);
+void RecordReadEngine4(uptr addr, u32 size);
 
-using namespace std;
-
-typedef u64 CommValType;
-
-class Matrix2D
-{
-private:
-    vector< vector<CommValType> > Matrix;
-    //most of the applications have functions less than 256
-    static const u32 DEFAULT_SIZE = 2048; //15000
-    set<IDNoType> FilledRows;
-    set<IDNoType> FilledCols;
-
-public:
-    Matrix2D();
-    Matrix2D(IDNoType size);
-    void inline RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
-    {
-        D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
-            << FUNC(cons) << " of size: " << size );
-
-        if( prod < Matrix.size() && cons < Matrix.size() )
-        {
-            Matrix[prod][cons] += size;
-        }
-        else
-        {
-            ECHO("prod/cons out of range");
-            Die();
-        }
-    }
-
-    CommValType MaxCommunication(u16 StartID);
-    void Print(ostream &fout);
-    void PrintMatrix();
-    void PrintDependenceMatrix();
-    void PrintDot();
-    void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
-    bool IsFilledRow(IDNoType r);
-    bool IsFilledCol(IDNoType c);
-    bool CheckLoopIndependence(u32 nIterations);
-    void Clear()
-    {
-        for(u32 i=0;i<DEFAULT_SIZE;i++)
-            for(u32 j=0;j<DEFAULT_SIZE;j++)
-                Matrix[i][j]=0.0f;
-    }
-};
+void RecordWriteEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip);
+void RecordReadEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip);
 
 #endif
