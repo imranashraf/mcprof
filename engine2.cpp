@@ -48,10 +48,18 @@ extern Symbols symTable;
 extern bool TrackObjects;
 extern bool DoTrace;
 
-// un-comment the following to print read/write address trace to output
+extern std::ofstream traceout;
+extern UINT64 gInstrCount;
+
+extern map<IDNoType,u64> funcReads;
+extern map<IDNoType,u64> funcWrites;
+extern map<IDNoType,u64> objReads;
+extern map<IDNoType,u64> objWrites;
+
+// un-comment the following to generate read/write traces
 // #define GENRATE_TRACES
 
-// un-comment the following to generate selected read/write trace
+// un-comment the following to generate selected read/write traces
 // #define GENRATE_SELECTED_TRACES
 
 void RecordWriteEngine2(uptr addr, u32 size)
@@ -61,12 +69,29 @@ void RecordWriteEngine2(uptr addr, u32 size)
         IDNoType prod = CallStack.Top();
         IDNoType objid = GetObjectID(addr);
 
-#ifdef GENRATE_TRACES
-        for(u32 i=0; i<size; i++)
-            cout << "W " << addr+i << endl;
-#endif
-
         D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
+
+#ifdef GENRATE_TRACES
+        // Generate Write Trace
+        switch (size)
+        {
+            case 1:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u8*)addr)) << endl;
+            break;
+            case 2:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u16*)addr)) << endl;
+            break;
+            case 4:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u32*)addr)) << endl;
+            break;
+            case 8:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u64*)addr)) << endl;
+            break;
+            default:
+                ECHO("traceout, write size is : " << size );
+            break;
+        }
+#endif
 
 #if 1
         // Added for allocation dependencies
@@ -86,10 +111,13 @@ void RecordWriteEngine2(uptr addr, u32 size)
             {
                 SetProducer(prod, addr+i);
             }
+
+            // Update write memory accesses
+            funcWrites[prod] += size;
         }
         else
         {
-            ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
+            D2ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
                     << " and " << symTable.GetSymName(objid) << dec);
             for(u32 i=0; i<size; i++)
             {
@@ -97,15 +125,19 @@ void RecordWriteEngine2(uptr addr, u32 size)
             }
             ComMatrix.RecordCommunication(prod, objid, size);
 
-            // Write Trace of a selected function to selected objects
+            // Update write memory accesses
+            funcWrites[prod] += size;
+            objWrites[objid] += size;
+
 #ifdef GENRATE_SELECTED_TRACES
+            // Generate Write Trace of a selected function to selected objects
             if(
                     // For canny: tmpimg objects(10) AND gaussian_smooth1(11) function.
                     // For canny: nms(20) object AND non_max_supp1(22) function.
                     (objid==20) && (prod==22)
               )
             {
-                cout << "W of "<< size << " to " << objid << " by " << prod << " at " << HEXA(addr) << endl;
+                traceout << "W of "<< size << " to " << objid << " by " << prod << " at " << HEXA(addr) << endl;
             }
 #endif
         }
@@ -119,14 +151,31 @@ void RecordReadEngine2(uptr addr, u32 size)
         IDNoType cons = CallStack.Top();
         D2ECHO("Recording Read of " << VAR(size) << " by " << FUNC(cons) << " at " << ADDR(addr) << dec);
 
+#ifdef GENRATE_TRACES
+        // Generate Read Trace
+        switch (size)
+        {
+            case 1:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u8*)addr)) << endl;
+            break;
+            case 2:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u16*)addr)) << endl;
+            break;
+            case 4:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u32*)addr)) << endl;
+            break;
+            case 8:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u64*)addr)) << endl;
+            break;
+            default:
+                ECHO("traceout, write size is : " << size );
+            break;
+        }
+#endif
+
         IDNoType prod=0;
         IDNoType objid = GetObjectID(addr);
         D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
-
-#ifdef GENRATE_TRACES
-        for(u32 i=0; i<size; i++)
-            cout << "R " << addr+i << endl;
-#endif
 
         if( objid == UnknownID || (TrackObjects == false) )
         {
@@ -138,23 +187,30 @@ void RecordReadEngine2(uptr addr, u32 size)
                 prod = GetProducer(addr+i);
                 ComMatrix.RecordCommunication(prod, cons, 1);
             }
+
+            // Update read memory accesses
+            funcReads[cons] += size;
         }
         else
         {
-            ECHO("Recording comm of " << VAR(size) << " b/w object "
+            D2ECHO("Recording comm of " << VAR(size) << " b/w object "
                     << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
 
             ComMatrix.RecordCommunication(objid, cons, size);
 
-            // Read Trace by a selected function from selected objects
+            // Update read memory accesses
+            funcReads[cons] += size;
+            objReads[objid] += size;
+
 #ifdef GENRATE_SELECTED_TRACES
+            // Generate Read Trace by a selected function from selected objects
             if(
                     // For canny: image(4) OR kernel(9) objects AND gaussian_smooth1(11) function.
                     // For canny: magnitude(18) OR delta_x(13) OR delta_y(14) objects AND non_max_supp1(22) function.
                     (objid==18 || objid==13 || objid==14) && (cons==22)
               )
             {
-                cout << "R of "<< size << " from " << objid << " by " << cons << " at " << HEXA(addr) << endl;
+                traceout << "R of "<< size << " from " << objid << " by " << cons << " at " << HEXA(addr) << endl;
             }
 #endif
         }

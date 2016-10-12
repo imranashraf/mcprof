@@ -4,15 +4,20 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [ 2.1 ] - [ 2016-xx-xx ]
 ### Added
-- loop dependency Support
-- callgraph Support for zones as well
+- Engine 4: loop dependency support (under test)
 - sparse matrix for loop dependence detection
+- callgraph Support for zones as well
 
 ### Changed
 - DoTrace modified for proper tracing only when required
+- Engine 2 now generates execution and memory profile
+- two callgraphs are generated:
+    - complete callgraph containing all function and edges
+    - simplified callgraph containing important function and edges
 
 ### Removed
-- detection of static symbols is disabled due to changes in pin 3.0.
+- detection of static symbols is disabled due to changes in pin 3.0
+- Engine 1 removed
 
 ### Fixed
 - Support for gcc 4.8.1 to 5.4.1

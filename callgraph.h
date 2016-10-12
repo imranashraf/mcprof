@@ -37,7 +37,6 @@
 #ifndef CALLGRAPH_H
 #define CALLGRAPH_H
 
-// #include "counters.h"
 #include "json.h"
 
 #include <set>

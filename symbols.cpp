@@ -364,7 +364,8 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
     ECHO("Binary Name = "<< binName);
 
 #if 1
-    ECHO("Info: Support for static symbols is under progress with gcc5");
+    ECHO("Info: Support for static symbols with Pin 3.0 will be back soon");
+    Die();
 #else
     int elf_fd;
     if (( elf_fd  = open( binName, O_RDONLY, 0)) < 0)

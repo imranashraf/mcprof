@@ -43,7 +43,6 @@
 #include "sparsematrix.h"
 #include "shadow.h"
 #include "callstack.h"
-#include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
 #include "engine4.h"
@@ -60,6 +59,8 @@
 #include <cstring>
 #include <cstddef>
 
+// un-comment the following to generate read/write traces (Also in engine2.cpp)
+#define GENRATE_TRACES
 
 /* ================================================================== */
 // Global variables
@@ -71,7 +72,8 @@ extern SparseMatrix DependMatrix;
 extern map <u32,IDNoType> CallSites2ID;
 
 std::ofstream pcout;
-std::ofstream cgout;
+std::ofstream tgout;
+std::ofstream traceout;
 
 // these maps are used to record each execution of loop as dependent/independent
 set<string>dependentLoopExecutions;
@@ -102,8 +104,8 @@ bool TrackLoopDepend;
 bool TrackTasks;
 u32  Threshold;
 
-// Global running instruction counter
-static UINT64 rInstrCount = 0;
+static UINT64 rInstrCount = 0; // Routine instruction counter
+UINT64 gInstrCount = 0; // Global running instruction counter
 
 CallGraph callgraph;
 
@@ -136,8 +138,8 @@ KNOB<BOOL> KnobTrackObjects(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackObjects", "0", "Track the objects");
 
 KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
-                        "Engine", "1",
-                        "specify engine to be used");
+                        "Engine", "2",
+                        "specify engine number to be used from 2,3,4");
 
 KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                                "SelectFunctions", "0",
@@ -228,6 +230,17 @@ VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
     }
 }
 
+VOID doInstrCountGlobal()
+{
+    if(DoTrace)
+        ++gInstrCount;
+}
+
+VOID Instruction(INS ins, VOID *v)
+{
+    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)doInstrCountGlobal, IARG_END);
+}
+
 void dummyRecorder(uptr a, u32 b){}
 VOID dummyInstrCounter(ADDRINT c){}
 
@@ -236,10 +249,6 @@ void SelectAnalysisEngine()
     InstrCounter = doInstrCount;
     switch( Engine )
     {
-    case 1:
-        ReadRecorder = RecordReadEngine1;
-        WriteRecorder = RecordWriteEngine1;
-        break;
     case 2:
         ReadRecorder = RecordReadEngine2;
         WriteRecorder = RecordWriteEngine2;
@@ -258,7 +267,6 @@ void SelectAnalysisEngine()
         break;
     }
     ECHO("Selected Engine number " << Engine);
-    D2ECHO( ADDR((void*)RecordReadEngine1) << " and " << ADDR((void*)RecordWriteEngine1) );
     D2ECHO( ADDR((void*)RecordReadEngine2) << " and " << ADDR((void*)RecordWriteEngine2) );
     D2ECHO( ADDR((void*)RecordReadEngine3) << " and " << ADDR((void*)RecordWriteEngine3) );
     D2ECHO( ADDR((void*)RecordReadEngine4) << " and " << ADDR((void*)RecordWriteEngine4) );
@@ -394,9 +402,11 @@ VOID RecordRoutineEntry1(ADDRINT irname)
     }
 
     calleeID = FuncName2ID[calleeName];
+
     callCounts[calleeID] += 1;
     callgraph.UpdateCall(calleeID, rInstrCount);
     rInstrCount=0;
+
     CallStack.Push(calleeID);
     CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
     D1ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID);
@@ -443,7 +453,7 @@ VOID RecordRoutineEntry2(ADDRINT irname)
             AddNoToNameEnd(calleeName, calleeID);
             symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
-            cgout << callerName << " FUNC " << calleeName  << endl; // for callgraph output
+            tgout << callerName << " FUNC " << calleeName  << endl; // for callgraph output
         }
 
         D1ECHO ("Using ID " << calleeID);
@@ -591,7 +601,7 @@ VOID RecordZoneEntry(INT32 zoneNo)
         symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
         // for callgraph output
-        cgout << callerName << " LOOP " << calleeName  << endl;
+        tgout << callerName << " LOOP " << calleeName  << endl;
         //cout << endl << callerName << " LOOP " << calleeName  << endl;
     }
 
@@ -1300,8 +1310,7 @@ VOID TheEnd(INT32 code, VOID *v)
 
     switch( KnobEngine.Value() )
     {
-    case 1:
-        PrintAccesses();
+    case 2:
         if(TrackTasks == false)
         {
             ofstream rfout;
@@ -1313,8 +1322,7 @@ VOID TheEnd(INT32 code, VOID *v)
             }
             rfout.close();
         }
-        break;
-    case 2:
+        PrintMemAccesses();
         ComMatrix.PrintDot();
         ComMatrix.PrintMatrix();
         // callgraph.Print();
@@ -1335,7 +1343,8 @@ VOID TheEnd(INT32 code, VOID *v)
     // PrintInstrCount();
     PrintInstrPercents();
     Locations.Print();
-    cgout.close();
+    tgout.close();
+    traceout.close();
 
     if(TrackLoopDepend)
     {
@@ -1458,8 +1467,12 @@ void SetupPin(int argc, char *argv[])
         OpenOutFile(KnobPerCallFile.Value(), pcout);
     }
 
-    // open the file to store call graph
-    OpenOutFile("callgraph.dat", cgout);
+    // open the file to store taskgraph
+    OpenOutFile("taskgraph.dat", tgout);
+
+    // Open the output file to store traces
+    OpenOutFile("traces.dat", traceout);
+    traceout << "InsNumber AccessType AccessSize AccessAddr AccessValue" << endl;
 
     if( TrackTasks || TrackLoopDepend )
     {
@@ -1474,10 +1487,18 @@ void SetupPin(int argc, char *argv[])
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);
+
     // Register function for Routine-level instrumentation
     RTN_AddInstrumentFunction(InstrumentRoutines, 0);
+
     // Register function for Trace-level instrumentation
     TRACE_AddInstrumentFunction(InstrumentTraces, 0);
+
+#ifdef GENRATE_TRACES
+    // Register function for Instruction-level instrumentation (used only for
+    // counting instructions for generating traces)
+    INS_AddInstrumentFunction(Instruction, 0);
+#endif
 
     // Register function to be called when the application exits
     PIN_AddFiniFunction(TheEnd, 0);

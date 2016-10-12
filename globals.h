@@ -129,6 +129,7 @@ std::string to_string( const T& n )
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
 #define HEXA(v) hex << "0x" << setw(12) << setfill ('0') << v << dec
+#define HEXV(v) hex << "0x" << setw(16) << setfill ('0') << v << dec
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
 
 #if (DEBUG>0)

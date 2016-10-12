@@ -51,4 +51,6 @@ float GetInstrCountPercent(IDNoType fid);
 
 u64 GetCallCount(IDNoType fid);
 
+void PrintMemAccesses();
+
 #endif
