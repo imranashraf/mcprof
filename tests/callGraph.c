@@ -16,7 +16,7 @@ int nElem;
 void test(int count)
 {
     printf("Call number %d to test()\n",count);
-    if(count)
+    if(count>1)
         test(count-1);
     else
         return;
@@ -41,6 +41,7 @@ void sumVecs()
         sumArr[i] = srcArr1[i] + coeff * srcArr2[i];
     }
     initVecs();
+    test(2);
 }
 
 void diffVecs()
@@ -68,6 +69,8 @@ int main()
     srcArr2 = malloc(nBytes);
     sumArr = malloc(nBytes);
     diffArr = malloc(nBytes);
+
+    test(4);
 
     int i;
     for(i=0; i<3; i++)

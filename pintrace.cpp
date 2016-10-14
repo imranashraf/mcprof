@@ -14,7 +14,7 @@
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
  *
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
  *
  * MCPROF is free software: you can redistribute it and/or modify it under the
@@ -43,9 +43,9 @@
 #include "sparsematrix.h"
 #include "shadow.h"
 #include "callstack.h"
+#include "engine1.h"
 #include "engine2.h"
 #include "engine3.h"
-#include "engine4.h"
 #include "counters.h"
 #include "callgraph.h"
 
@@ -88,8 +88,8 @@ CallSiteStackType CallSiteStack;
 void (*WriteRecorder)(uptr, u32);
 void (*ReadRecorder)(uptr, u32);
 void (*InstrCounter)(ADDRINT);
-VOID (*RecordRoutineEntry)(ADDRINT);
-VOID (*RecordRoutineExit)(VOID*);
+VOID (*RoutineEntryRecorder)(ADDRINT);
+VOID (*RoutineExitRecorder)(VOID*);
 
 u32 Engine=0;
 bool DoTrace=true;
@@ -119,14 +119,6 @@ u32 LoopIterationCount=1;
 // Command line switches
 /* ===================================================================== */
 
-// KNOB<string> KnobMatrixFile(KNOB_MODE_WRITEONCE,  "pintool",
-//                             "MatFile", "matrix.dat",
-//                             "specify file name for matrix output");
- 
-// KNOB<string> KnobDotFile(KNOB_MODE_WRITEONCE,  "pintool",
-//                          "DotFile", "communication.dot",
-//                          "specify file name for output in dot");
-
 KNOB<string> KnobPerCallFile(KNOB_MODE_WRITEONCE,  "pintool",
                          "PerCallFile", "percallaccesses.dat",
                          "specify file name for per call output file");
@@ -138,8 +130,8 @@ KNOB<BOOL> KnobTrackObjects(KNOB_MODE_WRITEONCE, "pintool",
                             "TrackObjects", "0", "Track the objects");
 
 KNOB<UINT32> KnobEngine(KNOB_MODE_WRITEONCE,  "pintool",
-                        "Engine", "2",
-                        "specify engine number to be used from 2,3,4");
+                        "Engine", "1",
+                        "specify engine number (1,2,3) to be used");
 
 KNOB<BOOL> KnobSelectFunctions(KNOB_MODE_WRITEONCE, "pintool",
                                "SelectFunctions", "0",
@@ -249,6 +241,10 @@ void SelectAnalysisEngine()
     InstrCounter = doInstrCount;
     switch( Engine )
     {
+    case 1:
+        ReadRecorder = RecordReadEngine1;
+        WriteRecorder = RecordWriteEngine1;
+        break;
     case 2:
         ReadRecorder = RecordReadEngine2;
         WriteRecorder = RecordWriteEngine2;
@@ -257,19 +253,15 @@ void SelectAnalysisEngine()
         ReadRecorder = RecordReadEngine3;
         WriteRecorder = RecordWriteEngine3;
         break;
-    case 4:
-        ReadRecorder = RecordReadEngine4;
-        WriteRecorder = RecordWriteEngine4;
-        break;
     default:
         ECHO("Specify a valid Engine number to be used");
         Die();
         break;
     }
     ECHO("Selected Engine number " << Engine);
+    D2ECHO( ADDR((void*)RecordReadEngine1) << " and " << ADDR((void*)RecordWriteEngine1) );
     D2ECHO( ADDR((void*)RecordReadEngine2) << " and " << ADDR((void*)RecordWriteEngine2) );
     D2ECHO( ADDR((void*)RecordReadEngine3) << " and " << ADDR((void*)RecordWriteEngine3) );
-    D2ECHO( ADDR((void*)RecordReadEngine4) << " and " << ADDR((void*)RecordWriteEngine4) );
 }
 
 void SelectDummyAnalysisEngine()
@@ -379,10 +371,10 @@ u32 lastCallLocIndex=0;
 u32 currSize;
 uptr currStartAddress;
 
-VOID RecordRoutineEntry1(ADDRINT irname)
+VOID RoutineEntryRecorder1(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
-    D1ECHO ("RecordRoutineEntry1 : " << rname );
+    D1ECHO ("RoutineEntryRecorder1 : " << rname );
     string calleeName(rname);
     IDNoType calleeID=0;
 
@@ -392,47 +384,51 @@ VOID RecordRoutineEntry1(ADDRINT irname)
         symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
     }
 
+    calleeID = FuncName2ID[calleeName];
+
     // following is to store recursive functions
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
-    D1ECHO( callerName << "  " << calleeName);
-    if(callerName == calleeName) // recursive function
+    if(callerName != calleeName) // Non recursive function
+    {
+        CallStack.Push(calleeID);
+        CallSiteStack.Push(lastCallLocIndex);
+    }
+    else
     {
         recursiveFunctions.insert(calleeName);
     }
 
-    calleeID = FuncName2ID[calleeName];
-
+    // call count should be updated even for recursive functions
     callCounts[calleeID] += 1;
     callgraph.UpdateCall(calleeID, rInstrCount);
     rInstrCount=0;
 
-    CallStack.Push(calleeID);
-    CallSiteStack.Push(lastCallLocIndex);   // record the call site loc index
-    D1ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID);
-
+    ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID);
     #if (DEBUG>0)
     CallStack.Print();
-    CallSiteStack.Print();
+    //CallSiteStack.Print();
     #endif
 
     // In engine 3, to save time, the curr call is selected only at
     // func entry/exit, so that it does not need to be determined on each access
-    if (KnobEngine.Value() == 3)
+    if ( Engine == 3)
     {
         D1ECHO ("Setting Current Call for : " << rname );
         SetCurrCallOnEntry();
     }
 
-    D1ECHO ("RecordRoutineEntry1 : " << calleeName << " Done" );
+    D1ECHO ("RoutineEntryRecorder1 : " << calleeName << " Done" );
 }
 
-// Used when tracking tasks
-VOID RecordRoutineEntry2(ADDRINT irname)
+// This recorder is used when tasks are tracked. The main differences are :
+//    new id is generated for each new call site
+//    and the way these are named (required for mcpar)
+VOID RoutineEntryRecorder2(ADDRINT irname)
 {
     const char* rname = reinterpret_cast<const char *>(irname);
     string calleeName(rname);
-    D1ECHO ("RecordRoutineEntry2 : " << calleeName );
+    D1ECHO ("RoutineEntryRecorder2 : " << calleeName );
 
     IDNoType callerID = CallStack.Top();
     string callerName = symTable.GetSymName(callerID);
@@ -443,51 +439,60 @@ VOID RecordRoutineEntry2(ADDRINT irname)
 
     IDNoType calleeID=0;
     D2ECHO( callerNameSimple << " ->  " << calleeName);
-    if( callerNameSimple != calleeName ) // due to recursion this check is needed
+    if( callerNameSimple != calleeName ) // Non recursive case
     {
         // for each callsite a unique id is generated
         // this will result in the generation of unique name
-        if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
+        if( !GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
         {
             AddNoToNameEnd(calleeName, lastCallLocIndex);
             AddNoToNameEnd(calleeName, calleeID);
             symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
 
-            tgout << callerName << " FUNC " << calleeName  << endl; // for callgraph output
+            // for taskgraph output
+            tgout << callerName << " FUNC " << calleeName  << "\n";
         }
 
         D1ECHO ("Using ID " << calleeID);
         CallStack.Push(calleeID);
         CallSiteStack.Push(lastCallLocIndex);
         D1ECHO ("Entered Routine2 : " << calleeName << " with ID " << calleeID);
-    }
 
-    // call count should be updated even for recursive functions
-    callCounts[calleeID] += 1;
-    callgraph.UpdateCall(calleeID, rInstrCount);
-    rInstrCount=0;
+        callCounts[calleeID] += 1;
+        callgraph.UpdateCall(calleeID, rInstrCount);
+        rInstrCount=0;
+    }
+    else // recursive case
+    {
+        // call count should be updated even for recursive functions
+        // in this case same callerID should be used
+        callCounts[callerID] += 1;
+        callgraph.UpdateCall(callerID, rInstrCount);
+        rInstrCount=0;
+    }
 
     #if (DEBUG>0)
     CallStack.Print();
-    CallSiteStack.Print();
+    //CallSiteStack.Print();
     #endif
 
     // TODO test with updated logic later
     // In engine 3, to save time, the curr call is selected only at
     // func entry/exit, so that it does not need to be determined on each access
-    if (KnobEngine.Value() == 3)
+    if ( Engine == 3)
     {
         D1ECHO ("Setting Current Call for : " << calleeName );
         SetCurrCallOnEntry();
     }
-    D1ECHO ("RecordRoutineEntry2 : " << calleeName << " Done" );
+
+    D1ECHO ("RoutineEntryRecorder2 : " << calleeName << " Done" );
 }
 
-VOID RecordRoutineExit1(VOID *ip)
+VOID RoutineExitRecorder1(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    D1ECHO ("RecordRoutineExit1 : " << rname );
+    D1ECHO ("RoutineExitRecorder1 : " << rname );
 
     // check first if map has entry for this ftn
     if ( symTable.IsSeenFunctionName(rname) )
@@ -496,47 +501,44 @@ VOID RecordRoutineExit1(VOID *ip)
         // check if the top ftn is the current one
         if ( lastCallID == FuncName2ID[rname] )
         {
-            D1ECHO("Routine ID: " << FuncName2ID[rname]
-                   << " Call stack top id " << lastCallID );
-
-            D1ECHO("Leaving Routine : " << rname
-                   << " Popping call stack top is "
-                   << symTable.GetSymName( lastCallID ) );
+            D1ECHO("Leaving Routine : " << rname << " id : " << FuncName2ID[rname]);
+            D1ECHO("Will pop : " << symTable.GetSymName( lastCallID ) << " id : " << lastCallID );
 
             CallStack.Pop();
             CallSiteStack.Pop();
 
-            D1ECHO ("Exited Routine1 : " << rname << " rInstrCount = " << rInstrCount);
-
-            callgraph.UpdateReturn( lastCallID, rInstrCount );
-            rInstrCount = 0;
+            ECHO ("Exited Routine1 : " << rname << " rInstrCount = " << rInstrCount);
 
             #if (DEBUG>0)
             CallStack.Print();
-            CallSiteStack.Print();
+            //CallSiteStack.Print();
             #endif
 
             // In engine 3, to save time, the curr call is selected only at func entry/exit,
             // so that it does not need to be determined on each access
-            if (KnobEngine.Value() == 3)
+            if ( Engine == 3)
             {
                 D1ECHO("Setting Current Call for : " << rname );
                 SetCurrCallOnExit(lastCallID);
             }
         }
+
+        // call count should be updated even for recursive functions
+        callgraph.UpdateReturn( lastCallID, rInstrCount );
+        rInstrCount = 0;
     }
 
     // un-comment the following to enable printing running count of instructions executed so far
     //ECHO("Instructions executed so far : " << rInstrCount );
-    D1ECHO ("RecordRoutineExit1 : " << rname << " Done");
+    D1ECHO ("RoutineExitRecorder1 : " << rname << " Done");
 }
 
 // Used when tracking tasks
-VOID RecordRoutineExit2(VOID *ip)
+VOID RoutineExitRecorder2(VOID *ip)
 {
     string rtnName = RTN_FindNameByAddress((ADDRINT)ip);
     string rname = PIN_UndecorateSymbolName(rtnName, UNDECORATION_NAME_ONLY);
-    D1ECHO ("RecordRoutineExit2 : " << rname );
+    D1ECHO ("RoutineExitRecorder2 : " << rname );
 
     if( ValidFtnName(rname) )
     {
@@ -555,29 +557,30 @@ VOID RecordRoutineExit2(VOID *ip)
 
             D1ECHO ("Exited2 Routine : " << rname << " rInstrCount = " << rInstrCount);
 
-            callgraph.UpdateReturn( topRtnID, rInstrCount );
-            rInstrCount = 0;
-
             // TODO test it later with updated logic
             // In engine 3, to save time, the curr call is selected only at func entry/exit,
             // so that it does not need to be determined on each access
-            if (KnobEngine.Value() == 3)
+            if ( Engine == 3 )
             {
                 D1ECHO("Setting Current Call for : " << rname );
                 SetCurrCallOnExit(topRtnID);
             }
         }
+
+        // call count should be updated even for recursive functions
+        callgraph.UpdateReturn( topRtnID, rInstrCount );
+        rInstrCount = 0;
     }
 
     #if (DEBUG>0)
     CallStack.Print();
-    CallSiteStack.Print();
+    //CallSiteStack.Print();
     #endif
 
     // un-comment the following to enable printing running count of instructions executed so far
     //ECHO("Instructions executed so far : " << rInstrCount );
 
-    D1ECHO ("RecordRoutineExit2 : " << rname << " Done");
+    D1ECHO ("RoutineExitRecorder2 : " << rname << " Done");
 }
 
 VOID RecordZoneEntry(INT32 zoneNo)
@@ -589,20 +592,29 @@ VOID RecordZoneEntry(INT32 zoneNo)
     // for each callsite a unique id is generated
     // this will result in the generation of unique name
     IDNoType calleeID=0;
-    IDNoType tempLastCallLocIndex=0;
     string calleeName(callerName);
-    RemoveNoFromNameEnd(calleeName, calleeID); // remove previous id
-    RemoveNoFromNameEnd(calleeName, tempLastCallLocIndex); // remove previous lastCallLocIndex
-    if( ! GetAvailableORNewID(calleeID, lastCallLocIndex) ) // returns false if id is new
+    bool isNewID = !GetAvailableORNewID(calleeID, lastCallLocIndex); // returns false if id is new
+    if( isNewID )
     {
         D2ECHO(" Using new id " << calleeID << " for : " << calleeName);
-        AddNoToNameEnd(calleeName, lastCallLocIndex); // attach new lastCallLocIndex
-        AddNoToNameEnd(calleeName, calleeID); // attach new id
-        symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
+        if(TrackTasks || TrackLoopDepend)
+        {
+            IDNoType tempCalleeID=0;
+            IDNoType tempLastCallLocIndex=0;
+            RemoveNoFromNameEnd(calleeName, tempCalleeID); // remove previous id if there
+            RemoveNoFromNameEnd(calleeName, tempLastCallLocIndex); // remove previous lastCallLocIndex if there
+            AddNoToNameEnd(calleeName, lastCallLocIndex); // attach new lastCallLocIndex
+            AddNoToNameEnd(calleeName, calleeID); // attach new id
 
-        // for callgraph output
-        tgout << callerName << " LOOP " << calleeName  << endl;
-        //cout << endl << callerName << " LOOP " << calleeName  << endl;
+            // for taskgraph output
+            tgout << callerName << " LOOP " << calleeName << "\n";
+        }
+        else
+        {
+            calleeName += "_Zone" + to_string(zoneNo);
+        }
+
+        symTable.InsertFunction(calleeName, calleeID, lastCallLocIndex);
     }
 
     CallStack.Push(calleeID);
@@ -615,17 +627,18 @@ VOID RecordZoneEntry(INT32 zoneNo)
 
     #if (DEBUG>0)
     CallStack.Print();
-    CallSiteStack.Print();
+    //CallSiteStack.Print();
     #endif
 
     // TODO test with updated logic later
     // In engine 3, to save time, the curr call is selected only at
     // func entry/exit, so that it does not need to be determined on each access
-    if (KnobEngine.Value() == 3)
+    if ( Engine == 3 )
     {
         D1ECHO ("Setting Current Call for : " << calleeName );
         SetCurrCallOnEntry();
     }
+
     D1ECHO ("RecordZoneEntry : " << calleeName << " Done");
 }
 
@@ -641,12 +654,8 @@ VOID RecordZoneExit(INT32 zoneNo)
         // check if the top ftn is the current one
         if ( lastCallID == FuncName2ID[zoneName] )
         {
-            D1ECHO("Zone ID: " << FuncName2ID[zoneName]
-                   << " Call stack top id " << lastCallID );
-
-            D1ECHO("Leaving Zone : " << zoneName
-                   << " Popping call stack top is "
-                   << symTable.GetSymName( lastCallID ) );
+            D1ECHO("Leaving Zone : " << zoneName << " id : " << FuncName2ID[zoneName] );
+            D1ECHO("Will pop : " << symTable.GetSymName( lastCallID ) << " id : " << lastCallID );
 
             CallStack.Pop();
             CallSiteStack.Pop();
@@ -656,12 +665,12 @@ VOID RecordZoneExit(INT32 zoneNo)
 
             #if (DEBUG>0)
             CallStack.Print();
-            CallSiteStack.Print();
+            //CallSiteStack.Print();
             #endif
 
             // In engine 3, to save time, the curr call is selected only at func entry/exit,
             // so that it does not need to be determined on each access
-            if (KnobEngine.Value() == 3)
+            if ( Engine == 3 )
             {
                 D1ECHO("Setting Current Call for : " << zoneName );
                 SetCurrCallOnExit(lastCallID);
@@ -674,8 +683,7 @@ VOID RecordZoneExit(INT32 zoneNo)
 
 VOID SetCallSite(u32 locIndex)
 {
-    D2ECHO("setting last function call locIndex to " << locIndex << " "
-                        << Locations.GetLocation(locIndex).toString());
+    D2ECHO("setting last callsite to : " << Locations.GetLocation(locIndex).toString() << " locIndex : " << locIndex);
     lastCallLocIndex=locIndex;
 }
 
@@ -943,7 +951,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                     INS_InsertCall(
                         ins,
                         IPOINT_BEFORE,
-                        (AFUNPTR)RecordRoutineExit,
+                        (AFUNPTR)RoutineExitRecorder,
                         IARG_INST_PTR,
                         IARG_END
                     );
@@ -1016,7 +1024,7 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
         {
             bool result = DependMatrix.CheckLoopIndependence(LoopIterationCount);
             if(result)
-            { //independent
+            { // independent
                 independentLoopExecutions.insert(loopName);
             }
             else
@@ -1049,8 +1057,8 @@ VOID Markers(INT32 locidx, INT32 arg, INT32 arg1, INT32 arg2)
     }
 }
 
-//#define USEDEBUGENGINE4
-// Above define can be used to perform detailed debug of engine 4.
+//#define USEDEBUGENGINE2
+// Above define can be used to perform detailed debug of engine 2.
 // Prints detailed output for dependencies.
 VOID InstrumentTraces(TRACE trace, VOID *v)
 {
@@ -1109,7 +1117,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
             // skip instrumenting call/return/prefetch instructions for memory accesses
             if( INS_IsCall(ins) || INS_IsRet(ins) || INS_IsPrefetch(ins) ) continue;
 
-#ifdef USEDEBUGENGINE4
+#ifdef USEDEBUGENGINE2
             char* cstr = new char[ 100 ];
             string insTemp = INS_Disassemble(ins);
             strcpy(cstr, insTemp.c_str() );
@@ -1131,7 +1139,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 if (INS_IsMemoryRead(ins) )
                 {
                     D2ECHO("Instrumenting Read in ins : " << INS_Disassemble(ins) );
-#ifdef USEDEBUGENGINE4
+#ifdef USEDEBUGENGINE2
                     INS_InsertPredicatedCall
                     (
                         ins, IPOINT_BEFORE, (AFUNPTR)RecordReadEngine4Debug,
@@ -1156,7 +1164,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
                 if (INS_HasMemoryRead2(ins) )
                 {
                     D2ECHO("Instrumenting Read2 in ins : " << INS_Disassemble(ins) );
-#ifdef USEDEBUGENGINE4
+#ifdef USEDEBUGENGINE2
                     INS_InsertPredicatedCall
                     (
                         ins, IPOINT_BEFORE, (AFUNPTR)RecordReadEngine4Debug,
@@ -1184,7 +1192,7 @@ VOID InstrumentTraces(TRACE trace, VOID *v)
             if( traceWrite && INS_IsMemoryWrite(ins) )
             {
                 D2ECHO("Instrumenting Write in ins : " << INS_Disassemble(ins) );
-#ifdef USEDEBUGENGINE4
+#ifdef USEDEBUGENGINE2
                 // Used in Debug of Engine 4
                 INS_InsertPredicatedCall
                 (
@@ -1220,7 +1228,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
 {
     /*
      * The following function recording can be done at the instrumentation time as
-     * below instead of doing at analysis time in RecordRoutineEntry(). This has
+     * below instead of doing at analysis time in RoutineEntryRecorder(). This has
      * resulted in more functions in SeenFnames which may not be even involved in
      * communication. This, however, is not as such a problem as it will simply
      * clutter the output, and easily be cleaned in dot file etc.
@@ -1257,7 +1265,7 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
             D1ECHO ("Instrumenting Routine : " << cstr );
 
             RTN_Open(rtn);
-            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RecordRoutineEntry,
+            RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)RoutineEntryRecorder,
                            IARG_ADDRINT, (ADDRINT)(cstr),
                            IARG_END);
 
@@ -1308,9 +1316,9 @@ VOID TheEnd(INT32 code, VOID *v)
     symTable.Print();
 #endif
 
-    switch( KnobEngine.Value() )
+    switch( Engine )
     {
-    case 2:
+    case 1:
         if(TrackTasks == false)
         {
             ofstream rfout;
@@ -1330,6 +1338,29 @@ VOID TheEnd(INT32 code, VOID *v)
         callgraph.PrintJson();
         ComMatrix.PrintDependenceMatrix();
         break;
+    case 2:
+        if(TrackLoopDepend)
+        {
+            ofstream ilout;
+            OpenOutFile("independentloopnames.dat", ilout);
+            set<string>::iterator it1;
+            set<string>::iterator it2;
+            for( it1=independentLoopExecutions.begin(); it1 !=independentLoopExecutions.end(); ++it1 )
+            {
+                it2 = dependentLoopExecutions.find(*it1);
+                if( it2 == dependentLoopExecutions.end() )
+                {
+                    ilout << *it1 << " ";
+                    ECHO("Iterations of loop " << *it1 << " are independent");
+                }
+            }
+            for( it1=dependentLoopExecutions.begin(); it1 !=dependentLoopExecutions.end(); ++it1 )
+            {
+                ECHO("Iterations of loop " << *it1 << " are dependent");
+            }
+            ilout.close();
+        }
+        break;
     case 3:
         PrintAllCalls(pcout);
         pcout.close();
@@ -1345,28 +1376,6 @@ VOID TheEnd(INT32 code, VOID *v)
     Locations.Print();
     tgout.close();
     traceout.close();
-
-    if(TrackLoopDepend)
-    {
-        ofstream ilout;
-        OpenOutFile("independentloopnames.dat", ilout);
-        set<string>::iterator it1;
-        set<string>::iterator it2;
-        for( it1=independentLoopExecutions.begin(); it1 !=independentLoopExecutions.end(); ++it1 )
-        {
-            it2 = dependentLoopExecutions.find(*it1);
-            if( it2 == dependentLoopExecutions.end() )
-            {
-                ilout << *it1 << " ";
-                ECHO("Iterations of loop " << *it1 << " are independent");
-            }
-        }
-        for( it1=dependentLoopExecutions.begin(); it1 !=dependentLoopExecutions.end(); ++it1 )
-        {
-            ECHO("Iterations of loop " << *it1 << " are dependent");
-        }
-        ilout.close();
-    }
 }
 
 /*!
@@ -1445,9 +1454,9 @@ void SetupPin(int argc, char *argv[])
 
     ECHO("Selecting Analysis Engine ...");
     if(TrackTasks)
-        Engine=2;
+        Engine=1;
     if(TrackLoopDepend)
-        Engine=4;
+        Engine=2;
 
     SelectAnalysisEngine();
 
@@ -1462,7 +1471,7 @@ void SetupPin(int argc, char *argv[])
         DoTrace=true;
     }
 
-    if ( KnobEngine.Value() == 3 )
+    if ( Engine == 3 )
     {
         OpenOutFile(KnobPerCallFile.Value(), pcout);
     }
@@ -1476,14 +1485,16 @@ void SetupPin(int argc, char *argv[])
 
     if( TrackTasks || TrackLoopDepend )
     {
-        RecordRoutineEntry = RecordRoutineEntry2;
-        RecordRoutineExit = RecordRoutineExit2;
+        RoutineEntryRecorder = RoutineEntryRecorder2;
+        RoutineExitRecorder = RoutineExitRecorder2;
     }
     else
     {
-        RecordRoutineEntry = RecordRoutineEntry1;
-        RecordRoutineExit = RecordRoutineExit1;
+        RoutineEntryRecorder = RoutineEntryRecorder1;
+        RoutineExitRecorder = RoutineExitRecorder1;
     }
+//     RoutineEntryRecorder = RoutineEntryRecorder2;
+//     RoutineExitRecorder = RoutineExitRecorder2;
 
     // Register function for Image-level instrumentation
     IMG_AddInstrumentFunction(InstrumentImages, 0);

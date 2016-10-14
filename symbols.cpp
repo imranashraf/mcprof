@@ -14,7 +14,7 @@
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
  *
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
  *
  * MCPROF is free software: you can redistribute it and/or modify it under the
@@ -49,6 +49,7 @@ extern CallSiteStackType CallSiteStack;
 extern Matrix2D ComMatrix;
 extern bool ShowUnknown;
 extern bool TrackLoopDepend;
+extern bool TrackTasks;
 
 std::string locsFileName("locations.dat");
 
@@ -198,7 +199,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     // also set the function in which this allocation is taking place
     // as the producer of this object. This should not be done when
     // tracking loop dependencies as it will cause extra communication/dependencies
-    if( !TrackLoopDepend )
+    if( TrackTasks && !TrackLoopDepend )
     {
         IDNoType prod = CallStack.Top();
         for(u32 i=0; i<size; i++)
@@ -222,16 +223,19 @@ void Symbols::UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 lastCal
     SetObjectIDs(saddr, size, id);
 
     // Added for allocation dependencies
-    // set producer of previous address range to Unknown
-    for(u32 i=0; i<prevSize; i++)
+    if( TrackTasks && !TrackLoopDepend )
     {
-        SetProducer( UnknownID, prevSAddr+i );
-    }
-    // now set the current producer to the new address range
-    IDNoType prod = CallStack.Top();
-    for(u32 i=0; i<size; i++)
-    {
-        SetProducer( prod, saddr+i );
+        // set producer of previous address range to Unknown
+        for(u32 i=0; i<prevSize; i++)
+        {
+            SetProducer( UnknownID, prevSAddr+i );
+        }
+        // now set the current producer to the new address range
+        IDNoType prod = CallStack.Top();
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer( prod, saddr+i );
+        }
     }
 }
 
@@ -303,7 +307,7 @@ void Symbols::Remove(uptr saddr)
     // the last producer and the function freeing it.
     // Also clear the producer to Unknown to avoid future
     // recording of communication.
-    if( !TrackLoopDepend )
+    if( TrackTasks && !TrackLoopDepend )
     {
         IDNoType prod = CallStack.Top();
         for(u32 i=0; i<size; i++)

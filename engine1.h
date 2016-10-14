@@ -14,7 +14,7 @@
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
  *
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
  *
  * MCPROF is free software: you can redistribute it and/or modify it under the
@@ -34,8 +34,8 @@
  *
  */
 
-#ifndef ENGINE4_H
-#define ENGINE4_H
+#ifndef ENGINE1_H
+#define ENGINE1_H
 
 #include "globals.h"
 
@@ -44,10 +44,10 @@
 #include <iomanip>
 #include <iostream>
 
-void RecordWriteEngine4(uptr addr, u32 size);
-void RecordReadEngine4(uptr addr, u32 size);
+// if BYTELEVEL is defined than the granularity is Byte
+// #define BYTELEVEL
 
-void RecordWriteEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip);
-void RecordReadEngine4Debug(uptr addr, u32 size, ADDRINT insName, VOID *ip);
+void RecordWriteEngine1(uptr addr, u32 size);
+void RecordReadEngine1(uptr addr, u32 size);
 
 #endif

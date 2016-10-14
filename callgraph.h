@@ -14,7 +14,7 @@
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
  *
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
  *
  * MCPROF is free software: you can redistribute it and/or modify it under the
@@ -86,7 +86,7 @@ public:
         }
         else
         {
-            D2ECHO("Call to " << symTable.GetSymName(callee) << " from " << symTable.GetSymName(currNode->ID) );
+            D1ECHO("Call to " << symTable.GetSymName(callee) << " from " << symTable.GetSymName(currNode->ID) );
             list<Node> & currNodechildren = currNode->children;
             list<Node>::iterator it;
             u32 index;
@@ -127,7 +127,7 @@ public:
 
     void UpdateReturn(IDNoType retFrom, u64 rInstrCount)
     {
-        D2ECHO("Return from " << symTable.GetSymName(currNode->ID) );
+        D1ECHO("Return from " << symTable.GetSymName(currNode->ID) );
         (currNode->instrCount) += rInstrCount;
         currNode = currNode->parent;
         #if (DEBUG>0)
