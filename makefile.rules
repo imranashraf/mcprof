@@ -74,7 +74,7 @@ ifeq ($(TARGET_OS),linux)
 #     TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors #-fexceptions
     TOOL_CXXFLAGS+= -MD -std=c++0x -I. -Wfatal-errors
     #TOOL_LDFLAGS+= -pg
-    TOOL_LIBS+= -lelf
+    #TOOL_LIBS+= -lelf # not needed as with Pin 3 we cannot link gnu libelf!
     APP_CXXFLAGS+= -fno-inline -g -Wfatal-errors
     #APP_CCFLAGS+= -fno-inline -g
 endif
@@ -182,6 +182,9 @@ $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(O
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@
 
+help: $(OBJDIR)mcprof$(PINTOOL_SUFFIX)
+# 	|| true is just to supress the return of non zero value
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -h -- ls || true
 
 format:
 	astyle --style=allman *.h *.cpp

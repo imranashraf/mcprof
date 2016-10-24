@@ -404,7 +404,7 @@ VOID RoutineEntryRecorder1(ADDRINT irname)
     callgraph.UpdateCall(calleeID, rInstrCount);
     rInstrCount=0;
 
-    ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID);
+    D1ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID);
     #if (DEBUG>0)
     CallStack.Print();
     //CallSiteStack.Print();
@@ -507,7 +507,7 @@ VOID RoutineExitRecorder1(VOID *ip)
             CallStack.Pop();
             CallSiteStack.Pop();
 
-            ECHO ("Exited Routine1 : " << rname << " rInstrCount = " << rInstrCount);
+            D1ECHO ("Exited Routine1 : " << rname << " rInstrCount = " << rInstrCount);
 
             #if (DEBUG>0)
             CallStack.Print();
