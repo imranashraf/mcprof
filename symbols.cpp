@@ -486,7 +486,7 @@ void Symbols::InitFromObjFile()
         // Get a new id for this NEW location
         IDNoType id = GlobalID++;
         //LocIndex2ID[locindex] = id;
-        ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
+        D2ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
         _Symbols[id] = Symbol(id, symname, SymType::OBJ, locindex );
         ++i;
     }
@@ -509,8 +509,9 @@ void Symbol::Print(ostream& fout)
          << SymTypeName[symType] << " " << name << " ";
 
     string callsitestring = symCallSite.GetCallSitesString();
+    fout << "callsitestring : " << callsitestring << endl;
     if(callsitestring == "" )
-         fout << Locations.GetLocation(symLocIndex).toString() << endl;
+        fout << Locations.GetLocation(symLocIndex).toString() << endl;
     else
         fout << symCallSite.GetCallSitesString() << ">"
              << Locations.GetLocation(symLocIndex).toString() << endl;
@@ -546,13 +547,12 @@ void Symbols::Print()
         ofstream fout;
         OpenOutFile(fname.c_str(), fout);
         ECHO("Printing Symbol Table to " << fname );
-        //for ( auto& entry : _Symbols)
-        std::tr1::unordered_map<IDNoType,Symbol>::iterator iter;
-        for(iter=_Symbols.begin(); iter!=_Symbols.end(); iter++)
+        for ( auto& entry : _Symbols)
         {
-            auto& sym = iter->second;
+            auto& sym = entry.second;
             sym.Print(fout);
         }
         fout.close();
     }
+    ECHO("Printed Symbol Table");
 }

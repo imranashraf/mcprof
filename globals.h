@@ -254,5 +254,7 @@ void RemoveSubstrs(std::string& src, std::string& toRemove);
 void RemoveCurrDirFromName(std::string& src);
 void AddNoToNameEnd(std::string& name, IDNoType id);
 void RemoveNoFromNameEnd(std::string& name, IDNoType& id);
+void GetFileName(const std::string& str, std::string& file);
+void GetFolderName(const std::string& str, std::string& foldr);
 
 #endif

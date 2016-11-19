@@ -253,3 +253,17 @@ void RemoveNoFromNameEnd(string& name, IDNoType& id)
         D3ECHO(" id: " << id );
     }
 }
+
+void GetFileName(const string& str, string& file)
+{
+    size_t found;
+    found=str.find_last_of("/\\");
+    file = str.substr(found+1);
+}
+
+void GetFolderName(const string& str, string& folder)
+{
+    size_t found;
+    found=str.find_last_of("/\\");
+    folder = str.substr(0,found);
+}

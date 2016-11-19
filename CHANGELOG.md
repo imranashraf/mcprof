@@ -7,10 +7,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Engine 4: loop dependency support (under test)
 - sparse matrix for loop dependence detection
 - callgraph Support for zones as well
+- Added support for profiling shared libraries of interest
 
 ### Changed
 - DoTrace modified for proper tracing only when required
-- Engine 2 now generates execution and memory profile
+- Engine 2 is now Engine 1 which generates execution and memory profile
 - two callgraphs are generated:
     - complete callgraph containing all function and edges
     - simplified callgraph containing important function and edges

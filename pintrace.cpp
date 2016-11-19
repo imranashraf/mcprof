@@ -146,7 +146,8 @@ KNOB<BOOL> KnobSelectObjects(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   "MainExecOnly","1",
                                   "Trace functions that are contained only in the\
-                                  executable image");
+                                  main executable image. Set it to 0 to specify library/image names\
+                                  of interest to instrument/profile in <interestingLibraryNames.dat> file");
 
 KNOB<BOOL> KnobRecordAllAllocations(KNOB_MODE_WRITEONCE, "pintool",
                                   "RecordAllAllocations","1",
@@ -290,7 +291,7 @@ BOOL ValidFtnName(string name)
             name.c_str()[0]=='?' ||
             !name.compare("atexit") ||
             (name.find("std::") != string::npos) ||
-            (name.find("::operator") != string::npos) ||
+//             (name.find("::operator") != string::npos) ||
 #ifdef WIN32
             !name.compare("GetPdbDll") ||
             !name.compare("DebuggerRuntime") ||
@@ -773,6 +774,62 @@ VOID StrdupAfter(uptr dstAddr)
     symTable.InsertMallocCalloc(currStartAddress, lastCallLocIndex, currSize);
 }
 
+vector<string> InterestingLibNames;
+void UpdateLibrariesOfInterestList(int argc, char **argv)
+{
+    // parse the command line arguments for the binary name
+    for (int i=1; i<argc-1; i++)
+    {
+        if (!strcmp(argv[i],"--"))
+        {
+            string mainImgName( argv[i+1] );
+            string imgname;
+            GetFileName(mainImgName, imgname);
+            D2ECHO("Main Image Name = "<< mainImgName);
+            D2ECHO("Simple Image Name = "<< imgname);
+            InterestingLibNames.push_back(imgname);
+            break;
+        }
+    }
+    
+    if( KnobMainExecutableOnly.Value() == false )
+    {
+        string ilfname = "interestingLibraryNames.dat";
+        ifstream ilfin;
+        OpenInFile(ilfname, ilfin);
+        string libName;
+        u32 i=0;
+        while( ilfin >> libName)   // while there are function names in file
+        {
+            InterestingLibNames.push_back(libName);
+            i++;
+        }
+        ilfin.close();
+
+        if(i==0)
+        {
+            ECHO("No library of insert found in " << ilfname );
+        }
+    }
+    for(auto &n : InterestingLibNames)
+    {
+        ECHO("Intersting library names : " << n);
+    }
+}
+bool IsLibOfInterest(string imgName)
+{
+    bool isInteresting = false;
+    for(auto &n : InterestingLibNames)
+    {
+        if( imgName.find(n) != string::npos )
+        {
+            isInteresting = true;
+            break;
+        }
+    }
+    return isInteresting;
+}
+
 // IMG instrumentation routine - called once per image upon image load
 VOID InstrumentImages(IMG img, VOID * v)
 {
@@ -879,18 +936,15 @@ VOID InstrumentImages(IMG img, VOID * v)
 
     }
 
-    // For simplicity, do rest of instrumentation only for main image.
-    // This can be extended to any other image of course.
-    if (    IMG_IsMainExecutable(img) == false &&
-            KnobMainExecutableOnly.Value() == true
-       )
+    // For simplicity, do rest of instrumentation only for images of interest
+    if ( !IsLibOfInterest(imgname) )
     {
-        ECHO("Skipping Image "<< imgname<< " for function calls instrumentation as it is not main executable");
+        ECHO("Skipping Image "<< imgname<< " for function calls instrumentation as it is not image of interest");
         return;
     }
     else
     {
-        ECHO("Instrumenting "<<imgname<<" for function calls as it is the Main executable ");
+        ECHO("Instrumenting "<<imgname<<" for function calls as it is image of interest");
     }
 
     // Traverse the sections of the image.
@@ -922,7 +976,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                     else RemoveCurrDirFromName(fileName);
                     // create a temp Location loc, may be inserted in list of locations later
                     Location loc(line, fileName);
-                    D1ECHO("  Routine Call found for " << tname << " at " << fileName <<":"<< line);
+                    D2ECHO("  Routine Call found for " << tname << " at " << fileName <<":"<< line);
                     bool inStdHeaders = ( fileName.find("/usr/include") != string::npos );
                     if( (!inStdHeaders) && ( ValidFtnCallName(tname) ) )
                     {
@@ -933,7 +987,7 @@ VOID InstrumentImages(IMG img, VOID * v)
                             locIndex = Locations.Insert(loc);
                         }
 
-                        D1ECHO("  Instrumenting call " << " at " << VAR(locIndex) << " " << fileName <<":"<< line);
+                        D2ECHO("  Instrumenting call " << " at " << VAR(locIndex) << " " << fileName <<":"<< line);
 
                         INS_InsertCall(
                             ins,
@@ -1235,8 +1289,8 @@ VOID InstrumentRoutines(RTN rtn, VOID *v)
      */
 
     IMG img = SEC_Img(RTN_Sec(rtn));
-
-    if( IMG_IsMainExecutable(img) )
+    string imgname = IMG_Name(img);
+    if ( IsLibOfInterest(imgname) )
     {
         string rname = PIN_UndecorateSymbolName( RTN_Name(rtn), UNDECORATION_NAME_ONLY);
         D1ECHO ("rname (UNDECORATION_COMPLETE): " << rname );
@@ -1311,10 +1365,6 @@ VOID TheEnd(INT32 code, VOID *v)
 {
     symTable.Print();
     PrintShadowMap();
-#if (DEBUG>0)
-    // Print Symbol Table to output file
-    symTable.Print();
-#endif
 
     switch( Engine )
     {
@@ -1431,6 +1481,8 @@ void SetupPin(int argc, char *argv[])
         symTable.InsertStaticSymbols(argc, argv);
     }
 
+    UpdateLibrariesOfInterestList(argc,argv);
+    
     if(KnobSelectFunctions.Value())
     {
         ECHO("Selected Functions Feature is not complete...");
