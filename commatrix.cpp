@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,12 +29,11 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
 
-#include "globals.h"
 #include "commatrix.h"
 #include "counters.h"
 
@@ -134,10 +133,12 @@ bool Matrix2D::IsFilledCol(IDNoType c)
 // Use the following to print tabs which will not be visually appealing but it will
 // generate the columns properly for further processing by other tools
 #define ALIGNMENT ("    ")
-
-void Matrix2D::PrintMatrix(ostream &fout)
+void Matrix2D::PrintMatrix()
 {
-    ECHO("Printing communication matrix as table for processing by tool");
+    std::ofstream mout;
+    string matrixFileName("matrix.dat");
+    OpenOutFile(matrixFileName, mout);
+    ECHO("Printing communication matrix as table in " << matrixFileName);
     IDNoType TotalSymbols = symTable.TotalSymbolCount();
     CHECK_LT(TotalSymbols, Matrix.size());
 
@@ -150,38 +151,64 @@ void Matrix2D::PrintMatrix(ostream &fout)
     // first update the map which contains the filled rows and columns
     UpdateEmptyRowsCols(StartID, TotalSymbols);
 
-    fout << ALIGNMENT << " ";
+    mout << ALIGNMENT << " ";
     for (IDNoType c=StartID; c<TotalSymbols; c++)
     {
         if( IsFilledCol(c) )
         {
-            fout << ALIGNMENT << symTable.GetSymName(c);
+            mout << ALIGNMENT << symTable.GetSymName(c);
         }
     }
-    fout << endl;
+    mout << endl;
 
     for (IDNoType p=StartID; p<TotalSymbols; p++)
     {
         if( IsFilledRow(p) )
         {
-            fout << ALIGNMENT << symTable.GetSymName(p);
+            mout << ALIGNMENT << symTable.GetSymName(p);
 
             for (IDNoType c=StartID; c<TotalSymbols; c++)
             {
                 if( IsFilledCol(c) )
                 {
-                    fout << ALIGNMENT << Matrix[p][c];
+                    mout << ALIGNMENT << Matrix[p][c];
                 }
             }
-            fout<<endl;
+            mout<<endl;
         }
     }
+    mout.close();
 }
 #undef ALIGNMENT
 
-void Matrix2D::PrintDot(ostream &dotout)
+// printing of matrix as simple task dependences
+void Matrix2D::PrintDependenceMatrix()
 {
-    ECHO("Printing communication in DOT");
+    string depFileName("taskdependences.dat");
+    ECHO("Printing dependences in " << depFileName);
+    std::ofstream depout;
+    OpenOutFile(depFileName, depout);
+    IDNoType TotalSymbols = symTable.TotalSymbolCount();
+    depout << "# producer    consumer    communication " << endl;
+    for (IDNoType pid=0; pid<TotalSymbols; pid++)
+    {
+        string prod = symTable.GetSymName(pid);
+        for (IDNoType cid=0; cid<TotalSymbols; cid++)
+        {
+            string cons = symTable.GetSymName(cid);
+            if( Matrix[pid][cid] > 0 )
+                depout << prod << " "<< cons << "  " << Matrix[pid][cid] << endl;
+        }
+    }
+    depout.close();
+}
+
+void Matrix2D::PrintDot()
+{
+    std::ofstream dotout;
+    string dotFileName("communication.dot");
+    OpenOutFile(dotFileName, dotout);
+    ECHO("Printing communication as DOT in " << dotFileName);
     u16 TotalSymbols = GlobalID;
     D1ECHO( VAR(TotalSymbols) );
     CHECK_LT(TotalSymbols, Matrix.size());
@@ -274,7 +301,7 @@ void Matrix2D::PrintDot(ostream &dotout)
             CommValType comm = Matrix[p][c];
             if( comm > Threshold )
             {
-                color = (int) (  1023 *  log((CommValType)(comm)) / log((CommValType)maxComm)  );
+                color = (int) (  1023 *  log( (double)(comm) ) / log( (double)maxComm ) );
                 dotout << dec
                        << "\"" << (u16)p << "\""
                        << "->"
@@ -294,4 +321,23 @@ void Matrix2D::PrintDot(ostream &dotout)
     }
 
     dotout << "}" << endl;
+    dotout.close();
+}
+
+bool Matrix2D::CheckLoopIndependence(u32 nIterations)
+{
+    bool result=true;
+    for (IDNoType pid=1; pid<nIterations-1; ++pid) // iterations start from 1
+    {
+        for (IDNoType cid=pid+1; cid<nIterations; ++cid)
+        {
+            if( Matrix[pid][cid] > 0 )
+            {
+                D2ECHO( pid << " "<< cid << "  " << Matrix[pid][cid] );
+                result = false;
+                break;
+            }
+        }
+    }
+    return result;
 }

@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -43,6 +43,12 @@
 
 map<IDNoType,u64> instrCounts;
 map<IDNoType,u64> callCounts;
+
+map<IDNoType,u64> funcReads;
+map<IDNoType,u64> funcWrites;
+map<IDNoType,u64> objReads;
+map<IDNoType,u64> objWrites;
+
 extern Symbols symTable;
 extern bool ShowUnknown;
 
@@ -67,12 +73,12 @@ void PrintInstrCount()
 void PrintInstrPercents()
 {
     ofstream fout;
-    OpenOutFile("execProfile.out", fout);
+    OpenOutFile("execProfile.dat", fout);
 
     multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
-    map<u64,IDNoType>::reverse_iterator iter;
-    fout << setw(15) << "%Exec.Instr." << "\t\t" << "Function Name" << endl;
-    fout << "  ===============================================" <<endl;
+    multimap<u64,IDNoType>::reverse_iterator iter;
+    fout << setw(10) << "Total Calls " << setw(15) << "%Exec.Instr." << "\t\t" << "Name" << endl;
+    fout << " #==================================================================" <<endl;
 
     for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
     {
@@ -81,7 +87,9 @@ void PrintInstrPercents()
             continue;
         else
         {
-            fout << setw(15) << GetInstrCountPercent(fid) << "\t\t" << symTable.GetSymName(fid) << endl;
+            fout << setw(10) << GetCallCount(fid) 
+                 << setw(15) << GetInstrCountPercent(fid) 
+                 << "\t\t" << symTable.GetSymName(fid) << endl;
         }
     }
     fout.close();
@@ -91,7 +99,7 @@ void PrintInstrPercents()
 // void PrintInstrPercents()
 // {
 //     ofstream fout;
-//     OpenOutFile("execProfile.out", fout);
+//     OpenOutFile("execProfile.dat", fout);
 // 
 //     map<IDNoType,u64>::iterator iter;
 //     fout << setw(45) << "Function Name" << setw(12) << "% Instr." << endl;
@@ -152,4 +160,52 @@ u64 GetCallCount(IDNoType fid)
 {
     //TODO what if the entry for an fid does not exist?
     return callCounts[fid];
+}
+
+void PrintMemAccesses()
+{
+    ofstream fout;
+    OpenOutFile("memProfile.dat", fout);
+
+    fout << " This table can be sorted by Total Accesses (-k2) by using bash command:"<<endl;
+    fout << "    tail -n +7 memProfile.dat | sort -k2 -gr" <<endl<<endl;
+
+    fout << " Per Function Flat Memory Profile \n";
+    fout << setw(45) << " Function Name " << "\t ================= Accesses  ============  Allocation" <<endl;
+    fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
+    fout << "                         ==========================================================================" <<endl;
+
+    map<IDNoType,u64>::iterator fiter;
+    for( fiter = funcReads.begin(); fiter != funcReads.end(); ++fiter)
+    {
+        auto fid = fiter->first;
+        auto freads = fiter->second;
+        auto fwrites = funcWrites[fid];
+        fout << setw(45) << symTable.GetSymName(fid)
+                << setw(14) << freads + fwrites
+                << setw(14) << freads
+                << setw(14) << fwrites
+                << "  "     << symTable.GetSymLocation(fid) << endl;
+    }
+
+    fout << "\n\n";
+    fout << " Per Object Flat Memory Profile \n";
+    fout << setw(45) << " Object Name " << "\t ================= Accesses  ============  Allocation" <<endl;
+    fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
+    fout << "                         ==========================================================================" <<endl;
+
+    map<IDNoType,u64>::iterator oiter;
+    for( oiter = objReads.begin(); oiter != objReads.end(); ++oiter)
+    {
+        auto oid = oiter->first;
+        auto oreads = oiter->second;
+        auto owrites = objWrites[oid];
+        fout << setw(45) << symTable.GetSymName(oid)
+                << setw(14) << oreads + owrites
+                << setw(14) << oreads
+                << setw(14) << owrites
+                << "  "     << symTable.GetSymLocation(oid) << endl;
+    }
+
+    fout.close();
 }

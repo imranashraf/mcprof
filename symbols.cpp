@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,31 +29,40 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
 
-#include <gelf.h>
-// #include <libelf.h>
+// #include <gelf.h>
 #include <cstring>
+#include <cctype>
 #include "shadow.h"
 #include "symbols.h"
 #include "callstack.h"
+#include "commatrix.h"
 
 extern map <string,IDNoType> FuncName2ID;
 extern map <string,IDNoType> CallSites2ID;
+extern CallStackType CallStack;
 extern CallSiteStackType CallSiteStack;
+extern Matrix2D ComMatrix;
 extern bool ShowUnknown;
+extern bool TrackLoopDepend;
+extern bool TrackTasks;
+
+std::string locsFileName("locations.dat");
 
 // List of all locations of symbols
 LocationList Locations;
 
 bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
 {
+    D2ECHO("Getting GetAvailableORNewID");
     bool result;
     string callsites("");
     CallSiteStack.GetCallSites(lastCallLocIndex, callsites);
+    D2ECHO("callsites " << callsites);
     if(CallSites2ID.find(callsites) != CallSites2ID.end() )
     {
         // use existing id as this call site is already seen
@@ -72,9 +81,63 @@ bool GetAvailableORNewID(IDNoType& id, u32 lastCallLocIndex)
     return result;
 }
 
+IDNoType GetNewID()
+{
+    return GlobalID++;
+}
+
+
+void LocationList::InitFromFile()
+{
+    ifstream locin;
+    u32 counter=0;
+
+    if ( OpenInFileIfExists(locsFileName, locin) )
+    {
+        string line;
+        while ( getline(locin, line) )
+        {
+            //the following line trims white space from the beginning of the string
+            line.erase(line.begin(), find_if(line.begin(), line.end(), not1(ptr_fun<int, int>(isspace))));
+
+            // ignore empty lines and lines starting with #
+            if (line.length() == 0 || line[0] == '#')
+                continue;
+
+            string filename;
+            u32 lno;
+            istringstream iss(line);
+            if (!(iss >> filename >> lno))
+            {
+                break;    // error
+            }
+            Insert( Location(lno, filename) );
+            ++counter;
+        }
+
+        locin.close();
+    }
+
+    ECHO("Initialized " << counter << " locations from file");
+}
+
+void LocationList::Print()
+{
+    std::ofstream locout;
+    ECHO("Writing locations to " << locsFileName);
+    // remove( locsFileName.c_str() ); // delete file TODO is it needed?
+    OpenOutFile(locsFileName, locout);
+    locout << "# list of locations in order" << endl;
+    for(u32 i=0; i<locations.size(); ++i)
+    {
+        locout << locations[i].toString() << endl;
+    }
+    locout.close();
+}
+
 string& Symbols::GetSymName(IDNoType id)
 {
-    D2ECHO("Getting name of symbol with id: " << id );
+    //D2ECHO("Getting name of symbol with id: " << id );
     Symbol& sym = _Symbols[id];
     return ( sym.GetName() );
 }
@@ -111,7 +174,7 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     // To check if symbol is already in the table. This is possible because of:
     //      - the list of selected objects provided as input
     //      - multiple allocations from same line
-    if(_Symbols.find(id) != _Symbols.end() )
+    if( _Symbols.find(id) != _Symbols.end() )
     {
         D2ECHO("Updating address and size of existing Object Symbol with id : " << int(id) );
         Symbol& availSym = _Symbols[id];
@@ -131,25 +194,56 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     // we also need to set the object ids in the shadow table/mem for this object
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     SetObjectIDs(saddr, size, id);
+
+    // Added for allocation dependencies.
+    // also set the function in which this allocation is taking place
+    // as the producer of this object. This should not be done when
+    // tracking loop dependencies as it will cause extra communication/dependencies
+    if( TrackTasks && !TrackLoopDepend )
+    {
+        IDNoType prod = CallStack.Top();
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer(prod, saddr+i);
+        }
+    }
 }
 
-void Symbols::UpdateRealloc(IDNoType id, uptr saddr, u32 lastCallLocIndex, u32 size)
+void Symbols::UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 lastCallLocIndex, u32 size)
 {
     D2ECHO("Updating Realloc ");
     Symbol& availSym = _Symbols[id];
-    availSym.SetSize(saddr,size);
+    u32 prevSize = availSym.GetSize(prevSAddr);
+    availSym.SetSize(saddr, size);
 
-    // we also need to set the object ids in the shadow table/mem for this object
+    // set the object ID of previous address range to unknown
+    SetObjectIDs(prevSAddr, prevSize, UnknownID);
     D2ECHO("Setting object ID as " << id << " on a size " << size);
+    // we also need to set the object ids in the shadow table/mem for this object
     SetObjectIDs(saddr, size, id);
+
+    // Added for allocation dependencies
+    if( TrackTasks && !TrackLoopDepend )
+    {
+        // set producer of previous address range to Unknown
+        for(u32 i=0; i<prevSize; i++)
+        {
+            SetProducer( UnknownID, prevSAddr+i );
+        }
+        // now set the current producer to the new address range
+        IDNoType prod = CallStack.Top();
+        for(u32 i=0; i<size; i++)
+        {
+            SetProducer( prod, saddr+i );
+        }
+    }
 }
 
-void Symbols::InsertFunction(const string& ftnname)
+void Symbols::InsertFunction(const string& ftnname, IDNoType id, u32 lastCallLocIndex)
 {
     D2ECHO("Inserting Function " << ftnname);
-    IDNoType id = GlobalID++;
     FuncName2ID[ftnname] = id;
-    Symbol sym(id, ftnname, SymType::FUNC);
+    Symbol sym(id, ftnname, SymType::FUNC, lastCallLocIndex);
     D1ECHO("Adding Function Symbol: " << ftnname
            << " with id: " << int(id) << " to Symbol Table");
     _Symbols[id] = sym;
@@ -207,6 +301,22 @@ void Symbols::Remove(uptr saddr)
     // Clear the obj ids for this object, which is same as setting it to UnknownID
     D2ECHO("Clearing object ID to " << UnknownID << " on a size " << size);
     SetObjectIDs(saddr, size, UnknownID);
+
+    // Added for allocation dependencies.
+    // Record the communication to show dependencies between
+    // the last producer and the function freeing it.
+    // Also clear the producer to Unknown to avoid future
+    // recording of communication.
+    if( TrackTasks && !TrackLoopDepend )
+    {
+        IDNoType prod = CallStack.Top();
+        for(u32 i=0; i<size; i++)
+        {
+            IDNoType prevProd = GetProducer(saddr+i);
+            ComMatrix.RecordCommunication(prevProd, prod, 1);
+            SetProducer(UnknownID, saddr+i);
+        }
+    }
 }
 
 bool Symbols::SymIsObj(IDNoType id)
@@ -221,7 +331,7 @@ bool Symbols::SymIsFunc(IDNoType id)
     return ( _Symbols[id].GetType() == SymType::FUNC );
 }
 
-const char * StripPath(const char * path)
+const char* StripPath(const char * path)
 {
     const char * file = strrchr(path,DELIMITER_CHAR);
     if (file)
@@ -255,8 +365,12 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
     }
     // strcpy(binName, StripPath(fullBinName));
     strcpy(binName, fullBinName );
-    cout << "Binary Name = "<< binName << endl;
+    ECHO("Binary Name = "<< binName);
 
+#if 1
+    ECHO("Info: Support for static symbols with Pin 3.0 will be back soon");
+    Die();
+#else
     int elf_fd;
     if (( elf_fd  = open( binName, O_RDONLY, 0)) < 0)
     {
@@ -322,6 +436,8 @@ void Symbols::InsertStaticSymbols(int argc, char **argv)
         }
     }
     close(elf_fd);
+#endif
+
 }
 
 // TODO May be the following two init methods may be combined together to read from
@@ -370,7 +486,7 @@ void Symbols::InitFromObjFile()
         // Get a new id for this NEW location
         IDNoType id = GlobalID++;
         //LocIndex2ID[locindex] = id;
-        ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
+        D2ECHO("Adding Object Symbol " << symname << "("<< id << ") to symbol table");
         _Symbols[id] = Symbol(id, symname, SymType::OBJ, locindex );
         ++i;
     }
@@ -391,10 +507,14 @@ void Symbol::Print(ostream& fout)
 
     fout << "ID: " << id << " "
          << SymTypeName[symType] << " " << name << " ";
-         //<< VAR(symLocIndex) << " ";
 
-    fout << symCallSite.GetCallSitesString() << ">"
-         << Locations.GetLocation(symLocIndex).toString() << endl;
+    string callsitestring = symCallSite.GetCallSitesString();
+    fout << "callsitestring : " << callsitestring << endl;
+    if(callsitestring == "" )
+        fout << Locations.GetLocation(symLocIndex).toString() << endl;
+    else
+        fout << symCallSite.GetCallSitesString() << ">"
+             << Locations.GetLocation(symLocIndex).toString() << endl;
 
     if(RecordAllAllocations)
     {
@@ -423,17 +543,16 @@ void Symbols::Print()
         ECHO("Symbol Table Empty");
     else
     {
-        string fname("symbols.out");
+        string fname("symbols.dat");
         ofstream fout;
         OpenOutFile(fname.c_str(), fout);
         ECHO("Printing Symbol Table to " << fname );
-        //for ( auto& entry : _Symbols)
-        std::tr1::unordered_map<IDNoType,Symbol>::iterator iter;
-        for(iter=_Symbols.begin(); iter!=_Symbols.end(); iter++)
+        for ( auto& entry : _Symbols)
         {
-            auto& sym = iter->second;
+            auto& sym = entry.second;
             sym.Print(fout);
         }
         fout.close();
     }
+    ECHO("Printed Symbol Table");
 }

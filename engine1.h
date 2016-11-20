@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -49,6 +49,5 @@
 
 void RecordWriteEngine1(uptr addr, u32 size);
 void RecordReadEngine1(uptr addr, u32 size);
-void PrintAccesses();
 
 #endif

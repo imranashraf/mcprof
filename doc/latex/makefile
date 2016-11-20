@@ -16,5 +16,6 @@ view: $(texfname).pdf
 
 clean:
 	rm -rf *~ $(texfname).aux $(texfname).bbl $(texfname).blg \
-	$(texfname).dvi $(texfname).out $(texfname).log
+	$(texfname).dvi $(texfname).out $(texfname).log \
+	$(texfname).lof $(texfname).lot $(texfname).toc
 

@@ -5,31 +5,43 @@
 \usepackage{color}
 \usepackage{amsmath}
 \usepackage{amsfonts}
-\usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{colortbl}
-\usepackage{multirow}
-\usepackage{xcolor}
-\usepackage{subfigure}
 \usepackage{dcolumn}
-\usepackage{flushend}
-\usepackage{capt-of}
-\usepackage{booktabs}
-\usepackage{rotating}
 \usepackage{textcomp}
-\usepackage{hyperref}
-
 \usepackage{graphicx}
-\DeclareGraphicsExtensions{.pdf,.eps,.png,.jpg}
-\graphicspath{{./figures/}}
-
 \usepackage{url}
+
+% \usepackage{xcolor}
 
 % for border on Verbatim environment
 \usepackage{fancyvrb}
 
 % for code listings
 \usepackage{listings}
+
+% \usepackage{booktabs}
+% \usepackage{flushend}
+% \usepackage{capt-of}
+% \usepackage{rotating}
+% \usepackage{multirow}
+% \usepackage{subfigure}
+
+\usepackage{hyperref}
+\usepackage[dvipsnames]{xcolor}
+\newcommand\myshade{85}
+\colorlet{mylinkcolor}{violet}
+\colorlet{mycitecolor}{YellowOrange}
+\colorlet{myurlcolor}{Aquamarine}
+\hypersetup{
+  linkcolor  = mylinkcolor!\myshade!black,
+  citecolor  = mycitecolor!\myshade!black,
+  urlcolor   = myurlcolor!\myshade!black,
+  colorlinks = true,
+}
+
+\DeclareGraphicsExtensions{.pdf,.eps,.png,.jpg}
+\graphicspath{{./figures/}}
 
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
@@ -64,6 +76,14 @@
     I.Ashraf@tudelft.nl
 }
 \maketitle
+
+\tableofcontents
+\newpage
+
+% \listoffigures
+% \listoftables
+
+\newpage
 
 %----------------------------------------------------------------------------------
 \section{Introduction}
@@ -109,6 +129,20 @@ with MCProf.  If not, see <http://www.gnu.org/licenses/>.
 {
 \tiny
 \begin{Verbatim}[frame=single, samepage=true]
+@phdthesis{phdthesisAshraf,
+author = "I. Ashraf",
+title = " Communication Driven Mapping of Applications on Multicore Platforms",
+school = "Delft University of Technology",
+address = "Delft, Netherlands",
+month = "April",
+year = "2016"
+}
+\end{Verbatim}
+}
+
+{
+\tiny
+\begin{Verbatim}[frame=single, samepage=true]
 @inproceedings{mcprof,
 author = "I. Ashraf and V.M. Sima and K.L.M. Bertels",
 title = "Intra-Application Data-Communication Characterization",
@@ -138,7 +172,7 @@ year = "2015",
 
 \MCPROF{} relies on Intel Pin, so it can be used on any 64-bit Linux platform for 
 which Pin is available. We have used \MCPROF{} on 64-bit Ubuntu 12.04, Ubuntu 
-14.04 on real machines as well as virtual machines running in virtualbox.
+14.04, Ubuntu 16.04 on real machines as well as virtual machines running in virtualbox.
 
 %----------------------------------------------------------------------------------
 \section{Availability}
@@ -146,7 +180,7 @@ which Pin is available. We have used \MCPROF{} on 64-bit Ubuntu 12.04, Ubuntu
 
 \MCPROF{} can be downloaded from \cite{mcprofDownload}.
 
-To get the latest version, you can clone \MCPROF{} from the git repository by:
+You can also clone \MCPROF{} from the git repository by:
 
 {
 \small
@@ -215,7 +249,7 @@ sudo apt-get install gnuplot
 \label{sec:installation}
 
 \MCPROF{} uses Makefile to compile the sources. In order to compile \MCPROF{}
-from sources on 32-bit / 64-bit Linux, the following steps can be performed.
+from sources on Linux, the following steps can be performed.
 
 \begin{itemize}
 
@@ -278,15 +312,7 @@ important files are:
 \section{Usage}
 \label{sec:usage}
 
-In order to explain the usage of \MCPROF{} we will use the example application
-listed in Figure \ref{fig:vectOps}. The complete source-code is available in
-\textbf{tests} directory of source package. In this application, $4$ \verb|int|
-arrays are created on source lines 23, 24, 25 and 26. These arrays are
-initialized in \verb|initVecs| function. The sum and difference of the elements
-of these arrays are computed in \verb|sumVecs| and \verb|diffVecs| functions,
-respectively.  Finally, these arrays are free on lines 32-35.
-
-\begin{figure} %[ht]
+\begin{figure}%[h]
     \centering
 %     \lstinputlisting[basicstyle=\scriptsize,language=C,showstringspaces=false,frame=bt]{code/example.c}
     \lstinputlisting
@@ -296,12 +322,19 @@ respectively.  Finally, these arrays are free on lines 32-35.
     frame=bt,
     numbers=left,
     stepnumber=1,
-    basicstyle=\small %\tiny
+    basicstyle=\scriptsize
     ] {code/vectOps.c}
     \caption{Example of an application processing some arrays.}
     \label{fig:vectOps}
 \end{figure}
 
+In order to explain the usage of \MCPROF{} we will use the example application
+listed in Figure \ref{fig:vectOps}. The complete source-code is available in
+\textbf{tests} directory of source package. In this application, $4$ \verb|int|
+arrays are created on source lines 23, 24, 25 and 26. These arrays are
+initialized in \verb|initVecs| function. The sum and difference of the elements
+of these arrays are computed in \verb|sumVecs| and \verb|diffVecs| functions,
+respectively.  Finally, these arrays are free on lines 32-35.
 
 \subsection{Profiling Given Tests}
 
@@ -399,18 +432,20 @@ deallocation of objects at run-time in the application. The complete call-path
 to the allocation site, with source file-name and line-no information will be 
 recorded as well and availble in symbol.out file.
 
-\item [-Engine] [1/2/3, default 2] This selects the engine to be used in
+\item [-Engine] [1/2/3, default 1] This selects the engine to be used in
     \MCPROF{}.  Based on the selected engine, the desired output is generated as
     below:
 
     \begin{description}
 
     \item [Engine 1]    provides the compute and memory intensive functions and
-        objects (if TrackObjects is 1) in the application.
+        objects (if TrackObjects is 1) in the application in the form of a flat
+        profile and also generates an application callgraph. It also provides the
+        data-communication information between functions. If TrackObjects is 1,
+        the communication is also reported through objects in the application.
 
-    \item [Engine 2]    provides the data-communication information between
-        functions. If TrackObjects is 1, the communication is also reported
-        through objects in the application.
+    \item [Engine 2]    provides information about a loop if it is independent.
+        This feature is under development and not fully tested.
 
     \item [Engine 3]    reports the memory access information through functions
         and objects per call.
@@ -496,8 +531,6 @@ be associated to any function. For instance the accesses before starting the
 
 In case of objects, their source-file and line-no information is also reported in
 the last column.
-
-\subsection{Engine 2 Output}
 
 \begin{figure}[!h]
 \centering
@@ -607,6 +640,19 @@ user has to manually look at the source-code to specify what should be the name
 of each object, in order to see the meaningful names of the objects. Hence, the 
 user can insert these names directly in \textbf{communication.dot} file. A 
 script will also be added soon to automate this process as much as possible.
+
+\subsection{Engine 2 Output}
+This engine simply provides the information if iterations of the selected loop
+are independent or not. In order to get an idea about how this can be achieved,
+reader is referred to see the details of the \textbf{tests/loopDepend.c} file
+and run the following to actually test it:
+
+{
+\small
+\begin{Verbatim}[frame=single]
+make loopDepend.test
+\end{Verbatim}
+}
 
 \subsection{Engine 3 Output}
 

@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -38,124 +38,186 @@
 #include "shadow.h"
 #include "engine1.h"
 #include "commatrix.h"
+#include "symbols.h"
 #include "callstack.h"
 
-#include <algorithm>
-#include <iomanip>
-
 extern CallStackType CallStack;
+extern Matrix2D ComMatrix;
+
 extern Symbols symTable;
+extern bool TrackObjects;
+extern bool TrackTasks;
+extern bool DoTrace;
 
-class Access
-{
-public:
-    float Reads;
-    float Writes;
-    float Total;
-    Access() : Reads(0), Writes(0), Total(0) {}
-};
+extern std::ofstream traceout;
+extern UINT64 gInstrCount;
 
-bool _sortByReads (const Access &lhs, const Access &rhs)
-{
-    return lhs.Reads > rhs.Reads;
-}
-bool _sortByWrites(const Access &lhs, const Access &rhs)
-{
-    return lhs.Writes > rhs.Writes;
-}
-bool _sortByTotal (const Access &lhs, const Access &rhs)
-{
-    return lhs.Total > rhs.Total;
-}
+extern map<IDNoType,u64> funcReads;
+extern map<IDNoType,u64> funcWrites;
+extern map<IDNoType,u64> objReads;
+extern map<IDNoType,u64> objWrites;
 
-class Accesses
-{
-private:
-    map<IDNoType,Access> _Accesses;
+// un-comment the following to generate read/write traces
+// #define GENRATE_TRACES
 
-public:
-    Accesses() {}
-    void UpdateWrites(IDNoType prod, u32 size)
-    {
-        _Accesses[prod].Writes += size;   // on later accesses, increment the writes by size
-    }
-    void UpdateReads(IDNoType cons, u32 size)
-    {
-        _Accesses[cons].Reads += size;   // on later accesses, increment the writes by size
-    }
-    void UpdateTotal()
-    {
-    //for(auto& pair : _Accesses)
-    map<IDNoType,Access>::iterator iter;
-    for( iter = _Accesses.begin(); iter != _Accesses.end(); iter++)
-//     for(Access& pair : _Accesses)
-        {
-            auto& elem = iter->second;
-            elem.Total = elem.Reads + elem.Writes;
-        }
-    }
-
-    // this bash command can be used to sort by total access:
-    //      tail -n +7 memProfile.out | sort -k2 -gr
-//     void SortByTotal()
-//     {
-//         sort(_Accesses.begin(), _Accesses.end(), _sortByTotal);
-//     }
-
-    void Print(ofstream& fout)
-    {
-        fout << " This table can be sorted by Total Accesses (-k2) by using bash command:"<<endl;
-        fout << "    tail -n +7 memProfile.out | sort -k2 -gr" <<endl<<endl;
-
-        fout << setw(45) << "Function Name " << "\t ================= Accesses  ============  Allocation" <<endl;
-        fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
-        fout << "                         ==========================================================================" <<endl;
-
-        //for(auto& pair : _Accesses)
-        map<IDNoType,Access>::iterator iter;
-        for( iter = _Accesses.begin(); iter != _Accesses.end(); iter++)
-        {
-            auto& id = iter->first;
-            auto& elem = iter->second;
-            fout << setw(45) << symTable.GetSymName(id)
-                 << setw(14) << elem.Total
-                 << setw(14) << elem.Reads
-                 << setw(14) << elem.Writes
-                 << "  "     << symTable.GetSymLocation(id) << endl;
-        }
-    }
-};
-
-// This will hold all the reads and writes for all functions
-Accesses TotalAccesses;
+// un-comment the following to generate selected read/write traces
+// #define GENRATE_SELECTED_TRACES
 
 void RecordWriteEngine1(uptr addr, u32 size)
 {
-    IDNoType prod = CallStack.Top();
-    IDNoType oid = GetObjectID(addr);
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(prod) << ADDR(addr));
-    D2ECHO("Recording Write:  " << VAR(size) << FUNC(oid) << ADDR(addr));
-    TotalAccesses.UpdateWrites(prod, size);
-    TotalAccesses.UpdateWrites(oid, size);
+    if(DoTrace)
+    {
+        IDNoType prod = CallStack.Top();
+        IDNoType objid = GetObjectID(addr);
+
+        D2ECHO("Recording Write of  " << VAR(size) << " by " << FUNC(prod) << " at " << ADDR(addr));
+
+#ifdef GENRATE_TRACES
+        // Generate Write Trace
+        switch (size)
+        {
+            case 1:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u8*)addr)) << endl;
+            break;
+            case 2:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u16*)addr)) << endl;
+            break;
+            case 4:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u32*)addr)) << endl;
+            break;
+            case 8:
+                traceout << gInstrCount << " W " << size << " " << HEXA(addr)  << " " << HEXV( *((u64*)addr)) << endl;
+            break;
+            default:
+                ECHO("traceout, write size is : " << size );
+            break;
+        }
+#endif
+
+#if 1
+        if(TrackTasks)
+        {
+            // Added for allocation dependencies
+            // TODO this can be a problem when same stack addresses are reused
+            // these will appear as write after write dependencies
+            for(u32 i=0; i<size; i++)
+            {
+                IDNoType prevProd = GetProducer(addr+i);
+                ComMatrix.RecordCommunication(prevProd, prod, 1);
+                D2ECHO( "AllocDepend " << FUNC(prevProd) << " " << FUNC(prod) << " at " << ADDR(addr) );
+            }
+        }
+#endif
+
+        if( (objid == UnknownID) || (TrackObjects == false) )
+        {
+            for(u32 i=0; i<size; i++)
+            {
+                SetProducer(prod, addr+i);
+            }
+
+            // Update write memory accesses
+            funcWrites[prod] += size;
+        }
+        else
+        {
+            D2ECHO("Recording comm of " << VAR(size) << " b/w " << FUNC(prod)
+                    << " and " << symTable.GetSymName(objid) << dec);
+            for(u32 i=0; i<size; i++)
+            {
+                SetProducer(prod, addr+i);
+            }
+            ComMatrix.RecordCommunication(prod, objid, size);
+
+            // Update write memory accesses
+            funcWrites[prod] += size;
+            objWrites[objid] += size;
+
+#ifdef GENRATE_SELECTED_TRACES
+            // Generate Write Trace of a selected function to selected objects
+            if(
+                    // For canny: tmpimg objects(10) AND gaussian_smooth1(11) function.
+                    // For canny: nms(20) object AND non_max_supp1(22) function.
+                    (objid==20) && (prod==22)
+              )
+            {
+                traceout << "W of "<< size << " to " << objid << " by " << prod << " at " << HEXA(addr) << endl;
+            }
+#endif
+        }
+    }
 }
 
 void RecordReadEngine1(uptr addr, u32 size)
 {
-    IDNoType cons = CallStack.Top();
-    IDNoType oid = GetObjectID(addr);
-    D2ECHO("Recording Read " << VAR(size) << FUNC(cons) << ADDR(addr) << dec);
-    D2ECHO("Recording Read " << VAR(size) << FUNC(oid) << ADDR(addr) << dec);
-    TotalAccesses.UpdateReads(cons, size);
-    TotalAccesses.UpdateReads(oid, size);
-}
+    if(DoTrace)
+    {
+        IDNoType cons = CallStack.Top();
+        D2ECHO("Recording Read of " << VAR(size) << " by " << FUNC(cons) << " at " << ADDR(addr) << dec);
 
-void PrintAccesses()
-{
-    ofstream fout;
-    OpenOutFile("memProfile.out", fout);
-    TotalAccesses.UpdateTotal();
-//     TotalAccesses.SortByTotal();
-    TotalAccesses.Print(fout);
-    fout.close();
+#ifdef GENRATE_TRACES
+        // Generate Read Trace
+        switch (size)
+        {
+            case 1:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u8*)addr)) << endl;
+            break;
+            case 2:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u16*)addr)) << endl;
+            break;
+            case 4:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u32*)addr)) << endl;
+            break;
+            case 8:
+                traceout << gInstrCount << " R " << size << " " << HEXA(addr)  << " " << HEXV( *((u64*)addr)) << endl;
+            break;
+            default:
+                ECHO("traceout, write size is : " << size );
+            break;
+        }
+#endif
+
+        IDNoType objid = GetObjectID(addr);
+        D2ECHO( ADDR(addr) << " " << symTable.GetSymName(objid) << "(" << objid << ")" );
+
+        if( (objid == UnknownID) || (TrackObjects == false) )
+        {
+            D2ECHO("Recording comm of " << VAR(size) << " b/w function "
+                    << FUNC( GetProducer(addr) ) << " and " << FUNC(cons) << dec);
+
+
+            for(u32 i=0; i<size; i++)
+            {
+                IDNoType prod = GetProducer(addr+i);
+                ComMatrix.RecordCommunication(prod, cons, 1);
+            }
+ 
+            // Update read memory accesses
+            funcReads[cons] += size;
+        }
+        else
+        {
+            D2ECHO("Recording comm of " << VAR(size) << " b/w object "
+                    << symTable.GetSymName(objid) << " and " << FUNC(cons) << dec);
+
+            ComMatrix.RecordCommunication(objid, cons, size);
+
+            // Update read memory accesses
+            funcReads[cons] += size;
+            objReads[objid] += size;
+
+#ifdef GENRATE_SELECTED_TRACES
+            // Generate Read Trace by a selected function from selected objects
+            if(
+                    // For canny: image(4) OR kernel(9) objects AND gaussian_smooth1(11) function.
+                    // For canny: magnitude(18) OR delta_x(13) OR delta_y(14) objects AND non_max_supp1(22) function.
+                    (objid==18 || objid==13 || objid==14) && (cons==22)
+              )
+            {
+                traceout << "R of "<< size << " from " << objid << " by " << cons << " at " << HEXA(addr) << endl;
+            }
+#endif
+        }
+    }
 }
 

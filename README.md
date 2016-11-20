@@ -91,6 +91,17 @@ You should have received a copy of the GNU Lesser General Public License along w
 **To cite MCProf:**
 
 ```
+@phdthesis{phdthesisAshraf,
+author = "I. Ashraf",
+title = " Communication Driven Mapping of Applications on Multicore Platforms",
+school = "Delft University of Technology",
+address = "Delft, Netherlands",
+month = "April",
+year = "2016"
+}
+```
+
+```
 @inproceedings{mcprof,
 author = {{I. Ashraf and V.M. Sima and K.L.M. Bertels}},
 title = {Intra-Application Data-Communication Characterization},
@@ -103,8 +114,7 @@ year = {2015},
 
 ## Supported Patforms
 
-`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04 on real machines as well as virtual machines running in virtualbox. Supported has been tested with gcc 4.6 till gcc 4.9. Please not that `MCProf` does not work with gcc 5 or above, kernel 4 or above, or Pin 3.0 or above.
-
+`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04, Ubuntu 16.04 on real machines as well as virtual machines running in virtualbox.
 
 ## Download
 
@@ -158,7 +168,7 @@ Various test examples are available in `tests` directory inside `MCProf`. These 
 This will create `communication.dot` file which can be converted to pdf file by the following command:
 
     dot -Tpdf communication.dot -o communication.pdf
-    
+
 A script `dot2pdf.sh` is also provided in the `scripts` directory which can also be used to convert the graphs in `dot` format to `pdf` format. This script also performs some extra tasks, for instance, remove unconnected nodes in the graph. This script can be used as:
 
     <path to mcprof dir>/scripts/dot2pdf.sh
@@ -185,3 +195,4 @@ Detailed documentation of `MCProf` with input options and outputs generated can 
 In case you are interested in contributing to `MCProf`, or you have questions orsuggestions for improvements, or you want to report a bug, contact:
 
 * Imran Ashraf [I.Ashraf@TUDelft.nl](I.Ashraf@TUDelft.nl)
+

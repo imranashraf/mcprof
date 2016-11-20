@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -66,23 +66,37 @@ private:
 public:
     Matrix2D();
     Matrix2D(IDNoType size);
-    //void RecordCommunication(IDNoType prod, IDNoType cons, u32 size);
     void inline RecordCommunication(IDNoType prod, IDNoType cons, u32 size)
     {
         D2ECHO("Recording Communication b/w " << FUNC(prod) << " and "
             << FUNC(cons) << " of size: " << size );
 
         if( prod < Matrix.size() && cons < Matrix.size() )
+        {
             Matrix[prod][cons] += size;
+        }
+        else
+        {
+            ECHO("prod/cons out of range");
+            Die();
+        }
     }
 
     CommValType MaxCommunication(u16 StartID);
     void Print(ostream &fout);
-    void PrintMatrix(ostream &fout);
-    void PrintDot(ostream &dotout);
+    void PrintMatrix();
+    void PrintDependenceMatrix();
+    void PrintDot();
     void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
     bool IsFilledRow(IDNoType r);
     bool IsFilledCol(IDNoType c);
+    bool CheckLoopIndependence(u32 nIterations);
+    void Clear()
+    {
+        for(u32 i=0;i<DEFAULT_SIZE;i++)
+            for(u32 j=0;j<DEFAULT_SIZE;j++)
+                Matrix[i][j]=0.0f;
+    }
 };
 
 #endif

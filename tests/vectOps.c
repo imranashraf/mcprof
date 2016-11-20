@@ -13,13 +13,12 @@ TYPE coeff = 2;
 int nBytes;
 int nElem;
 
-void initVecs()
+void initVec(TYPE* arr)
 {
     int i;
     for(i = 0; i < nElem; i++)
     {
-        srcArr1[i]=i*5 + 7;
-        srcArr2[i]=2*i - 3;
+        arr[i]=i*5 + 7;
     }
 }
 
@@ -48,19 +47,20 @@ int main()
     nBytes = nElem*sizeof(TYPE);
     printf("Total bytes : %d\n",nBytes);
 
-    srcArr1 = malloc(nBytes);
+    srcArr1 = (TYPE*)malloc(nBytes);
     printf("srcArr1 addr : %p\n",srcArr1);
 
-    srcArr2 = malloc(nBytes);
+    srcArr2 = (TYPE*)malloc(nBytes);
     printf("srcArr2 addr : %p\n",srcArr2);
 
-    sumArr = malloc(nBytes);
+    sumArr = (TYPE*)malloc(nBytes);
     printf("sumArr addr : %p\n",sumArr);
 
-    diffArr = malloc(nBytes);
+    diffArr = (TYPE*)malloc(nBytes);
     printf("diffArr addr : %p\n",diffArr);
 
-    initVecs();
+    initVec(srcArr1);
+    initVec(srcArr2);
     sumVecs();
     diffVecs();
 

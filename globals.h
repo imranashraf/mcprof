@@ -13,10 +13,10 @@
 
  * This file is a part of MCPROF.
  * https://bitbucket.org/imranashraf/mcprof
- * 
- * Copyright (c) 2014-2015 TU Delft, The Netherlands.
+ *
+ * Copyright (c) 2014-2016 TU Delft, The Netherlands.
  * All rights reserved.
- * 
+ *
  * MCPROF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with MCPROF.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Authors: Imran Ashraf
  *
  */
@@ -42,11 +42,12 @@
 #include <iomanip>
 #include <map>
 #include <string>
+#include <sstream>
 #include <cstdlib>
 
 //Set the debugging level (0-3)
 // 0   -> No Debug
-// 1-3 -> Debug mode, while 3 is the most verbose
+// 1-2 -> Debug mode, 2 is the most verbose
 #define DEBUG 0
 
 #if defined(_WIN64)
@@ -112,9 +113,13 @@ static const std::string FREE("free");
 
 static const std::string STRDUP("strdup");
 
-extern std::map <std::string,IDNoType> FuncName2ID;
-#include "symbols.h"
-extern Symbols symTable;
+template < typename T >
+std::string to_string( const T& n )
+{
+    std::ostringstream stm ;
+    stm << n ;
+    return stm.str() ;
+}
 
 #define ECHO(content) std::cerr << "[MCPROF] " << __FILE__ <<":"<< __LINE__ <<" "<< content << std::endl
 
@@ -124,8 +129,8 @@ extern Symbols symTable;
 #define VARS4(first, second, third, fourth) VAR(first) << " - " << VARS3(second, third, fourth)
 
 #define HEXA(v) hex << "0x" << setw(12) << setfill ('0') << v << dec
+#define HEXV(v) hex << "0x" << setw(16) << setfill ('0') << v << dec
 #define ADDR(v) " `" #v "': " << hex << "0x" << setw(12) << setfill ('0') << v << dec
-#define FUNC(v)  symTable.GetSymName((int)v) << "(" << (int)v << ")"
 
 #if (DEBUG>0)
 #define DECHO(content)                          ECHO(content)
@@ -199,6 +204,7 @@ void PrintLogo();
 bool isEmpty(std::ifstream& fin);
 void OpenInFile(const std::string& fileName, std::ifstream& fin);
 void OpenOutFile(const std::string& fileName, std::ofstream& fout);
+bool OpenInFileIfExists(const std::string& fileName, std::ifstream& fin);
 bool IsPowerOfTwo(uptr x);
 uptr RoundUpTo(uptr size, uptr boundary);
 uptr RoundDownTo(uptr x, uptr boundary);
@@ -225,8 +231,8 @@ std::multimap<B,A> flipMap(std::map<A,B> & src)
 // the order of execution
 #define UNORDERED 0
 #define ORDERED 1
-// #define FUNCTION_ORDER ORDERED
-#define FUNCTION_ORDER UNORDERED
+#define FUNCTION_ORDER ORDERED
+// #define FUNCTION_ORDER UNORDERED
 
 #ifdef WIN32
 #define DELIMITER_CHAR '\\'
@@ -246,5 +252,9 @@ void SetCurrDir();
 void PrintCurrDir();
 void RemoveSubstrs(std::string& src, std::string& toRemove);
 void RemoveCurrDirFromName(std::string& src);
+void AddNoToNameEnd(std::string& name, IDNoType id);
+void RemoveNoFromNameEnd(std::string& name, IDNoType& id);
+void GetFileName(const std::string& str, std::string& file);
+void GetFolderName(const std::string& str, std::string& foldr);
 
 #endif

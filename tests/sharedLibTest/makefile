@@ -1,8 +1,8 @@
-PIN_DIR=/opt/applics/pin-2.14-67254
-MCPROF_DIR=/data/repositories/mcprof
+PIN_DIR?=$(PIN_HOME)
+MCPROF_DIR?=../..
 
 CC = gcc
-EXEC=test
+EXEC=exec
 CMD=./$(EXEC)
 CFLAGS=-O2
 INCS=-I.
@@ -24,13 +24,15 @@ $(EXEC):  $(OBJS)
 run: $(EXEC)
 	$(CMD)
 
-MCPROF_OPT:=-RecordStack 0  -TrackObjects 1 -Engine 3
+MCPROF_OPT:=-RecordStack 0  -TrackObjects 1 -Engine 1 -MainExecOnly 0
 mcprof: CFLAGS=-Og -g -fno-inline -fdata-sections -ffunction-sections -fno-omit-frame-pointer
 mcprof: LDFLAGS+=-Wl,--gc-sections
 mcprof: clean $(EXEC)
 	$(PIN_DIR)/pin -t $(MCPROF_DIR)/obj-intel64/mcprof.so $(MCPROF_OPT) -- $(CMD)
 
 clean:
-	rm -f *.o $(EXEC) $(OBJS) *~ *.log gmon.out libvectOps.so *.out
+	rm -f *.o $(EXEC) $(OBJS) *~ *.log gmon.out libvectOps.so *.dot *.pdf callgraph.json \
+		execProfile.dat locations.dat matrix.dat memProfile.dat recursivefunctions.dat \
+		symbols.dat taskdependences.dat taskgraph.dat traces.dat
 
 .PHONY: clean all run mcprof

@@ -52,7 +52,7 @@ SA_TOOL_ROOTS :=
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
 	multiAllocFtn multiAllocMacro multiAllocClass loopAllocations \
 	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04 \
-	markers callGraph
+	markers loopDepend callGraph allocDepend
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -71,10 +71,10 @@ endif
 
 # Linux
 ifeq ($(TARGET_OS),linux)
-    #TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors
-    TOOL_CXXFLAGS+= -MD -std=c++0x -I -Wfatal-errors
+#     TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors #-fexceptions
+    TOOL_CXXFLAGS+= -MD -std=c++0x -I. -Wfatal-errors
     #TOOL_LDFLAGS+= -pg
-    TOOL_LIBS+= -lelf
+    #TOOL_LIBS+= -lelf # not needed as with Pin 3 we cannot link gnu libelf!
     APP_CXXFLAGS+= -fno-inline -g -Wfatal-errors
     #APP_CCFLAGS+= -fno-inline -g
 endif
@@ -88,13 +88,13 @@ endif
 # Test recipes
 #
 ##############################################################
-MCPROF_OPT:=-RecordStack 0 -TrackObjects 1 -Engine 2
+MCPROF_OPT:=-RecordStack 0 -TrackObjects 1 -Engine 1
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
 # All tests in this section should adhere to the naming convention: <testname>.test
 
 vectOps.test: $(OBJDIR)vectOps$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)vectOps$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)vectOps$(EXE_SUFFIX)
 
 memAllocFree.test: $(OBJDIR)memAllocFree$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)memAllocFree$(EXE_SUFFIX)
@@ -136,9 +136,15 @@ markers.test: $(OBJDIR)markers$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -TrackZones 1 -TrackStartStop 1 -- $(OBJDIR)markers$(EXE_SUFFIX)
 
 callGraph.test: $(OBJDIR)callGraph$(EXE_SUFFIX)
-	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) $(MCPROF_OPT) -- $(OBJDIR)callGraph$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)callGraph$(EXE_SUFFIX)
 	@python -m json.tool callgraph.json > temp
 	@mv temp callgraph.json
+
+loopDepend.test: $(OBJDIR)loopDepend$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 0 -TrackLoopDepend 1 -SelectedLoopNo 2 -- $(OBJDIR)loopDepend$(EXE_SUFFIX)
+	
+allocDepend.test: $(OBJDIR)allocDepend$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)allocDepend$(EXE_SUFFIX)
 
 ##############################################################
 #
@@ -149,8 +155,8 @@ callGraph.test: $(OBJDIR)callGraph$(EXE_SUFFIX)
 # See makefile.default.rules for the default build rules.
 
 CPPSRCS =	globals.cpp shadow.cpp callstack.cpp commatrix.cpp \
-		engine1.cpp engine2.cpp engine3.cpp \
 		symbols.cpp counters.cpp json.cpp \
+		engine1.cpp engine2.cpp engine3.cpp \
 		pintrace.cpp mcprof.cpp
 CPPOBJS = $(CPPSRCS:%.cpp=$(OBJDIR)%$(OBJ_SUFFIX))
 
@@ -161,8 +167,7 @@ $(OBJDIR)mcprof$(PINTOOL_SUFFIX): $(CPPOBJS)
 
 clean: cleantemp
 cleantemp:
-	rm -f *~ $(TESTDIR)*~ communication.dot communication.pdf matrix.eps \
-	callgraph.out callgraph.dot callgraph.json callgraph.pdf
+	rm -f *~ $(TESTDIR)*~ *.dat *.dot *.json *.pdf *.eps
 
 ###### Special applications' build rules ######
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
@@ -177,6 +182,9 @@ $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(O
 $(OBJDIR)malloc_wrap.o: $(TESTDIR)malloc_wrap.c
 	$(APP_CC) -I. -fno-inline -O1 -g -c $^ -o $@
 
+help: $(OBJDIR)mcprof$(PINTOOL_SUFFIX)
+# 	|| true is just to supress the return of non zero value
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -h -- ls || true
 
 format:
 	astyle --style=allman *.h *.cpp
@@ -187,12 +195,12 @@ openingFileOrder=makefile.rules globals.h globals.cpp markers.h \
 	shadow.h shadow.cpp commatrix.h commatrix.cpp \
 	symbols.h symbols.cpp \
 	counters.h counters.cpp \
-	callstack.h callstack.cpp callgraph.h \
+	callstack.h callstack.cpp json.h json.cpp callgraph.h \
 	engine1.h engine1.cpp engine2.h engine2.cpp engine3.h engine3.cpp \
 	pintrace.h pintrace.cpp \
 	mcprof.cpp
 open:
-	kate $(openingFileOrder) &> /dev/null &
+	kate -n $(openingFileOrder) &> /dev/null &
 vimopen:
 	vim $(openingFileOrder)
 

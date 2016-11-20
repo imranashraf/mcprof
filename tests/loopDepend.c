@@ -4,7 +4,7 @@
 
 #include "markers.h"
 
-#define SIZE 100
+#define SIZE 10
 typedef int TYPE;
 
 TYPE *srcArr1;
@@ -20,10 +20,14 @@ int nbytes;
 void initVec(TYPE* arr)
 {
     int i;
+    MCPROF_ZONE_ENTER(1);
     for(i = 0; i < SIZE; i++)
     {
+        MCPROF_LOOPBODY_ENTER(1);
         arr[i]=i*5 + 7;
+        MCPROF_LOOPBODY_EXIT(1);
     }
+    MCPROF_ZONE_EXIT(1);
 }
 
 void sumVecs()
@@ -44,31 +48,53 @@ void diffVecs()
     }
 }
 
-void prodVecs()
+// void prodVecs()
+// {
+//     int i;
+//     MCPROF_ZONE_ENTER(2);
+//     for(i = 0; i < SIZE; i++)
+//     {
+//         MCPROF_LOOPBODY_ENTER(2);
+//         prodArr[i] = sumArr[i] * diffArr[i] ;
+//         MCPROF_LOOPBODY_EXIT(2);
+//     }
+//     MCPROF_ZONE_EXIT(2);
+// }
+
+void prodVecs(TYPE* a, TYPE* b, TYPE* c)
 {
     int i;
-    for(i = 0; i < SIZE; i++)
+    MCPROF_ZONE_ENTER(2);
+    for(i = 1; i < SIZE; i++)
     {
-        prodArr[i] = sumArr[i] * diffArr[i] ;
+        MCPROF_LOOPBODY_ENTER(2);
+        c[i] = a[i] * b[i] ;
+        MCPROF_LOOPBODY_EXIT(2);
     }
+    MCPROF_ZONE_EXIT(2);
 }
 
 void sumdiffVecs()
 {
     int i;
-    MCPROF_ZONE_ENTER(1);
-    for(i = 0; i < SIZE; i++)
-    {
-        sumArr[i] = srcArr1[i] + coeff * srcArr2[i];
-    }
-    MCPROF_ZONE_EXIT(1);
 
-    MCPROF_ZONE_ENTER(2);
+    MCPROF_ZONE_ENTER(3);
     for(i = 0; i < SIZE; i++)
     {
-        diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]);
+        MCPROF_LOOPBODY_ENTER(3);
+        sumArr[i] = srcArr1[i] + coeff * srcArr2[i];
+        MCPROF_LOOPBODY_EXIT(3);
     }
-    MCPROF_ZONE_EXIT(2);
+    MCPROF_ZONE_EXIT(3);
+
+    MCPROF_ZONE_ENTER(4);
+    for(i = 1; i < SIZE; i++)
+    {
+        MCPROF_LOOPBODY_ENTER(4);
+        diffArr[i] = coeff * (srcArr1[i] - srcArr2[i]) + diffArr[i-1];
+        MCPROF_LOOPBODY_EXIT(4);
+    }
+    MCPROF_ZONE_EXIT(4);
 }
 
 void process()
@@ -82,34 +108,24 @@ void process()
     #else
     sumdiffVecs();
     #endif
-    prodVecs();
+    prodVecs(sumArr, diffArr, prodArr);
+//     prodVecs();
 }
 
 int main()
 {
+    MCPROF_START();
     nbytes = SIZE*sizeof(TYPE);
     printf("Vector Operations Test.\n");
-    printf("Total bytes : %d\n",nbytes);
 
     srcArr1 = malloc(nbytes);
-    printf("srcArr1 addr after malloc : %p\n",srcArr1);
-
     srcArr2 = malloc(nbytes);
-    printf("srcArr2 addr after malloc : %p\n",srcArr2);
-
     sumArr = malloc(nbytes);
-    printf("sumArr addr after malloc : %p\n",sumArr);
-
     diffArr = malloc(nbytes);
-    printf("diffArr addr after malloc : %p\n",diffArr);
-
     prodArr = malloc(nbytes);
-    printf("prodArr addr after malloc : %p\n",prodArr);
 
-    MCPROF_START();
     process();
-    //printf("output : %d\n", sumArr[1]+diffArr[1]+prodArr[1]);
-    MCPROF_STOP();
+    printf("output : %d\n", sumArr[0]+diffArr[0]+prodArr[0]);
 
     free(srcArr1);
     free(srcArr2);
@@ -117,5 +133,6 @@ int main()
     free(diffArr);
     free(prodArr);
 
+    MCPROF_STOP();
     return 0;
 }
