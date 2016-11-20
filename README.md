@@ -91,6 +91,17 @@ You should have received a copy of the GNU Lesser General Public License along w
 **To cite MCProf:**
 
 ```
+@phdthesis{phdthesisAshraf,
+author = "I. Ashraf",
+title = " Communication Driven Mapping of Applications on Multicore Platforms",
+school = "Delft University of Technology",
+address = "Delft, Netherlands",
+month = "April",
+year = "2016"
+}
+```
+
+```
 @inproceedings{mcprof,
 author = {{I. Ashraf and V.M. Sima and K.L.M. Bertels}},
 title = {Intra-Application Data-Communication Characterization},
@@ -103,7 +114,7 @@ year = {2015},
 
 ## Supported Patforms
 
-`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04 on real machines as well as virtual machines running in virtualbox.
+`MCProf` relies on Intel Pin, so it can be used on any 64-bit Linux platform for which Pin is available. We have used `MCProf` on 64-bit Ubuntu 12.04, Ubuntu 14.04, Ubuntu 16.04 on real machines as well as virtual machines running in virtualbox.
 
 
 ## Download
