@@ -87,6 +87,7 @@ public:
     void PrintMatrix();
     void PrintDependenceMatrix();
     void PrintDot();
+    void PrintGraph();
     void UpdateEmptyRowsCols(IDNoType StartID, IDNoType EndID);
     bool IsFilledRow(IDNoType r);
     bool IsFilledCol(IDNoType c);

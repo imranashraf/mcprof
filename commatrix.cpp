@@ -259,7 +259,7 @@ void Matrix2D::PrintDot()
                     << " [label=\" " << symname
                     << " \\n" << GetInstrCountPercent(fid) << "%"
                     << ", " << GetCallCount(fid) << "\""
-                    << ftnNodeStyle 
+                    << ftnNodeStyle
                     << "];" << endl;
         }
     }
@@ -275,7 +275,7 @@ void Matrix2D::PrintDot()
             {
                 dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname
                        << " \\n" << hBytes(symTable.GetTotalSymSize(c)) << "\""
-                       << objNodeStyle 
+                       << objNodeStyle
                        << "];" << endl;
             }
             #if (FUNCTION_ORDER == UNORDERED)
@@ -285,7 +285,7 @@ void Matrix2D::PrintDot()
                        << " [label=\" " << symname
                        << " \\n" << GetInstrCountPercent(c) << "%"
                        << ", " << GetCallCount(c) << "\""
-                       << ftnNodeStyle 
+                       << ftnNodeStyle
                        << "];" << endl;
             }
             #endif
@@ -322,6 +322,66 @@ void Matrix2D::PrintDot()
 
     dotout << "}" << endl;
     dotout.close();
+}
+
+void Matrix2D::PrintGraph()
+{
+    std::ofstream gfout;
+    string graphFileName("communication_graph.dat");
+    OpenOutFile(graphFileName, gfout);
+    ECHO("Printing communication as DOT in " << graphFileName);
+    u16 TotalSymbols = GlobalID;
+    D1ECHO( VAR(TotalSymbols) );
+    CHECK_LT(TotalSymbols, Matrix.size());
+
+    u16 StartID;
+    if(ShowUnknown)
+        StartID = 0; // as 0 is reserved for unknown id
+    else
+        StartID = 1;
+
+    // print objects and functions
+    for (u16 c=StartID; c<TotalSymbols; c++)
+    {
+        string symname = symTable.GetSymName(c);
+        if( !symname.empty() )
+        {
+            if ( symTable.SymIsObj(c) )
+            {
+                gfout   << "o;" << (u16)c
+                        << ";" << symname
+                        << ";" << symTable.GetTotalSymSize(c)
+                        << endl;
+            }
+            else
+            {
+                gfout   << "f;" << (u16)c
+                        << ";" << symname
+                        << ";" << GetInstrCount(c)
+                        << ";" << GetCallCount(c)
+                        << endl;
+            }
+        }
+    }
+
+    // now print the edges
+    for (u16 p=StartID; p<TotalSymbols; p++)
+    {
+        for (u16 c=StartID; c<TotalSymbols; c++)
+        {
+            CommValType comm = Matrix[p][c];
+            // if( comm > Threshold )
+            if( comm > 0 )
+            {
+                gfout << "e;" << (u16)p
+                      << ";" << (u16)c
+                      << ";" << comm
+                      << endl;
+            }
+        }
+    }
+
+    gfout.close();
 }
 
 bool Matrix2D::CheckLoopIndependence(u32 nIterations)

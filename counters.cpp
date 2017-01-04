@@ -87,8 +87,8 @@ void PrintInstrPercents()
             continue;
         else
         {
-            fout << setw(10) << GetCallCount(fid) 
-                 << setw(15) << GetInstrCountPercent(fid) 
+            fout << setw(10) << GetCallCount(fid)
+                 << setw(15) << GetInstrCountPercent(fid)
                  << "\t\t" << symTable.GetSymName(fid) << endl;
         }
     }
@@ -100,7 +100,7 @@ void PrintInstrPercents()
 // {
 //     ofstream fout;
 //     OpenOutFile("execProfile.dat", fout);
-// 
+//
 //     map<IDNoType,u64>::iterator iter;
 //     fout << setw(45) << "Function Name" << setw(12) << "% Instr." << endl;
 //     for( iter = instrCounts.begin(); iter != instrCounts.end(); iter++ )
@@ -149,12 +149,16 @@ u64 MaxInstrCount()
     return max;
 }
 
+u64 GetInstrCount(IDNoType fid)
+{
+    return instrCounts[fid];
+}
+
 float GetInstrCountPercent(IDNoType fid)
 {
     u64 count = instrCounts[fid];
     return floor( 100.0 * count / TotalInstrCount() );
 }
-
 
 u64 GetCallCount(IDNoType fid)
 {

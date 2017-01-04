@@ -4,6 +4,20 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [ 2.1 ] - [ 2016-xx-xx ]
 ### Added
+- dot graph filter script to apply node and edge threshold
+- graph in .dat format as input for dotfilter script
+
+### Changed
+-
+
+### Removed
+- threshold as command line arg to mcprof in favor of filter script 
+
+### Fixed
+- 
+
+## [ 2.1 ] - [ 2016-11-20 ]
+### Added
 - Engine 4: loop dependency support (under test)
 - sparse matrix for loop dependence detection
 - callgraph Support for zones as well

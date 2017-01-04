@@ -791,7 +791,7 @@ void UpdateLibrariesOfInterestList(int argc, char **argv)
             break;
         }
     }
-    
+
     if( KnobMainExecutableOnly.Value() == false )
     {
         string ilfname = "interestingLibraryNames.dat";
@@ -1382,6 +1382,7 @@ VOID TheEnd(INT32 code, VOID *v)
         }
         PrintMemAccesses();
         ComMatrix.PrintDot();
+        ComMatrix.PrintGraph();
         ComMatrix.PrintMatrix();
         // callgraph.Print();
         callgraph.PrintText();
@@ -1482,7 +1483,7 @@ void SetupPin(int argc, char *argv[])
     }
 
     UpdateLibrariesOfInterestList(argc,argv);
-    
+
     if(KnobSelectFunctions.Value())
     {
         ECHO("Selected Functions Feature is not complete...");

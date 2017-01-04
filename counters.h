@@ -47,6 +47,7 @@
 void PrintInstrCount();
 void PrintInstrPercents();
 u64 TotalInstrCount();
+u64 GetInstrCount(IDNoType fid);
 float GetInstrCountPercent(IDNoType fid);
 
 u64 GetCallCount(IDNoType fid);
