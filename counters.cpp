@@ -77,7 +77,7 @@ void PrintInstrPercents()
 
     multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
     multimap<u64,IDNoType>::reverse_iterator iter;
-    fout << setw(10) << "Total Calls " << setw(15) << "%Exec.Instr." << "\t\t" << "Name" << endl;
+    fout << setw(10) << "Total Calls " << setw(15) << "%Exec.Instr." << setw(16) << "Exec.Instr." << "\t\t" << "Name" << endl;
     fout << " #==================================================================" <<endl;
 
     for( iter = instrCountsSorted.rbegin(); iter != instrCountsSorted.rend(); ++iter )
@@ -89,6 +89,7 @@ void PrintInstrPercents()
         {
             fout << setw(10) << GetCallCount(fid)
                  << setw(15) << GetInstrCountPercent(fid)
+                 << setw(16) << GetInstrCount(fid)
                  << "\t\t" << symTable.GetSymName(fid) << endl;
         }
     }
