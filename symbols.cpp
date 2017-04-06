@@ -124,7 +124,7 @@ void LocationList::InitFromFile()
 void LocationList::Print()
 {
     std::ofstream locout;
-    ECHO("Writing locations to " << locsFileName);
+    D1ECHO("Writing locations to " << locsFileName);
     // remove( locsFileName.c_str() ); // delete file TODO is it needed?
     OpenOutFile(locsFileName, locout);
     locout << "# list of locations in order" << endl;
@@ -150,9 +150,16 @@ u32 Symbols::GetSymSize(uptr saddr)
     return ( sym.GetSize(saddr) );
 }
 
+u32 Symbols::GetSymSize(IDNoType id)
+{
+    D2ECHO("Getting total size of symbol with id: " << id );
+    Symbol& sym = _Symbols[id];
+    return ( sym.GetLastSize() );
+}
+
 u32 Symbols::GetTotalSymSize(IDNoType id)
 {
-    D2ECHO("Getting size of symbol with id: " << id );
+    D2ECHO("Getting total size of symbol with id: " << id );
     Symbol& sym = _Symbols[id];
     return ( sym.GetTotalSize() );
 }
@@ -554,5 +561,5 @@ void Symbols::Print()
         }
         fout.close();
     }
-    ECHO("Printed Symbol Table");
+    D1ECHO("Printed Symbol Table");
 }

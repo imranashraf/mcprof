@@ -187,7 +187,7 @@ if __name__ == "__main__":
     g = readGraph(fin)
     filterNodes(g, nthresh)
     filterEdges(g, ethresh)
-    dotout = "output.dot"
+    dotout = "communication_filtered_" + str(nthresh) +"_"+ str(ethresh) + ".dot"
     writeDot(g,dotout)
     generatePdf(dotout)
     # showDot(dotout)

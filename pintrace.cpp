@@ -58,6 +58,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cstddef>
+#include <cctype>
 
 // un-comment the following to generate read/write traces (Also in engine2.cpp)
 #define GENRATE_TRACES
@@ -92,7 +93,7 @@ VOID (*RoutineEntryRecorder)(ADDRINT);
 VOID (*RoutineExitRecorder)(VOID*);
 
 u32 Engine=0;
-bool DoTrace=true;
+bool DoTrace=false;
 bool TrackObjects;
 bool RecordAllAllocations;
 bool FlushCalls;
@@ -147,7 +148,8 @@ KNOB<BOOL> KnobMainExecutableOnly(KNOB_MODE_WRITEONCE, "pintool",
                                   "MainExecOnly","1",
                                   "Trace functions that are contained only in the\
                                   main executable image. Set it to 0 to specify library/image names\
-                                  of interest to instrument/profile in <interestingLibraryNames.dat> file");
+                                  of interest to instrument/profile in <interestingLibraryNames.dat> file \
+                                  with each name with complete path on separate line");
 
 KNOB<BOOL> KnobRecordAllAllocations(KNOB_MODE_WRITEONCE, "pintool",
                                   "RecordAllAllocations","1",
@@ -223,16 +225,19 @@ VOID PIN_FAST_ANALYSIS_CALL doInstrCount(ADDRINT c)
     }
 }
 
+// used only for counting instructions for generating traces
 VOID doInstrCountGlobal()
 {
     if(DoTrace)
         ++gInstrCount;
 }
 
+// used only for counting instructions for generating traces
 VOID Instruction(INS ins, VOID *v)
 {
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)doInstrCountGlobal, IARG_END);
 }
+
 
 void dummyRecorder(uptr a, u32 b){}
 VOID dummyInstrCounter(ADDRINT c){}
@@ -403,9 +408,9 @@ VOID RoutineEntryRecorder1(ADDRINT irname)
     // call count should be updated even for recursive functions
     callCounts[calleeID] += 1;
     callgraph.UpdateCall(calleeID, rInstrCount);
+    D2ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID << " and rInstrCount " << rInstrCount);
     rInstrCount=0;
 
-    D1ECHO ("Entered Routine1 : " << calleeName << " with ID " << calleeID);
     #if (DEBUG>0)
     CallStack.Print();
     //CallSiteStack.Print();
@@ -797,11 +802,18 @@ void UpdateLibrariesOfInterestList(int argc, char **argv)
         string ilfname = "interestingLibraryNames.dat";
         ifstream ilfin;
         OpenInFile(ilfname, ilfin);
-        string libName;
+        string line;
         u32 i=0;
-        while( ilfin >> libName)   // while there are function names in file
+        while( getline(ilfin, line) )   // while there are function names in file
         {
-            InterestingLibNames.push_back(libName);
+            //the following line trims white space from the beginning of the string
+            line.erase(line.begin(), find_if(line.begin(), line.end(), not1(ptr_fun<int, int>(isspace))));
+
+            // ignore empty lines and lines starting with #
+            if (line.length() == 0 || line[0] == '#')
+                continue;
+
+            InterestingLibNames.push_back(line);
             i++;
         }
         ilfin.close();
@@ -1366,6 +1378,9 @@ VOID TheEnd(INT32 code, VOID *v)
     symTable.Print();
     PrintShadowMap();
 
+    // PrintInstrCount();
+    PrintInstrPercents();
+
     switch( Engine )
     {
     case 1:
@@ -1387,7 +1402,7 @@ VOID TheEnd(INT32 code, VOID *v)
         // callgraph.Print();
         callgraph.PrintText();
         callgraph.PrintJson();
-        ComMatrix.PrintDependenceMatrix();
+        //ComMatrix.PrintDependenceMatrix();
         break;
     case 2:
         if(TrackLoopDepend)
@@ -1422,8 +1437,6 @@ VOID TheEnd(INT32 code, VOID *v)
         break;
     }
 
-    // PrintInstrCount();
-    PrintInstrPercents();
     Locations.Print();
     tgout.close();
     traceout.close();

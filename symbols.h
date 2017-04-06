@@ -47,7 +47,6 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
-#include <sstream>
 
 extern bool RecordAllAllocations;
 
@@ -239,6 +238,7 @@ public:
             size=size1;
         }
     }
+
     u32 GetSize(uptr saddr)
     {
         if(RecordAllAllocations)
@@ -248,14 +248,20 @@ public:
             if( sizeVec.size() )
                 return sizeVec.back();
             else
-                return 0;
+                return size;
         }
         else
         {
             return size;
         }
     }
-    
+
+    u32 GetLastSize()
+    {
+        //size of the last allocation only in the case of multiple allocations
+        return size;
+    }
+
     u32 GetTotalSize()
     {
         u32 totalSize = 0;
@@ -332,6 +338,7 @@ public:
     void UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 locIndex, u32 size);
     string& GetSymName(IDNoType idno);
     u32 GetSymSize(uptr saddr);
+    u32 GetSymSize(IDNoType id);
     u32 GetTotalSymSize(IDNoType idno);
     string GetSymLocation(IDNoType idno);
     bool IsSeenFunctionName(string& ftnName);

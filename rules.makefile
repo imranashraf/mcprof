@@ -52,7 +52,7 @@ SA_TOOL_ROOTS :=
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
 	multiAllocFtn multiAllocMacro multiAllocClass loopAllocations \
 	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04 \
-	markers loopDepend callGraph allocDepend
+	markers loopDepend callGraph allocDepend virtualFunction
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -70,13 +70,16 @@ ifeq ($(TARGET_OS),android)
 endif
 
 # Linux
+# -O2 -g -fno-inline -fno-omit-frame-pointer -fno-optimize-sibling-calls -Wfatal-errors
 ifeq ($(TARGET_OS),linux)
-#     TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors #-fexceptions
+    #TOOL_CXXFLAGS+= -MD -std=c++11 -I. -Wfatal-errors #-fexceptions
     TOOL_CXXFLAGS+= -MD -std=c++0x -I. -Wfatal-errors
     #TOOL_LDFLAGS+= -pg
-    #TOOL_LIBS+= -lelf # not needed as with Pin 3 we cannot link gnu libelf!
-    APP_CXXFLAGS+= -fno-inline -g -Wfatal-errors
-    #APP_CCFLAGS+= -fno-inline -g
+    #TOOL_LIBS+= -lelf # not needed as with after Pin 3 we cannot link gnu libelf!
+    APP_CXXFLAGS:=$(filter-out -O3,$(APP_CXXFLAGS))
+    APP_CCFLAGS:=$(filter-out -O3,$(APP_CCFLAGS))
+    APP_CXXFLAGS+= -O2 -g -fno-omit-frame-pointer -fno-optimize-sibling-calls -Wfatal-errors
+    APP_CCFLAGS+= -O2 -g -fno-omit-frame-pointer -fno-optimize-sibling-calls -Wfatal-errors
 endif
 
 # Windows
@@ -140,9 +143,14 @@ callGraph.test: $(OBJDIR)callGraph$(EXE_SUFFIX)
 	@python -m json.tool callgraph.json > temp
 	@mv temp callgraph.json
 
+virtualFunction.test: $(OBJDIR)virtualFunction$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)virtualFunction$(EXE_SUFFIX)
+	@python -m json.tool callgraph.json > temp
+	@mv temp callgraph.json
+
 loopDepend.test: $(OBJDIR)loopDepend$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 0 -TrackLoopDepend 1 -SelectedLoopNo 2 -- $(OBJDIR)loopDepend$(EXE_SUFFIX)
-	
+
 allocDepend.test: $(OBJDIR)allocDepend$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)allocDepend$(EXE_SUFFIX)
 
@@ -171,10 +179,10 @@ cleantemp:
 
 ###### Special applications' build rules ######
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.c
-	$(APP_CC) -I. -O1 -g -fno-inline $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+	$(APP_CC) -I. $(APP_CCFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)%$(EXE_SUFFIX): $(TESTDIR)%.cpp
-	$(APP_CXX) -I. -O1 -g -fno-inline $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
+	$(APP_CXX) -I. $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)memAllocFreeWrappers$(EXE_SUFFIX): $(TESTDIR)memAllocFreeWrappers.c $(OBJDIR)malloc_wrap.o
 	$(APP_CC) -I. -fno-inline -O1 -g $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)

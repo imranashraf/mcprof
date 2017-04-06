@@ -43,6 +43,7 @@
 #include <list>
 
 extern Symbols symTable;
+extern map<IDNoType,u64> instrCounts;
 
 typedef struct NodeType
 {
@@ -77,16 +78,18 @@ public:
     {
         if(currNode == NULL)
         {
+            D2ECHO( "adding rInstrCount : " << rInstrCount << " to source node : " << symTable.GetSymName(callee) );
             head.ID = callee;
-            //head.instrCount = 0;
-            head.instrCount = rInstrCount;
+            head.instrCount = 0;    // shoult not be head.instrCount = rInstrCount; 
+                                    // as otherwise instructions before main will be counted for main
             head.nCalls = 1;
-            head.parent=NULL;
+            head.parent = NULL;
             currNode = &head;
+            D2ECHO( "   updated: " << currNode->instrCount << " vs " << instrCounts[currNode->ID] );
         }
         else
         {
-            D1ECHO("Call to " << symTable.GetSymName(callee) << " from " << symTable.GetSymName(currNode->ID) );
+            D2ECHO("Call to " << symTable.GetSymName(callee) << " from " << symTable.GetSymName(currNode->ID) );
             list<Node> & currNodechildren = currNode->children;
             list<Node>::iterator it;
             u32 index;
@@ -95,8 +98,10 @@ public:
                 if( callee == it->ID )
                 {
                     D2ECHO( symTable.GetSymName(callee) << " found in the children");
+                    D2ECHO( "  adding rInstrCount : " << rInstrCount << " for " << symTable.GetSymName(currNode->ID) );
                     // Save rInstrCount of previous function before switching
                     (currNode->instrCount) += rInstrCount;
+                    D2ECHO( "   updated: " << currNode->instrCount << " vs " << instrCounts[currNode->ID] );
                     currNode = &(*it);
                     (currNode->nCalls) += 1;
                     break;
@@ -106,6 +111,7 @@ public:
             if( it == currNodechildren.end() )  // if not found
             {
                 D2ECHO( symTable.GetSymName(callee) << " not found in the children");
+                D2ECHO( "  adding rInstrCount : " << rInstrCount << " for " << symTable.GetSymName(currNode->ID) );
                 Node n;
                 n.ID = callee;
                 n.instrCount = 0;
@@ -114,7 +120,7 @@ public:
                 currNodechildren.push_back(n);
                 // Save rInstrCount of previous function before switching
                 (currNode->instrCount) += rInstrCount;
-                //currNode = &( currNodechildren[ currNodechildren.size()-1 ] );
+                D2ECHO( "   updated: " << currNode->instrCount << " vs " << instrCounts[currNode->ID] );
                 currNode = &( currNodechildren.back() );
             }
         }
@@ -127,8 +133,10 @@ public:
 
     void UpdateReturn(IDNoType retFrom, u64 rInstrCount)
     {
-        D1ECHO("Return from " << symTable.GetSymName(currNode->ID) );
+        D2ECHO("Return from " << symTable.GetSymName(currNode->ID) );
+        D2ECHO( " adding rInstrCount : " << rInstrCount << " for " << symTable.GetSymName(currNode->ID) );
         (currNode->instrCount) += rInstrCount;
+        D2ECHO( "   updated: " <<currNode->instrCount << " vs " << instrCounts[currNode->ID] );
         currNode = currNode->parent;
         #if (DEBUG>0)
         ECHO("Updated situation");
@@ -158,9 +166,9 @@ public:
 
     void PrintText()
     {
-        ECHO("Printing callgraph to callgraph.out");
+        ECHO("Printing callgraph to callgraph.dat");
         ofstream cgout;
-        OpenOutFile("callgraph.out", cgout);
+        OpenOutFile("callgraph.dat", cgout);
         u64 totalCount = 0;
         TotalInsCount(head, totalCount);
         PrintRec( head, 0, totalCount, cgout);
@@ -215,11 +223,11 @@ public:
         jevent["callchain"] = jcallchain;
 
         json::Array jcosts;
-        jcosts.push_back((int) n.instrCount); // cast required because of ambiguity in json class
+        jcosts.push_back((double) n.instrCount); // cast required because of ambiguity in json class
         jevent["cost"] = jcosts;
 
-        jevent["calls"] = (int) n.nCalls;
-    
+        jevent["calls"] = (double) n.nCalls;
+
         jevents.push_back(jevent);
 
         for( auto& child : n.children )

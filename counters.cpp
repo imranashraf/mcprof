@@ -73,7 +73,9 @@ void PrintInstrCount()
 void PrintInstrPercents()
 {
     ofstream fout;
-    OpenOutFile("execProfile.dat", fout);
+    string exefname("execProfile.dat");
+    ECHO("Printing flat execution profile in " << exefname);
+    OpenOutFile(exefname, fout);
 
     multimap<u64, IDNoType> instrCountsSorted = flipMap(instrCounts);
     multimap<u64,IDNoType>::reverse_iterator iter;
@@ -170,7 +172,9 @@ u64 GetCallCount(IDNoType fid)
 void PrintMemAccesses()
 {
     ofstream fout;
-    OpenOutFile("memProfile.dat", fout);
+    string memfname("memProfile.dat");
+    OpenOutFile(memfname, fout);
+    ECHO("Printing flat memory access profile in " << memfname);
 
     fout << " This table can be sorted by Total Accesses (-k2) by using bash command:"<<endl;
     fout << "    tail -n +7 memProfile.dat | sort -k2 -gr" <<endl<<endl;

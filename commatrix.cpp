@@ -138,7 +138,7 @@ void Matrix2D::PrintMatrix()
     std::ofstream mout;
     string matrixFileName("matrix.dat");
     OpenOutFile(matrixFileName, mout);
-    ECHO("Printing communication matrix as table in " << matrixFileName);
+    ECHO("Printing communication matrix in " << matrixFileName);
     IDNoType TotalSymbols = symTable.TotalSymbolCount();
     CHECK_LT(TotalSymbols, Matrix.size());
 
@@ -208,7 +208,7 @@ void Matrix2D::PrintDot()
     std::ofstream dotout;
     string dotFileName("communication.dot");
     OpenOutFile(dotFileName, dotout);
-    ECHO("Printing communication as DOT in " << dotFileName);
+    ECHO("Printing communication graph in dot format in " << dotFileName);
     u16 TotalSymbols = GlobalID;
     D1ECHO( VAR(TotalSymbols) );
     CHECK_LT(TotalSymbols, Matrix.size());
@@ -274,7 +274,8 @@ void Matrix2D::PrintDot()
             if ( symTable.SymIsObj(c) )
             {
                 dotout << "\"" << (u16)c << "\"" << " [label=\" " << symname
-                       << " \\n" << hBytes(symTable.GetTotalSymSize(c)) << "\""
+                       // << " \\n" << hBytes(symTable.GetTotalSymSize(c)) << "\""
+                       << " \\n" << hBytes(symTable.GetSymSize(c)) << "\""
                        << objNodeStyle
                        << "];" << endl;
             }
@@ -329,7 +330,7 @@ void Matrix2D::PrintGraph()
     std::ofstream gfout;
     string graphFileName("communication_graph.dat");
     OpenOutFile(graphFileName, gfout);
-    ECHO("Printing communication as DOT in " << graphFileName);
+    ECHO("Printing communication as text file for filtering in " << graphFileName);
     u16 TotalSymbols = GlobalID;
     D1ECHO( VAR(TotalSymbols) );
     CHECK_LT(TotalSymbols, Matrix.size());
@@ -350,7 +351,8 @@ void Matrix2D::PrintGraph()
             {
                 gfout   << "o;" << (u16)c
                         << ";" << symname
-                        << ";" << symTable.GetTotalSymSize(c)
+                        // << ";" << symTable.GetTotalSymSize(c)
+                        << ";" << symTable.GetSymSize(c)
                         << endl;
             }
             else
