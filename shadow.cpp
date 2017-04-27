@@ -149,6 +149,15 @@ void SetLastConsumer(IDNoType cid, uptr addr)
 
 // (AE/PE)
 #if (MODE==TABLES)
+IDNoType GetLastConsumer(uptr addr)
+{
+    Entry* entry = ShadowTable.getEntry(addr);
+    return entry->lastConsID;
+}
+#endif
+
+// (AE/PE)
+#if (MODE==TABLES)
 void SetLastConsumers(uptr saddr, u32 size, IDNoType cid)
 {
     //TODO we need to use memset, secondly we need to take care if

@@ -177,7 +177,7 @@ string Symbols::GetSymLocation(IDNoType id)
 
 void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
 {
-    D2ECHO("Inserting Malloc/Calloc/Realloc ");
+    D2ECHO("Inserting Malloc/Calloc ");
 
     IDNoType id=0;
     GetAvailableORNewID(id, lastCallLocIndex); //ignoring return value
@@ -232,11 +232,16 @@ void Symbols::UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 lastCal
 
     // set the object ID of previous address range to unknown
     SetObjectIDs(prevSAddr, prevSize, UnknownID);
-    D2ECHO("Setting object ID as " << id << " on a size " << size);
-    // we also need to set the object ids in the shadow table/mem for this object
+    // Now set the object ids in the shadow table/mem for this object
     SetObjectIDs(saddr, size, id);
 
-    // TODO implement required logic for SetlastConsumers (AE/PE)
+    // (AE/PE)
+    // get last consumer of previous address range
+    IDNoType prevLastCons = GetLastConsumer(prevSAddr);
+    // and copy it to new address range
+    SetLastConsumers(saddr, size, prevLastCons);
+    // Now set last consumer of previous address to UnknownID 
+    SetLastConsumers(prevSAddr, prevSize, UnknownID);
 
     // Added for allocation dependencies
     if( TrackTasks && !TrackLoopDepend )

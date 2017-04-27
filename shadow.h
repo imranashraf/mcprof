@@ -76,6 +76,7 @@ void PrintShadowMap();
 
 // (AE/PE)
 void SetLastConsumer(IDNoType cid, uptr addr);
+IDNoType GetLastConsumer(uptr addr);
 void SetLastConsumers(uptr saddr, u32 size, IDNoType cid);
 void GetAEPECount(uptr saddr, u32 size, u64 &ae, u64 &pe);
 

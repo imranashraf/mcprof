@@ -430,7 +430,7 @@ objects. If set 1, the calls to memory allocations functions (malloc, calloc,
 realloc, free, new, delete) will be instrumented to track the allocation and 
 deallocation of objects at run-time in the application. The complete call-path 
 to the allocation site, with source file-name and line-no information will be 
-recorded as well and availble in symbol.out file.
+recorded as well and availble in symbol.dat file.
 
 \item [-Engine] [1/2/3, default 1] This selects the engine to be used in
     \MCPROF{}.  Based on the selected engine, the desired output is generated as
@@ -473,17 +473,17 @@ recorded as well and availble in symbol.out file.
 
 \MCPROF{} generates various output files based on the selected engines. An
 important file which is generated independent of the selected engine is
-\textbf{symbols.out}.  This file contains the information about the
+\textbf{symbols.dat}.  This file contains the information about the
 function/object symbols tracked during the application execution. In case of
 objects, the allocation address, allocation size, call-path of the allocation is
 also reported.
 
 \subsection{Engine 1 Output}
 
-The output of Engine 1 are two text-files \textbf{execProfile.out} in the current
+The output of Engine 1 are two text-files \textbf{execProfile.dat} in the current
 directory.
 
-\textbf{execProfile.out} file contains the information about the
+\textbf{execProfile.dat} file contains the information about the
 execution profile of the application. This profile lists the compute intensive
 functions in the application by reporting the percentage of dynamically executed
 instructions. An example output for the \textbf{vectOps} application is shown below:
@@ -500,37 +500,54 @@ instructions. An example output for the \textbf{vectOps} application is shown be
 \end{Verbatim}
 }
 
-\textbf{memProfile.out} file contains the information about the memory accesses
+\textbf{memProfile.dat} file contains the information about the memory accesses
 performed by functions/objects in the application. An example output for the
 \textbf{vectOps} application is shown below:
 
 {
-\scriptsize
+\tiny
 \begin{Verbatim}[frame=single, samepage=true]
-This table can be sorted by Total Accesses (-k2) by using bash command:
-    tail -n +7 memProfile.out | sort -k2 -gr
+ This table can be sorted by Total Accesses (-k2) by using bash command:
+    tail -n +7 memProfile.dat | sort -k2 -gr
 
-Function   ============ Accesses  ==========    Allocation
- Name       Total         Reads        Writes      Path
-===============================================================
-UnknownFtn  287038        232876      54162     :0
-initVecs    800           0           800       :0
-sumVecs     1200          800         400       :0
-diffVecs    1200          800         400       :0
-main        74982         70976       4006      :0
-srcArr1     1200          800         400       /<complete path>/vectOps.c:51
-srcArr2     1200          800         400       /<complete path>/vectOps.c:54
-sumArr      404           4           400       /<complete path>/vectOps.c:57
-diffArr     404           4           400       /<complete path>/vectOps.c:60
+Per Function Flat Memory Profile 
+       Function Name     ================= Accesses  =========    Allocation
+                              Total         Reads       Writes       Path
+ ==========================================================================
+           UnknownFtn        106270         79937         26333  NA:0
+                 main         78818         66750         12068  NA:0
+              sumVecs         12000          8000          4000  tests/vectOps.c:64
+             diffVecs         12000          8000          4000  tests/vectOps.c:65
+
+
+Per Object Flat Memory Profile 
+         Object Name     =============== Accesses  ============        ==== Efficiency ====  ==== Allocation
+                              Total         Reads       Writes        Alloc %        Prod %      Path
+ ============================================================================================================
+                 Obj2         12000          8000          4000           100           100  tests/vectOps.c:50
+                 Obj3         12000          8000          4000           100           100  tests/vectOps.c:53
+                 Obj4          4004             4          4000           100           0.1  tests/vectOps.c:56
+                 Obj5          4004             4          4000           100           0.1  tests/vectOps.c:59
 \end{Verbatim}
 }
 
 The accesses reported against \textbf{UnknownFtn} are the accesses which cannot
-be associated to any function. For instance the accesses before starting the
-\textbf{main} function is called.
+be associated to any function. For instance, the accesses before the \textbf{main}
+function is called.
 
-In case of objects, their source-file and line-no information is also reported in
-the last column.
+In case of objects, Total, Read and Write memory accesses are reported in
+Column 2-4. Two other very useful efficiency factors are reported in column 5
+and 6, under Efficiency. Column 5 (Alloc \%) is the percentage of allocation
+efficiency. This indicated what percentage of allocated bytes are actually
+used for writing some data. Column 6 (Prod \%) is the percentage of
+production efficiency. This is an indication of what percentage of data
+produced is actually consumed (read) later in the application before the
+object is freed. If production efficiency of an allocated object is low, then
+its not really utilized, which might mean that this data should not have been
+produced.
+
+Last Column reports source-file and line-no of where the allocation has taken
+place in the application.
 
 \begin{figure}[!h]
 \centering
@@ -592,7 +609,7 @@ with TrackObjects as 0.
 
 Another important format of the reported information is the data-communication 
 matrix. In this format, the communication is reported in the form of a matrix in 
-a \textbf{matrix.out} text file. This file can be converted to a graph by using 
+a \textbf{matrix.dat} text file. This file can be converted to a graph by using 
 \verb|plotScript.sh| script availble in \textbf{scripts} directory. This can be 
 executed as:
 
@@ -656,7 +673,7 @@ make loopDepend.test
 
 \subsection{Engine 3 Output}
 
-\MCPROF{} reports per call accesses in Engine 3 in \textbf{percallaccesses.out}
+\MCPROF{} reports per call accesses in Engine 3 in \textbf{percallaccesses.dat}
 text file, as shown below:
 
 {

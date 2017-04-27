@@ -34,8 +34,8 @@ set key samplen 2 spacing .5 font ",8"
 
 set logscale zcb
 
-XTICS="`head -1 matrix.out`"
-YTICS="`awk 'BEGIN{getline}{printf "%s ",$1}' matrix.out`"
+XTICS="`head -1 matrix.dat`"
+YTICS="`awk 'BEGIN{getline}{printf "%s ",$1}' matrix.dat`"
 
 set for [i=1:words(XTICS)] xtics ( word(XTICS,i) i-1 )
 set for [i=1:words(YTICS)] ytics ( word(YTICS,i) i-1 )
@@ -61,5 +61,5 @@ set palette defined ( 0 "white", 1 "green", 2 "blue", 3 "brown", 4 "red")
 
 set pm3d map
 set pm3d interpolate 2,2
-splot "<awk '{$1=\"\"}1' matrix.out | sed '1 d'" matrix with points pointtype 5 \
+splot "<awk '{$1=\"\"}1' matrix.dat | sed '1 d'" matrix with points pointtype 5 \
         pointsize 1 palette linewidth 15 title ""

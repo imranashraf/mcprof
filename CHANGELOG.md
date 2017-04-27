@@ -2,19 +2,32 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [ 2.1 ] - [ 2016-xx-xx ]
+## [ 2.x ] - [ 2017-xx-xx ]
 ### Added
-- dot graph filter script to apply node and edge threshold
-- graph in .dat format as input for dotfilter script
+- 
 
 ### Changed
 -
 
 ### Removed
-- threshold as command line arg to mcprof in favor of filter script 
+- 
 
 ### Fixed
 - 
+
+## [ 2.2 ] - [ 2017-04-27 ]
+### Added
+- dot graph filter script to apply node and edge threshold
+- graph in .dat format as input for dotfilter script
+- AE, PE factors, reported for allocated objects in memProfile.dat
+- gprof2dot script
+
+### Removed
+- threshold as command line arg to mcprof in favor of filter script 
+
+### Fixed
+- callgraph instruction counter cast
+
 
 ## [ 2.1 ] - [ 2016-11-20 ]
 ### Added
