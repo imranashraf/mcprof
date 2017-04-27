@@ -84,7 +84,7 @@ void SetProducer(IDNoType fid, uptr addr)
 {
     D2ECHO("Setting " << FUNC(fid) << " as producer of " << ADDR(addr));
     Entry* entry = ShadowTable.getEntry(addr);
-    entry->funcID = fid;
+    entry->prodID = fid;
     //entry->threadID = tid;
 }
 #endif
@@ -97,7 +97,7 @@ void SetProducers(uptr saddr, u32 size, IDNoType fid)
     for(uptr addr = saddr; addr < saddr+size; addr++)
     {
         Entry* entry = ShadowTable.getEntry(addr);
-        entry->funcID = fid;
+        entry->prodID = fid;
     }
 }
 #endif
@@ -120,7 +120,7 @@ IDNoType GetProducer(uptr addr)
 {
     IDNoType id;
     Entry* entry = ShadowTable.getEntry(addr);
-    id = entry->funcID;
+    id = entry->prodID;
     D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(id));
     return id;
 }
@@ -134,6 +134,46 @@ IDNoType GetObjectID(uptr addr)
     oid = entry->objID;
     D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(oid));
     return oid;
+}
+#endif
+
+// (AE/PE)
+#if (MODE==TABLES)
+void SetLastConsumer(IDNoType cid, uptr addr)
+{
+    D2ECHO("Setting " << FUNC(cid) << " as last consumer of " << ADDR(addr));
+    Entry* entry = ShadowTable.getEntry(addr);
+    entry->lastConsID = cid;
+}
+#endif
+
+// (AE/PE)
+#if (MODE==TABLES)
+void SetLastConsumers(uptr saddr, u32 size, IDNoType cid)
+{
+    //TODO we need to use memset, secondly we need to take care if
+    // addr does not lie in this table (in current non-optimal way its not a problem)
+    for(uptr addr = saddr; addr < saddr+size; addr++)
+    {
+        Entry* entry = ShadowTable.getEntry(addr);
+        entry->lastConsID = cid;
+    }
+}
+#endif
+
+// (AE/PE)
+#if (MODE==TABLES)
+void GetAEPECount(uptr saddr, u32 size, u64 &ae, u64 &pe)
+{
+    ae = 0; pe = 0; //counts
+    for(uptr addr = saddr; addr < saddr+size; addr++)
+    {
+        Entry* entry = ShadowTable.getEntry(addr);
+        IDNoType pid = entry->prodID;
+        IDNoType lcid = entry->lastConsID;
+        ae += (pid != UnknownID);
+        pe += (lcid != UnknownID);
+    }
 }
 #endif
 
@@ -154,12 +194,12 @@ void SetProducer(IDNoType pid, uptr addr)
     #endif
     {
         Entry* entry = (Entry*) ShadowMem.Mem2Shadow(addr);
-        entry->funcID = pid;
+        entry->prodID = pid;
     }
     else
     {
         Entry* entry = ShadowTable.getEntry(addr);
-        entry->funcID = pid;
+        entry->prodID = pid;
     }
 }
 #endif
@@ -180,7 +220,7 @@ void SetProducers(uptr saddr, u32 size, IDNoType pid)
         for(uptr addr = saddr; addr < saddr+size; addr++)
         {
             Entry* entry = (Entry*) ShadowMem.Mem2Shadow(addr);
-            entry->funcID = pid;
+            entry->prodID = pid;
         }
     }
     else
@@ -188,7 +228,7 @@ void SetProducers(uptr saddr, u32 size, IDNoType pid)
         for(uptr addr = saddr; addr < saddr+size; addr++)
         {
             Entry* entry = ShadowTable.getEntry(addr);
-            entry->funcID = pid;
+            entry->prodID = pid;
         }
     }
 }
@@ -271,12 +311,12 @@ IDNoType GetProducer(uptr addr)
     #endif
     {
         Entry* entry = (Entry*) ShadowMem.Mem2Shadow(addr);
-        pid = entry->funcID;
+        pid = entry->prodID;
     }
     else
     {
         Entry* entry = ShadowTable.getEntry(addr);
-        pid = entry->funcID;
+        pid = entry->prodID;
     }
 
     D2ECHO("Got producer of " << ADDR(addr) << " as " << FUNC(pid));

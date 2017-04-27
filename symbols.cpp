@@ -51,6 +51,10 @@ extern bool ShowUnknown;
 extern bool TrackLoopDepend;
 extern bool TrackTasks;
 
+// AE/PE
+extern map<IDNoType,double> objTotalACount;
+extern map<IDNoType,double> objTotalPCount;
+
 std::string locsFileName("locations.dat");
 
 // List of all locations of symbols
@@ -202,6 +206,9 @@ void Symbols::InsertMallocCalloc(uptr saddr, u32 lastCallLocIndex, u32 size)
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     SetObjectIDs(saddr, size, id);
 
+    // set last consumer to UnknownID as its just allocated (AE/PE)
+    SetLastConsumers(saddr, size, UnknownID);
+
     // Added for allocation dependencies.
     // also set the function in which this allocation is taking place
     // as the producer of this object. This should not be done when
@@ -228,6 +235,8 @@ void Symbols::UpdateRealloc(IDNoType id, uptr prevSAddr, uptr saddr, u32 lastCal
     D2ECHO("Setting object ID as " << id << " on a size " << size);
     // we also need to set the object ids in the shadow table/mem for this object
     SetObjectIDs(saddr, size, id);
+
+    // TODO implement required logic for SetlastConsumers (AE/PE)
 
     // Added for allocation dependencies
     if( TrackTasks && !TrackLoopDepend )
@@ -304,6 +313,16 @@ void Symbols::Remove(uptr saddr)
         _Symbols.erase(it);
     }
     */
+
+    // AE/PE
+    u64 ac, pc; // counts
+    GetAEPECount(saddr, size, ac, pc);
+    IDNoType oid = GetObjectID(saddr);
+    D2ECHO("OBJ ID: " << oid << " size: " << size << " current ACount: " << ac << "  current PCount: " << pc);
+    objTotalACount[oid] += ac; objTotalPCount[oid] = pc;
+
+    // set last consumer to UnknownID as its freed now (AE/PE)
+    SetLastConsumers(saddr, size, UnknownID);
 
     // Clear the obj ids for this object, which is same as setting it to UnknownID
     D2ECHO("Clearing object ID to " << UnknownID << " on a size " << size);

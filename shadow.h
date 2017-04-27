@@ -74,11 +74,17 @@ void SetObjectIDs(uptr saddr, u32 size, IDNoType id);
 void SetProducers(uptr saddr, u32 size, IDNoType fid);
 void PrintShadowMap();
 
+// (AE/PE)
+void SetLastConsumer(IDNoType cid, uptr addr);
+void SetLastConsumers(uptr saddr, u32 size, IDNoType cid);
+void GetAEPECount(uptr saddr, u32 size, u64 &ae, u64 &pe);
+
 struct Entry
 {
-    IDNoType funcID;
+    IDNoType prodID;
     IDNoType objID;
-    //IDNoType threadID;
+    IDNoType lastConsID; // (AE/PE)
+    //IDNoType prodThreadID;
 };
 
 class L1Table

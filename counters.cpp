@@ -49,6 +49,10 @@ map<IDNoType,u64> funcWrites;
 map<IDNoType,u64> objReads;
 map<IDNoType,u64> objWrites;
 
+// AE/PE
+map<IDNoType,double> objTotalACount;
+map<IDNoType,double> objTotalPCount;
+
 extern Symbols symTable;
 extern bool ShowUnknown;
 
@@ -180,7 +184,7 @@ void PrintMemAccesses()
     fout << "    tail -n +7 memProfile.dat | sort -k2 -gr" <<endl<<endl;
 
     fout << " Per Function Flat Memory Profile \n";
-    fout << setw(45) << " Function Name " << "\t ================= Accesses  ============  Allocation" <<endl;
+    fout << setw(45) << " Function Name " << "\t ================= Accesses  =========    Allocation" <<endl;
     fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
     fout << "                         ==========================================================================" <<endl;
 
@@ -197,23 +201,45 @@ void PrintMemAccesses()
                 << "  "     << symTable.GetSymLocation(fid) << endl;
     }
 
+    // AE/PE
     fout << "\n\n";
     fout << " Per Object Flat Memory Profile \n";
-    fout << setw(45) << " Object Name " << "\t ================= Accesses  ============  Allocation" <<endl;
-    fout << setw(45) << "  " << setw(14) << "Total" << setw(14) << "Reads" << setw(14) << "Writes "<< "      Path" << endl;
-    fout << "                         ==========================================================================" <<endl;
+    fout << setw(45) << " Object Name " << "\t =============== Accesses  ============        ==== Efficiency ====  ==== Allocation" <<endl;
+    fout << setw(45) <<"  " << setw(14) <<"Total" << setw(14) <<"Reads" << setw(14)  <<"Writes " << setw(14) <<"Alloc %" << setw(14) <<"Prod %"  << "      Path" << endl;
+    fout << "                         ============================================================================================================" <<endl;
 
+    set<IDNoType> seenObjects;
     map<IDNoType,u64>::iterator oiter;
     for( oiter = objReads.begin(); oiter != objReads.end(); ++oiter)
     {
         auto oid = oiter->first;
+        seenObjects.insert(oid);
         auto oreads = oiter->second;
         auto owrites = objWrites[oid];
         fout << setw(45) << symTable.GetSymName(oid)
                 << setw(14) << oreads + owrites
                 << setw(14) << oreads
                 << setw(14) << owrites
+                << setw(14) << objTotalACount[oid]/symTable.GetTotalSymSize(oid)*100
+                << setw(14) << objTotalPCount[oid]/symTable.GetTotalSymSize(oid)*100
                 << "  "     << symTable.GetSymLocation(oid) << endl;
+    }
+
+    for( oiter = objWrites.begin(); oiter != objWrites.end(); ++oiter)
+    {
+        auto oid = oiter->first;
+        if( seenObjects.find(oid) == seenObjects.end() )
+        {
+            auto oreads = oiter->second;
+            auto owrites = objWrites[oid];
+            fout << setw(45) << symTable.GetSymName(oid)
+                    << setw(14) << oreads + owrites
+                    << setw(14) << oreads
+                    << setw(14) << owrites
+                    << setw(14) << objTotalACount[oid]/symTable.GetTotalSymSize(oid)*100
+                    << setw(14) << objTotalPCount[oid]/symTable.GetTotalSymSize(oid)*100
+                    << "  "     << symTable.GetSymLocation(oid) << endl;
+        }
     }
 
     fout.close();

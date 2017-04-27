@@ -206,6 +206,9 @@ void RecordReadEngine1(uptr addr, u32 size)
             funcReads[cons] += size;
             objReads[objid] += size;
 
+            // set last consumer to reader(cons) as it is reading now (AE/PE)
+            SetLastConsumers(addr, size, cons);
+
 #ifdef GENRATE_SELECTED_TRACES
             // Generate Read Trace by a selected function from selected objects
             if(

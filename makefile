@@ -6,8 +6,8 @@
 
 # If the tool is built out of the kit, PIN_ROOT must be specified in the make invocation and point to the kit root.
 MIN_SUPPORTED_REV:=62732
-MAX_SUPPORTED_REV:=76887
-#MAX_SUPPORTED_REV:=81201 (pin 3.2 not yet supported)
+MAX_SUPPORTED_REV:=76887  #(pin 3.1)
+#MAX_SUPPORTED_REV:=81201 #(pin 3.2 not yet supported)
 
 ifdef PIN_ROOT
 AVAIL_REV := $(shell pin -version | awk '/Rev/{print $$3}')

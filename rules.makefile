@@ -52,7 +52,7 @@ SA_TOOL_ROOTS :=
 APP_ROOTS := vectOps memAllocFree memAllocFreeWrappers memSetCopyMove \
 	multiAllocFtn multiAllocMacro multiAllocClass loopAllocations \
 	memNewDelete vectOpsCPP01 vectOpsCPP02 vectOpsCPP03 vectOpsCPP04 \
-	markers loopDepend callGraph allocDepend virtualFunction
+	markers loopDepend callGraph allocDepend virtualFunction aepeTest
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -153,6 +153,9 @@ loopDepend.test: $(OBJDIR)loopDepend$(EXE_SUFFIX)
 
 allocDepend.test: $(OBJDIR)allocDepend$(EXE_SUFFIX)
 	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)allocDepend$(EXE_SUFFIX)
+
+aepeTest.test: $(OBJDIR)aepeTest$(EXE_SUFFIX)
+	$(PIN) -t $(OBJDIR)mcprof$(PINTOOL_SUFFIX) -RecordStack 0 -TrackObjects 1 -Engine 1 -- $(OBJDIR)aepeTest$(EXE_SUFFIX)
 
 ##############################################################
 #
