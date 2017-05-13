@@ -8,6 +8,8 @@ import networkx as nx
 import subprocess
 from math import log
 
+rootDir = os.path.dirname(os.path.realpath(__file__))
+
 try:
     print ("MCProf Graph filtering script")
     import pygraphviz as pg
@@ -123,7 +125,8 @@ def writeDot(nxGraph, foutname):
 def generatePdf(foutname):
     print('Generating Pdf ...')
     # cmd = "dot -Tpdf %s -O" %fout
-    cmd = "/data/repositories/mcprof/scripts/dot2pdf.sh %s" %foutname
+    d2pScript = os.path.join(rootDir, "dot2pdf.sh" )
+    cmd = '{0} {1}'.format(d2pScript, foutname)
     ret = subprocess.check_output( cmd, shell=True)
     print("Written %s output dot file." % str(foutname))
 
