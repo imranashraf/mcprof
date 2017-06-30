@@ -2,9 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+
 ## [ 2.x ] - [ 2017-xx-xx ]
 ### Added
-- 
+- printing sizes in filtered graphs in human readable format
 
 ### Changed
 -
@@ -13,7 +14,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - 
 
 ### Fixed
-- 
+- mcprof absolute path in script
+- Update documentation with mcprof dependencies
+
 
 ## [ 2.2 ] - [ 2017-04-27 ]
 ### Added

@@ -129,6 +129,7 @@ In order to setup and use `MCProf` the following packages are required:
 * libelf library to read static symbols from the binary
 * graphviz Dot utility for converting the generated communication graphs from dot to pdf, png etc
 * gnuplot to plot communication matrix as graph
+* pydotplus and networkx python packages for graph filtering
 
 ## Quick Setup (See [manual](https://bitbucket.org/imranashraf/mcprof/raw/master/doc/manual.pdf) for details)
 
